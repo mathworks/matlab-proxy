@@ -69,7 +69,7 @@ Once the `matlab-proxy` package is installed.
   ```bash
   env MWI_BASE_URL="/matlab" matlab-proxy-app
   ```
-  `MWI_BASE_URL` is an environment variable which is required. It controls the link on which MATLAB can be accessed.
+  `MWI_BASE_URL` is an environment variable which controls the link on which MATLAB can be accessed.
   For a detailed listing of all environment variables. See [Advanced-Usage.md](./Advanced-Usage.md)
 
   Running the above command will print text out on your terminal, which will contain the URL to access MATLAB. For example:

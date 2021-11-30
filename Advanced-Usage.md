@@ -7,7 +7,7 @@ This page lists some of the advanced manuevers that may be of specific interest 
 To control the behavior of the MATLAB Proxy, you can optionally specify the environment variables described in this section. You must specify these variables before starting the integration. For example, a network license server can be specified when you start the integration using the command below:
 
 ```bash
-env MLM_LICENSE_FILE="1234@example.com" MWI_BASE_URL="/test" matlab-proxy-app
+env MLM_LICENSE_FILE="1234@example.com" matlab-proxy-app
 ```
 
 The following table describes all the environment variables that you can set to customize the behavior of this integration.
@@ -15,7 +15,7 @@ The following table describes all the environment variables that you can set to 
 | Name | Type | Example Value | Description |
 | ---- | ---- | ------------- | ----------- |
 | **MLM_LICENSE_FILE** | string | `"1234@111.22.333.444"` | When you want to use either a license file or a network license manager to license MATLAB, specify this variable.</br> For example, specify the location of the network license manager to be `123@hostname`.|                                                                         
-| **MWI_BASE_URL** (mandatory) | string | `"/matlab"` | Set to control the base URL of the app. MWI_BASE_URL should start with `/` or be `empty`. |
+| **MWI_BASE_URL** | string | `"/matlab"` | Set to control the base URL of the app. MWI_BASE_URL should start with `/` or be `empty`. |
 | **MWI_APP_PORT** | integer | `8080` | Specify the port for the HTTP server to listen on. |
 | **MWI_LOG_LEVEL** | string | `"CRITICAL"` | Specify the Python log level to be one of the following `NOTSET`, `DEBUG`, `INFO`, `WARN`, `ERROR`, or `CRITICAL`. For more information on Python log levels, see [Logging Levels](https://docs.python.org/3/library/logging.html#logging-levels) .<br />The default value is `INFO`. |
 | **MWI_LOG_FILE** | string | `"/tmp/logs.txt"` | Specify the full path to the file where you want debug logs from this integration to be written. |
