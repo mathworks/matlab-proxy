@@ -529,12 +529,12 @@ class AppState:
         waiters = []
         # Terminate
         if matlab is not None and matlab.returncode is None:
-            logger.debug(f"Terminating MATLAB (PID={matlab.pid})")
+            logger.info(f"Terminating MATLAB (PID={matlab.pid})")
             matlab.terminate()
             waiters.append(matlab.wait())
 
         if xvfb is not None and xvfb.returncode is None:
-            logger.debug(f"Terminating Xvfb (PID={xvfb.pid})")
+            logger.info(f"Terminating Xvfb (PID={xvfb.pid})")
             xvfb.terminate()
             waiters.append(xvfb.wait())
 

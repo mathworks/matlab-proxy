@@ -123,7 +123,7 @@ def get(config=matlab_proxy.get_default_config_name(), dev=False):
             ],
             "create_xvfb_cmd": create_xvfb_cmd,
             "base_url": mwi_validators.validate_base_url(
-                os.getenv(mwi_env.get_env_name_base_url(), None)
+                os.getenv(mwi_env.get_env_name_base_url(), "")
             ),
             "app_port": mwi_validators.validate_app_port_is_free(
                 os.getenv(mwi_env.get_env_name_app_port())

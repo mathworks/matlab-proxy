@@ -115,11 +115,9 @@ def validate_app_port_is_free(port):
 def validate_base_url(base_url):
     """Validates base_url set in the env variable MWI_BASE_URL.
 
-    If MWI_BASE_URL is not set, will error out.
     If MWI_BASE_URL is empty, will use base_url="/"
     If MWI_BASE_URL doesnt have a prefix '/' will error out.
     If MWI_BASE_URL has a suffix '/', will remove it.
-
 
     Args:
         base_url (str | None): The base_url at which the integration will be launched.
@@ -127,12 +125,6 @@ def validate_base_url(base_url):
     Returns:
         [str]: Validated base_url
     """
-    if base_url is None:
-        logger.error(
-            f"The environment variable {mwi_env.get_env_name_base_url()} is not set."
-        )
-        sys.exit(1)
-
     validated_base_url = ""
     if base_url == "":
         validated_base_url = ""
