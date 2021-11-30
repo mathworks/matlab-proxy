@@ -1,7 +1,5 @@
 # MATLAB Proxy
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/mathworks/matlab-proxy/MATLAB%20Proxy?logo=github)](https://github.com/mathworks/matlab-proxy/actions) 
-[![PyPI badge](https://img.shields.io/pypi/v/matlab-proxy.svg?logo=pypi)](https://pypi.python.org/pypi/matlab-proxy) 
-[![codecov](https://codecov.io/gh/mathworks/matlab-proxy/branch/main/graph/badge.svg?token=ZW3SESKCSS)](https://codecov.io/gh/mathworks/matlab-proxy)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/mathworks/matlab-proxy/Testing%20MATLAB%20Proxy?logo=github)](https://github.com/mathworks/matlab-proxy/actions) [![PyPI badge](https://img.shields.io/pypi/v/matlab-proxy.svg?logo=pypi)](https://pypi.python.org/pypi/matlab-proxy) [![codecov](https://codecov.io/gh/mathworks/matlab-proxy/branch/main/graph/badge.svg?token=ZW3SESKCSS)](https://codecov.io/gh/mathworks/matlab-proxy)
 
 Copyright (c) 2021 The MathWorks, Inc. All rights reserved.
 
