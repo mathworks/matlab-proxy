@@ -11,8 +11,8 @@ describe('MatlabJsd Component', () => {
 
   it('throws console.error when rendered without required prop-type', () => {
     // Mocking console.error to do nothing.
-    const errorMessage = ['Warning: Failed prop type: The prop `url` is marked as required in `MatlabJsd`, but its value is `undefined`.\n    in MatlabJsd'];
     const errorMock = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const errorMessage =   'The prop `url` is marked as required in `MatlabJsd`, but its value is `undefined`.'
 
     const { queryByTitle } = render(<MatlabJsd />);
 
@@ -24,7 +24,7 @@ describe('MatlabJsd Component', () => {
     expect(errorMock).toHaveBeenCalledTimes(1);
 
     // Check if console.error was called with the correct error message.
-    expect(console.error.mock.calls).toEqual([errorMessage]);
+    expect(console.error.mock.calls[0]).toContain(errorMessage);
   });
 
   it('renders without crashing', () => {
