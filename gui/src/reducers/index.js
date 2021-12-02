@@ -116,6 +116,7 @@ export function isFetching(state = false, action) {
         case REQUEST_TERMINATE_INTEGRATION:
         case REQUEST_STOP_MATLAB:
         case REQUEST_START_MATLAB:
+        case REQUEST_ENV_CONFIG:
             return true;
         case RECEIVE_SERVER_STATUS:
         case RECEIVE_SET_LICENSING:
@@ -123,6 +124,7 @@ export function isFetching(state = false, action) {
         case RECEIVE_STOP_MATLAB:
         case RECEIVE_START_MATLAB:
         case RECEIVE_ERROR:
+        case RECEIVE_ENV_CONFIG:
             return false;
         default:
             return state;
@@ -155,20 +157,6 @@ export function isSubmitting(state = false, action) {
         case RECEIVE_START_MATLAB:
         case RECEIVE_ERROR:
             return false;
-        default:
-            return state;
-    }
-}
-
-export function fetchAbortController(state = new AbortController(), action) {
-    switch (action.type) {
-        case REQUEST_SERVER_STATUS:
-        case REQUEST_SET_LICENSING:
-        case REQUEST_TERMINATE_INTEGRATION:
-        case REQUEST_STOP_MATLAB:
-        case REQUEST_START_MATLAB:
-        case REQUEST_ENV_CONFIG:
-            return action.fetchAbortController;
         default:
             return state;
     }
@@ -238,7 +226,6 @@ export const serverStatus = combineReducers({
     isFetching,
     hasFetched,
     isSubmitting,
-    fetchAbortController,
     fetchFailCount
 });
 

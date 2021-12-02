@@ -18,7 +18,7 @@ import {
     RECEIVE_ERROR,
     RECEIVE_ENV_CONFIG,
 } from '../actions';
-import { getFetchAbortController, selectMatlabPending, selectHasFetchedEnvConfig } from '../selectors';
+import { selectMatlabPending } from '../selectors';
 
 export function setTriggerPosition(x, y) {
     return {
@@ -42,10 +42,9 @@ export function setOverlayVisibility(visibility) {
     };
 }
 
-export function requestServerStatus(fetchAbortController) {
+export function requestServerStatus() {
     return {
         type: REQUEST_SERVER_STATUS,
-        fetchAbortController
     };
 }
 
@@ -59,10 +58,9 @@ export function receiveServerStatus(status) {
     }
 }
 
-export function requestEnvConfig(fetchAbortController) {
+export function requestEnvConfig() {
     return {
         type: REQUEST_ENV_CONFIG,
-        fetchAbortController,
     };
 }
 
@@ -73,10 +71,9 @@ export function receiveEnvConfig(config) {
     };
 }
 
-export function requestSetLicensing(fetchAbortController) {
+export function requestSetLicensing() {
     return {
         type: REQUEST_SET_LICENSING,
-        fetchAbortController
     };
 }
 
@@ -87,10 +84,9 @@ export function receiveSetLicensing(status) {
     };
 }
 
-export function requestTerminateIntegration(fetchAbortController) {
+export function requestTerminateIntegration() {
     return {
         type: REQUEST_TERMINATE_INTEGRATION,
-        fetchAbortController
     };
 }
 
@@ -102,10 +98,9 @@ export function receiveTerminateIntegration(status) {
     };
 }
 
-export function requestStopMatlab(fetchAbortController) {
+export function requestStopMatlab() {
     return {
         type: REQUEST_STOP_MATLAB,
-        fetchAbortController
     };
 }
 
@@ -116,10 +111,9 @@ export function receiveStopMatlab(status) {
     };
 }
 
-export function requestStartMatlab(fetchAbortController) {
+export function requestStartMatlab() {
     return {
         type: REQUEST_START_MATLAB,
-        fetchAbortController
     };
 }
 
@@ -136,60 +130,52 @@ export function receiveError(error) {
     return {
         type: RECEIVE_ERROR,
         error
-    };
+    }
 }
+
+export async function fetchWithTimeout(dispatch, resource, options={}, timeout=10000){    
+    // Create an abort controller for this request and set a timeout for it to abort.
+    const controller = new AbortController();  
+    const id = setTimeout(() => controller.abort(), timeout);
+
+    try {
+        const response = await fetch(resource, {
+            ...options,
+            signal: controller.signal
+        });
+        clearTimeout(id);
+
+        return response;
+    } catch(error) {
+        // If AbortController is aborted, then AbortError exception is raised due to time out.
+        if (error.name === "AbortError"){
+            dispatch(receiveError(`HTTP request for resource ${resource} timed out.`))
+        } else {
+            dispatch(receiveError("Communication with server failed.")) 
+        }
+    }
+} 
+
 
 export function fetchServerStatus() {
     return async function (dispatch, getState) {        
 
-        // Abort any previous request which is in-flight
-        getFetchAbortController(getState()).abort();
+        dispatch(requestServerStatus());
+        const response = await fetchWithTimeout(dispatch, './get_status', {}, 10000)
+        const data = await response.json();
+        dispatch(receiveServerStatus(data));
 
-        // Create new AbortController
-        const abortController = new AbortController();
-
-        // Set this request as in-flight
-        dispatch(requestServerStatus(abortController));
-
-        try {
-            const res = await fetch('./get_status', {
-                signal: abortController.signal
-            });
-            const data = await res.json();
-		    dispatch(receiveServerStatus(data));
-            
-        } catch (e) {
-            dispatch(
-                receiveError('Communication with server failed.')
-            );
-        }     
-
-        if(!selectHasFetchedEnvConfig(getState())) {
-            return dispatch(fetchEnvConfig())
-        }
     }
 }
 
 export function fetchEnvConfig() {
     return async function (dispatch, getState) {
-        //Abort any previous request which is in-flight
-        getFetchAbortController(getState()).abort();
-
-        //Create new AbortController
-        const abortController = new AbortController();
-
-        //Set this request as in-flight
-        dispatch(requestEnvConfig(abortController));
         
-        try {
-            const res = await fetch('./get_env_config', {
-                signal: abortController.signal,
-            });
-            const data = await res.json();
-            return dispatch(receiveEnvConfig(data));
-        } catch (e) {
-            dispatch(receiveError('Failed to fetch Env config.'));
-        }
+        dispatch(requestEnvConfig());
+        const response = await fetchWithTimeout(dispatch, './get_env_config', {}, 10000);
+        const data = await response.json();
+        dispatch(receiveEnvConfig(data));
+
     };
 }
 
@@ -197,32 +183,21 @@ export function fetchEnvConfig() {
 export function fetchSetLicensing(info) {
     return async function (dispatch, getState) {
 
-        // Abort any previous request which is in-flight
-        getFetchAbortController(getState()).abort();
-
-        // Create new AbortController
-        const abortController = new AbortController();
-
-        // Set this request as in-flight
-        dispatch(requestSetLicensing(abortController));
-
-        try {
-            const res = await fetch('./set_licensing_info', {
-                method: 'PUT',
-                mode: 'same-origin',
-                cache: 'no-cache',
-                credentials: 'same-origin',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(info),
-                signal: abortController.signal
-            });
-            const data = await res.json();
-            return dispatch(receiveSetLicensing(data));
-        } catch (e) {
-            dispatch( receiveError('Communication with server failed.'));
+        const options =  {
+            method: 'PUT',
+            mode: 'same-origin',
+            cache: 'no-cache',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(info),
         }
+
+        dispatch(requestSetLicensing());
+        const response = await fetchWithTimeout(dispatch, './set_licensing_info', options, 15000);
+        const data = await response.json();
+        dispatch(receiveSetLicensing(data));
 
     }
 }
@@ -230,28 +205,17 @@ export function fetchSetLicensing(info) {
 export function fetchUnsetLicensing() {
     return async function (dispatch, getState) {
 
-        // Abort any previous request which is in-flight
-        getFetchAbortController(getState()).abort();
-
-        // Create new AbortController
-        const abortController = new AbortController();
-
-        // Set this request as in-flight
-        dispatch(requestSetLicensing(abortController));
-
-        try {
-            const res = await fetch('./set_licensing_info', {
-                method: 'DELETE',
-                mode: 'same-origin',
-                cache: 'no-cache',
-                credentials: 'same-origin',
-                signal: abortController.signal
-            });
-            const data = await res.json();
-            return dispatch(receiveSetLicensing(data));
-        } catch (e) {
-            dispatch( receiveError('Communication with server failed.'));
+        const options =  {
+            method: 'DELETE',
+            mode: 'same-origin',
+            cache: 'no-cache',
+            credentials: 'same-origin',
         }
+
+        dispatch(requestSetLicensing());
+        const response = await fetchWithTimeout(dispatch, './set_licensing_info', options, 15000);
+        const data = await response.json();
+        dispatch(receiveSetLicensing(data));
 
     }
 }
@@ -259,28 +223,17 @@ export function fetchUnsetLicensing() {
 export function fetchTerminateIntegration() {
     return async function (dispatch, getState) {
 
-        // Abort any previous request which is in-flight
-        getFetchAbortController(getState()).abort();
-
-        // Create new AbortController
-        const abortController = new AbortController();
-
-        // Set this request as in-flight
-        dispatch(requestTerminateIntegration(abortController));
-
-        try {
-            const res = await fetch('./terminate_integration', {
-                method: 'DELETE',
-                mode: 'same-origin',
-                cache: 'no-cache',
-                credentials: 'same-origin',
-                signal: abortController.signal
-            });
-            const data = await res.json();
-            return dispatch(receiveTerminateIntegration(data));
-        } catch (e) {
-            dispatch( receiveError('Communication with server failed.'));
+        const options =  {
+            method: 'DELETE',
+            mode: 'same-origin',
+            cache: 'no-cache',
+            credentials: 'same-origin',
         }
+
+        dispatch(requestTerminateIntegration());
+        const response = await fetchWithTimeout(dispatch, './terminate_integration', options, 15000);
+        const data = await response.json();
+        dispatch(receiveTerminateIntegration(data));
 
     }
 }
@@ -288,28 +241,17 @@ export function fetchTerminateIntegration() {
 export function fetchStopMatlab() {
     return async function (dispatch, getState) {
 
-        // Abort any previous request which is in-flight
-        getFetchAbortController(getState()).abort();
-
-        // Create new AbortController
-        const abortController = new AbortController();
-
-        // Set this request as in-flight
-        dispatch(requestStopMatlab(abortController));
-
-        try {
-            const res = await fetch('./stop_matlab', {
-                method: 'DELETE',
-                mode: 'same-origin',
-                cache: 'no-cache',
-                credentials: 'same-origin',
-                signal: abortController.signal
-            });
-            const data = await res.json();
-            return dispatch(receiveStopMatlab(data));
-        } catch (e) {
-            dispatch( receiveError('Communication with server failed.'));
+        const options =  {
+            method: 'DELETE',
+            mode: 'same-origin',
+            cache: 'no-cache',
+            credentials: 'same-origin',
         }
+
+        dispatch(requestStopMatlab());
+        const response = await fetchWithTimeout(dispatch, './stop_matlab', options, 15000);
+        const data = await response.json();
+        dispatch(receiveStopMatlab(data));
 
     }
 }
@@ -317,32 +259,21 @@ export function fetchStopMatlab() {
 export function fetchStartMatlab() {
     return async function (dispatch, getState) {
 
-        // Abort any previous request which is in-flight
-        getFetchAbortController(getState()).abort();
-
-        // Create new AbortController
-        const abortController = new AbortController();
-
-        // Set this request as in-flight
-        dispatch(requestStartMatlab(abortController));
-
-        try {
-            const res = await fetch('./start_matlab', {
-                method: 'PUT',
-                mode: 'same-origin',
-                cache: 'no-cache',
-                credentials: 'same-origin',
-                signal: abortController.signal,
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({}),
-            });
-            const data = await res.json();
-            return dispatch(receiveStartMatlab(data));
-        } catch (e) {
-            dispatch( receiveError('Communication with server failed.'));
+        const options =  {
+            method: 'PUT',
+            mode: 'same-origin',
+            cache: 'no-cache',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({}),
         }
+
+        dispatch(requestStartMatlab());
+        const response = await fetchWithTimeout(dispatch, './start_matlab', options, 15000);
+        const data = await response.json();
+        dispatch(receiveStartMatlab(data));
 
     }
 }

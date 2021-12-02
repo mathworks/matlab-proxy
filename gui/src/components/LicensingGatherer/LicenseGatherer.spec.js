@@ -22,7 +22,6 @@ describe('LicenseGatherer component', () => {
         isFetching: false,
         hasFetched: true,
         isSubmitting: false,
-        fetchAbortController: new AbortController(),
         fetchFailCount: 0,
         wsEnv: 'abcd',
       },

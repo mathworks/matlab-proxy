@@ -25,7 +25,6 @@ describe("OverlayTrigger Component", () => {
         isFetching: false,
         hasFetched: true,
         isSubmitting: false,
-        fetchAbortController: new AbortController(),
         fetchFailCount: 0,
       },
       loadUrl: null,

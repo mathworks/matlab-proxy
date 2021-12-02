@@ -15,7 +15,6 @@ describe('reducers', () => {
     genericAction = {
       type: '',
       error: 'Licensing Error',
-      fetchAbortController: new AbortController(),
       loadUrl: '/',
       hidden: true,
       x: 12,
@@ -289,26 +288,6 @@ describe('reducers', () => {
       action = _.cloneDeep(genericAction);
       expect(reducers.isSubmitting(undefined, action)).toBe(false);
       expect(reducers.isSubmitting(true, action)).toBe(true);
-    });
-  });
-
-  describe('fetchAbortController', () => {
-
-    it('should return a AbortController object defined within the action object', () => {
-      for (let i = 0; i < requestActions.length; i++) {
-        action = _.cloneDeep(genericAction);
-        action.type = requestActions[i];
-        expect(reducers.fetchAbortController(undefined, action)).toStrictEqual(
-          action.fetchAbortController
-        );
-      }
-    });
-
-    // Check default state
-    it('should return new AbortController object in default case', () => {
-      action = _.cloneDeep(genericAction);
-      const abortController = new AbortController();
-      expect(reducers.fetchAbortController(abortController, action)).toEqual(abortController);
     });
   });
 

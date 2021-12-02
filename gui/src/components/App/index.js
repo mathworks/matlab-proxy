@@ -22,10 +22,12 @@ import {
     selectError,
     selectLoadUrl,
     selectIsConnectionError,
+    selectHasFetchedEnvConfig,
 } from '../../selectors';
 import {
     setOverlayVisibility,
     fetchServerStatus,
+    fetchEnvConfig,
 } from '../../actionCreators';
 
 function App() {
@@ -34,6 +36,7 @@ function App() {
     const overlayVisible = useSelector(selectOverlayVisible);
     const fetchStatusPeriod = useSelector(selectFetchStatusPeriod);
     const hasFetchedServerStatus = useSelector(selectHasFetchedServerStatus);
+    const hasFetchedEnvConfig = useSelector(selectHasFetchedEnvConfig);
     const licensingProvided = useSelector(selectLicensingProvided);
     const matlabUp = useSelector(selectMatlabUp);
     const error = useSelector(selectError);
@@ -90,6 +93,14 @@ function App() {
     } else if (error && error.type === "MatlabInstallError") {
         dialog = <Error message={error.message} />;
     }
+
+    useEffect(() => {
+        // Initial fetch environment configuration
+        if (!hasFetchedEnvConfig) {
+            dispatch(fetchEnvConfig());
+        }
+        
+    }, [dispatch, hasFetchedEnvConfig]);
 
     useEffect(() => {
         // Initial fetch server status

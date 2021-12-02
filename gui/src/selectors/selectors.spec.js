@@ -24,7 +24,6 @@ describe('selectors', () => {
           emailAddress: 'abc@mathworks.com',
         },
         fetchFailCount: 2,
-        fetchAbortController: new AbortController(),
       },
     };
 

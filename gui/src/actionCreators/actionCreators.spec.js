@@ -26,21 +26,15 @@ describe.each([
 
 
   describe.each([
-  [actionCreators.requestServerStatus, {type:actions.REQUEST_SERVER_STATUS, fetchAbortController:new AbortController()}],
-  [actionCreators.requestSetLicensing, {type:actions.REQUEST_SET_LICENSING, fetchAbortController:new AbortController()}],
-  [actionCreators.requestStopMatlab, {type:actions.REQUEST_STOP_MATLAB, fetchAbortController:new AbortController()}],
-  [actionCreators.requestStartMatlab, {type:actions.REQUEST_START_MATLAB, fetchAbortController:new AbortController()}],
-  [actionCreators.requestTerminateIntegration, {type:actions.REQUEST_TERMINATE_INTEGRATION, fetchAbortController:new AbortController()}],
+  [actionCreators.requestServerStatus, {type:actions.REQUEST_SERVER_STATUS}],
+  [actionCreators.requestSetLicensing, {type:actions.REQUEST_SET_LICENSING}],
+  [actionCreators.requestStopMatlab, {type:actions.REQUEST_STOP_MATLAB}],
+  [actionCreators.requestStartMatlab, {type:actions.REQUEST_START_MATLAB}],
+  [actionCreators.requestTerminateIntegration, {type:actions.REQUEST_TERMINATE_INTEGRATION}],
   ])('Test Request actionCreators', (method, expectedAction) => {
 
-    let abortController;
-    beforeAll(() => {
-      abortController = new AbortController();
-    });
-
-    test(`check if an action of type  ${expectedAction.type} is returned with an AbortController when method actionCreator.${method.name}() is called`, () => {
-        expect(method(abortController)).toEqual(expectedAction);
-
+    test(`check if an action of type  ${expectedAction.type} is returned when method actionCreator.${method.name}() is called`, () => {
+        expect(method()).toEqual(expectedAction);
     });
   });
 
@@ -55,13 +49,12 @@ describe.each([
 
     test(`check if an action of type  ${expectedAction.type} is returned when method actionCreator.${method.name}() is called`, () => {
         expect(method(input)).toEqual(expectedAction);
-
     });
   });
 
 
 
-describe('Test sync actionCreators using redux-thunk', () => {
+describe('Test Sync actionCreators', () => {
   it('should dispatch action of type RECEIVE_SERVER_STATUS ', () => {
     const store = mockStore({
       overlayVisibility: false,
@@ -75,8 +68,7 @@ describe('Test sync actionCreators using redux-thunk', () => {
         licensingInfo: {
           type: 'NLM',
           connectionString: 'abc@nlm',
-        },
-        fetchAbortController: new AbortController(),
+        }
       },
     });
 
@@ -94,13 +86,11 @@ describe('Test sync actionCreators using redux-thunk', () => {
 
     const receivedActions = store.getActions();
 
-    expect(receivedActions.map((element) => element.type)).toEqual(
-      expectedActionTypes
-    );
+    expect(receivedActions.map((element) => element.type)).toEqual( expectedActionTypes);
   });
 });
 
-describe('async actionCreators', () => {
+describe('Test fetchWithTimeout method', () => {
   let store;
   beforeEach(() => {
     store = mockStore({
@@ -115,7 +105,6 @@ describe('async actionCreators', () => {
         isSubmitting: false,
         hasFetched: false,
         fetchFailCount: 0,
-        fetchAbortController: new AbortController(),
       },
     });
   });
@@ -124,7 +113,108 @@ describe('async actionCreators', () => {
     fetchMock.restore();
   });
 
-  it('dispatches REQUEST_SERVER_STATUS,RECEIVE_SERVER_STATUS, REQUEST_ENV_CONFIG and RECEIVE_ENV_CONFIG when fetching status', () => {
+  it('should fetch requested data without raising an exception or dispatching any action', async () => {
+    fetchMock.getOnce('/get_status', {
+      body: {
+        matlab: {
+          status: 'down',
+        },
+        licensing: {},
+      },
+      headers: { 'content-type': 'application/json' },
+    });    
+
+    const response = await actionCreators.fetchWithTimeout(store.dispatch, '/get_status', {}, 10000);
+    const body = await response.json()
+    
+    expect(body).not.toBeNull();  
+  });
+
+  it('dispatches RECIEVE_ERROR when no response is received', async () => {
+
+    const expectedActions = [
+      actions.RECEIVE_ERROR,
+    ];
+
+    try {
+      const response = await actionCreators.fetchWithTimeout(store.dispatch, '/get_status', {}, 100);
+    } catch(error) {
+      expect(error).toBeInstanceOf(TypeError)
+      const received = store.getActions();
+      expect(received.map((a) => a.type)).toEqual(expectedActions);
+    }
+  });
+
+
+  it('should send a delayed response after timeout expires, thereby triggering abort() method of AbortController', async () => {
+
+    const timeout = 10
+    const delay = (response, after=500) => () => new Promise(resolve => setTimeout(resolve, after)).then(() => response);
+
+    // Send a delayed response, well after the timeout for the request has expired.
+    // This should trigger the abort() method of the AbortController()
+    fetchMock.mock('/get_status', delay(200, timeout + 100)); 
+
+    const abortSpy = jest.spyOn(AbortController.prototype, 'abort');
+    const expectedActions = [
+      actions.RECEIVE_ERROR,
+    ];
+ 
+    await actionCreators.fetchWithTimeout(store.dispatch, '/get_status', {}, timeout);    
+
+    expect(abortSpy).toBeCalledTimes(1);
+    const received = store.getActions();
+    expect(received.map((a) => a.type)).toEqual(expectedActions);
+  });
+
+  it('should send a delayed response before timeout expires, thereby not triggering abort() method of AbortController', async () => {
+
+    const timeout = 1000
+    const delay = (response, after=500) => () => new Promise(resolve => setTimeout(resolve, after)).then(() => response);
+
+    // Send a delayed response, well after the timeout for the request has expired.
+    // This will trigger the abort() method of the AbortController()
+    fetchMock.mock('/get_status', delay(200, timeout - 100)); 
+
+    const abortSpy = jest.spyOn(AbortController.prototype, 'abort');
+
+    // should not have dispatched any actions if request-response cycle is successful in fetchWithTimeout method
+    const expectedActions = [];
+ 
+    const response = await actionCreators.fetchWithTimeout(store.dispatch, '/get_status', {}, timeout);    
+    const received = store.getActions();
+
+    expect(abortSpy).not.toBeCalledTimes(1);
+    expect(response.ok).toBe(true);
+    expect(received.map((a) => a.type)).toEqual(expectedActions);
+  });
+
+});
+
+describe('Test Async actionCreators', () => {
+  let store;
+  beforeEach(() => {
+    store = mockStore({
+      error: null,
+      serverStatus: {
+        matlabVersion: 'R2020b',
+        licensingInfo: {
+          type: 'NLM',
+          connectionString: 'abc@nlm',
+        },
+        isFetching: false,
+        isSubmitting: false,
+        hasFetched: false,
+        fetchFailCount: 0,
+      },
+    });
+  });
+
+  afterEach(() => {
+    fetchMock.restore();
+  });
+
+  it('dispatches REQUEST_SERVER_STATUS, RECEIVE_SERVER_STATUS when fetching status', () => {
     fetchMock.getOnce('/get_status', {
       body: {
         matlab: {
@@ -135,25 +225,33 @@ describe('async actionCreators', () => {
       headers: { 'content-type': 'application/json' },
     });
 
+    const expectedActions = [
+      actions.REQUEST_SERVER_STATUS,
+      actions.RECEIVE_SERVER_STATUS,
+    ];
+
+    return store.dispatch(actionCreators.fetchServerStatus()).then(() => {
+      const received = store.getActions();
+      expect(received.map((a) => a.type)).toEqual(expectedActions);
+    });
+  });
+
+  it('dispatches REQUEST_ENV_CONFIG, RECEIVE_ENV_CONFIG when fetching environment configuration', () => {
     fetchMock.getOnce('/get_env_config', {
       body: {
-        "config": {
-          "url": "https://github.com/mathworks/matlab-web-proxy/",
-          "targetEnv": "MATLAB_WEB_DESKTOP",
-          "mhlm_context": "jupyter",
-        }
+        "doc_url": "https://github.com/mathworks/matlab-web-proxy/",
+        "extension_name": "default_configuration_matlab_desktop_proxy",
+        "extension_name_short_description": "MATLAB Web Desktop",
       },
       headers: { 'content-type': 'application/json' },
     });
 
     const expectedActions = [
-      actions.REQUEST_SERVER_STATUS,
-      actions.RECEIVE_SERVER_STATUS,
       actions.REQUEST_ENV_CONFIG,
-      actions.RECEIVE_ENV_CONFIG
+      actions.RECEIVE_ENV_CONFIG,
     ];
 
-    return store.dispatch(actionCreators.fetchServerStatus()).then(() => {
+    return store.dispatch(actionCreators.fetchEnvConfig()).then(() => {
       const received = store.getActions();
       expect(received.map((a) => a.type)).toEqual(expectedActions);
     });
@@ -239,31 +337,7 @@ describe('async actionCreators', () => {
       });
   });
 
-  it('should dispatch REQUEST_STOP_MATLAB AND RECEIVE_STOP_MATLAB when we stop matlab', () => {
-    fetchMock.deleteOnce('./stop_matlab', {
-      body: {
-        matlab: {
-          status: 'down',
-        },
-        licensing: null,
-      },
-      headers: { 'content-type': 'application/json' },
-    });
-
-    const expectedActionTypes = [
-      actions.REQUEST_STOP_MATLAB,
-      actions.RECEIVE_STOP_MATLAB,
-    ];
-
-    return store.dispatch(actionCreators.fetchStopMatlab()).then(() => {
-      const receivedActions = store.getActions();
-      expect(receivedActions.map((action) => action.type)).toEqual(
-        expectedActionTypes
-      );
-    });
-  });
-
-  it('should dispatch REQUEST_STOP_MATLAB AND RECEIVE_STOP_MATLAB when we stop matlab', () => {
+    it('should dispatch REQUEST_STOP_MATLAB AND RECEIVE_STOP_MATLAB when we stop matlab', () => {
     fetchMock.putOnce('./start_matlab', {
       body: {
         matlab: {
