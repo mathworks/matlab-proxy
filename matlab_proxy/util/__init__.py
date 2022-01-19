@@ -53,9 +53,17 @@ def prepare_site(app, runner):
         [TCPSite]: A TCPSite on which the integration will start.
     """
     port = app["settings"]["app_port"]
+    # SSL_CONFIG validated and inserted in settings.py
+    ssl_context = app["settings"]["ssl_context"]
+
     if port:
-        logger.info(f"Using {mwi_env.get_env_name_app_port()} to launch the server")
-        site = web.TCPSite(runner, host=app["settings"]["host_interface"], port=port)
+        logger.debug(f"Using {mwi_env.get_env_name_app_port()} to launch the server")
+        site = web.TCPSite(
+            runner,
+            host=app["settings"]["host_interface"],
+            port=port,
+            ssl_context=ssl_context,
+        )
 
     else:
         while True:
@@ -64,9 +72,12 @@ def prepare_site(app, runner):
                 s.bind(("", 0))
                 p = s.getsockname()[1]
                 s.close()
-                logger.info(f"Trying to launch the site on port {p}")
+                logger.debug(f"Trying to launch the site on port {p}")
                 site = web.TCPSite(
-                    runner, host=app["settings"]["host_interface"], port=p
+                    runner,
+                    host=app["settings"]["host_interface"],
+                    port=p,
+                    ssl_context=ssl_context,
                 )
                 break
             except:

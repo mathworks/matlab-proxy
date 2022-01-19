@@ -1,15 +1,21 @@
 # Copyright 2020-2021 The MathWorks, Inc.
 
-import os
-from pathlib import Path
-import tempfile
-import xml.etree.ElementTree as ET
-import uuid
-import socket
-import shutil
 import matlab_proxy
-from matlab_proxy.util import mwi_custom_http_headers, mwi_validators
+import os
+import shutil
+import socket
+import ssl
+import sys
+import tempfile
+import uuid
+import xml.etree.ElementTree as ET
+
 from matlab_proxy import mwi_environment_variables as mwi_env
+from matlab_proxy.util import mwi_custom_http_headers, mwi_validators
+from matlab_proxy.util import mwi_logger
+from pathlib import Path
+
+logger = mwi_logger.get()
 
 
 def get_matlab_path():
@@ -65,6 +71,7 @@ def get_dev_settings(config):
         "mwa_login": f"https://login{ws_env_suffix}.mathworks.com",
         "mwi_custom_http_headers": mwi_custom_http_headers.get(),
         "env_config": mwi_validators.validate_env_config(config),
+        "ssl_context": None,
     }
 
 
@@ -110,6 +117,11 @@ def get(config=matlab_proxy.get_default_config_name(), dev=False):
         )
         matlab_path = get_matlab_path()
         ws_env, ws_env_suffix = get_ws_env_settings()
+
+        ssl_key_file, ssl_cert_file = mwi_validators.validate_ssl_key_and_cert_file(
+            os.getenv(mwi_env.get_env_name_ssl_key_file(), None),
+            os.getenv(mwi_env.get_env_name_ssl_cert_file(), None),
+        )
         return {
             "matlab_path": matlab_path,
             "matlab_version": get_matlab_version(matlab_path),
@@ -141,6 +153,9 @@ def get(config=matlab_proxy.get_default_config_name(), dev=False):
             "mwa_login": f"https://login{ws_env_suffix}.mathworks.com",
             "mwi_custom_http_headers": mwi_custom_http_headers.get(),
             "env_config": mwi_validators.validate_env_config(config),
+            "ssl_context": get_ssl_context(
+                ssl_cert_file=ssl_cert_file, ssl_key_file=ssl_key_file
+            ),
         }
 
 
@@ -201,3 +216,32 @@ def get_test_temp_dir():
     test_temp_dir = Path(tempfile.gettempdir()) / "MWI" / "tests"
     test_temp_dir.mkdir(parents=True, exist_ok=True)
     return test_temp_dir
+
+
+def get_ssl_context(ssl_cert_file, ssl_key_file):
+    """Creates an SSL CONTEXT for use with the TCP Site"""
+
+    # The certfile string must be the path to a single file in PEM format containing the
+    # certificate as well as any number of CA certificates needed to establish the certificate’s authenticity.
+    # The keyfile string, if present, must point to a file containing the private key in.
+    # Otherwise the private key will be taken from certfile as well.
+    import traceback
+
+    if ssl_cert_file != None:
+        try:
+            ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            ssl_context.load_cert_chain(ssl_cert_file, ssl_key_file)
+            logger.debug(f"Using SSL certification!")
+        except Exception as e:
+            # Something was wrong with the certificates provided
+            logger.error("SSL certificates provided are invalid. Aborting...")
+            traceback.print_exc()
+            logger.info("==== Fatal error : ===")
+            print(e)
+            # printing stack trace
+            logger.info("======================")
+            sys.exit(1)
+    else:
+        ssl_context = None
+
+    return ssl_context

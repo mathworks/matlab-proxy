@@ -15,6 +15,7 @@ import socket
 import errno
 import pkg_resources
 import matlab_proxy
+import os
 from matlab_proxy.util import mwi_logger
 from matlab_proxy import mwi_environment_variables as mwi_env
 
@@ -37,7 +38,6 @@ def validate_mlm_license_file(nlm_conn_str):
         String: Returns the same argument passed to this function if its valid.
     """
     import re
-    import os
     from .mwi_exceptions import NetworkLicensingError
 
     if nlm_conn_str is None:
@@ -90,7 +90,7 @@ def validate_app_port_is_free(port):
     """
     # If port is None, at launch, site will use a randomnly allocated port.
     if port is None:
-        logger.info(
+        logger.debug(
             f"Environment variable {mwi_env.get_env_name_app_port()} was not set. Will use a random port at launch."
         )
         return port
@@ -167,7 +167,7 @@ def validate_env_config(config):
                 logger.error(f"{key} missing in the provided {config} configuration")
                 sys.exit(1)
 
-        logger.info(f"Successfully validated provided {config} configuration")
+        logger.debug(f"Successfully validated provided {config} configuration")
         return env_config
     else:
         logger.error(
@@ -191,3 +191,49 @@ def __get_configs():
         configs[entry_point.name.lower()] = entry_point.load()
 
     return configs
+
+
+def validate_ssl_cert_file(a_ssl_cert_file):
+    """Ensures that its a valid readable file"""
+
+    # Empty strings are valid inputs
+    if a_ssl_cert_file:
+        # String is not empty, check to see if the file exists
+        if not os.path.isfile(a_ssl_cert_file):
+            logger.error(f"MWI_SSL_CERT_FILE is not a valid file: {a_ssl_cert_file}")
+            sys.exit(1)
+
+    # string is either empty, or is a valid file on disk
+    return a_ssl_cert_file
+
+
+def validate_ssl_key_and_cert_file(a_ssl_key_file, a_ssl_cert_file):
+    """Ensures that its a valid readable file"""
+
+    if a_ssl_cert_file is None and a_ssl_key_file is None:
+        # Both values are None, this is acceptable.
+        return a_ssl_key_file, a_ssl_cert_file
+
+    # Implies atleast one value is not None.
+
+    # Cert file is either empty or valid file.
+    cert_file = validate_ssl_cert_file(a_ssl_cert_file=a_ssl_cert_file)
+
+    if cert_file is None and a_ssl_key_file is not None:
+        logger.error(f"MWI_SSL_CERT_FILE must be provided to use the MWI_SSL_KEY_FILE")
+        sys.exit(1)
+
+    if a_ssl_key_file is None and cert_file is not None:
+        logger.info(
+            f"MWI_SSL_KEY_FILE is not provided, ensure that your MWI_SSL_CERT_FILE : '{cert_file}' contains a private key"
+        )
+
+    if a_ssl_key_file:
+        if not os.path.isfile(a_ssl_key_file):
+            logger.error(f"MWI_SSL_KEY_FILE is not a valid file: {a_ssl_key_file}")
+            sys.exit(1)
+
+    logger.info(
+        f"SSL Keys provided were: MWI_SSL_CERT_FILE: {a_ssl_cert_file} & MWI_SSL_KEY_FILE: {a_ssl_key_file}"
+    )
+    return a_ssl_key_file, a_ssl_cert_file

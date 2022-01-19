@@ -582,8 +582,8 @@ def main():
 
     loop = util.add_signal_handlers(loop)
 
-    logger.info("Starting MATLAB proxy app")
-    logger.info(
+    logger.debug("Starting MATLAB proxy app")
+    logger.debug(
         f' with base_url: {app["settings"]["base_url"]} and app_port:{app["settings"]["app_port"]}.'
     )
 
@@ -593,8 +593,14 @@ def main():
         else f'MATLAB Integration for {app["state"].settings["env_config"]["extension_name_short_description"]}'
     )
 
+    ssl_context = app["settings"]["ssl_context"]
+    if ssl_context != None:
+        access_protocol = "https"
+    else:
+        access_protocol = "http"
+
     logger.info(
-        f'\nThe {prefix} can be accessed on http://localhost:{app["settings"]["app_port"]}{app["settings"]["base_url"]}/index.html'
+        f'\n================================\nThe {prefix} can be accessed on {access_protocol}://localhost:{app["settings"]["app_port"]}{app["settings"]["base_url"]}/index.html\n================================'
     )
 
     loop.run_forever()

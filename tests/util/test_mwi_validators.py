@@ -137,3 +137,49 @@ def test_validate_base_url_no_prefix_error():
     with pytest.raises(SystemExit) as e:
         mwi_validators.validate_base_url("matlab/")
     assert e.value.code == 1
+
+
+def test_validate_mwi_ssl_key_and_cert_file(monkeypatch):
+    """Check if port@hostname passes validation"""
+    ssl_cert_file_env_name = mwi_env.get_env_name_ssl_cert_file()
+    ssl_key_file_env_name = mwi_env.get_env_name_ssl_key_file()
+    fd, path = tempfile.mkstemp()
+    monkeypatch.setenv(ssl_cert_file_env_name, path)
+    monkeypatch.setenv(ssl_key_file_env_name, path)
+    try:
+        # Verify that if KEY and CERT are provided
+        key_file, cert_file = mwi_validators.validate_ssl_key_and_cert_file(
+            os.getenv(ssl_key_file_env_name), os.getenv(ssl_cert_file_env_name)
+        )
+        assert key_file == str(path)
+        assert cert_file == str(path)
+
+        # Verify that KEY can be None
+        key_file, cert_file = mwi_validators.validate_ssl_key_and_cert_file(
+            None, os.getenv(ssl_cert_file_env_name)
+        )
+        assert key_file == None
+        assert cert_file == str(path)
+
+        # Verify that if KEY is provided, CERT must also be provided
+        with pytest.raises(SystemExit) as e:
+            mwi_validators.validate_ssl_key_and_cert_file(
+                os.getenv(ssl_key_file_env_name), None
+            )
+        assert e.value.code == 1
+
+        # Verify that KEY is valid file location
+        with pytest.raises(SystemExit) as e:
+            mwi_validators.validate_ssl_key_and_cert_file(
+                "/file/does/not/exist", os.getenv(ssl_cert_file_env_name)
+            )
+        assert e.value.code == 1
+
+        # Verify that KEY is valid file location
+        with pytest.raises(SystemExit) as e:
+            mwi_validators.validate_ssl_key_and_cert_file(
+                os.getenv(ssl_key_file_env_name), "/file/does/not/exist"
+            )
+        assert e.value.code == 1
+    finally:
+        os.remove(path)

@@ -23,7 +23,7 @@ def get():
 
     # If the environment variable is not present
     if custom_headers_path is None:
-        logger.info(
+        logger.debug(
             f"Environment variable {env_var} is not set, hence no custom HTTP headers are applied."
         )
         return dict()

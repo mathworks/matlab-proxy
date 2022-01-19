@@ -94,3 +94,13 @@ def is_testing_mode_enabled():
 def is_web_logging_enabled():
     """Returns true if the web logging is required to be enabled"""
     return os.environ.get(get_env_name_web_logging_enabled(), "false").lower() == "true"
+
+
+def get_env_name_ssl_cert_file():
+    """Specifies the certificate to be used by webserver."""
+    return "MWI_SSL_CERT_FILE"
+
+
+def get_env_name_ssl_key_file():
+    """Specifies the key used by webserver to sign the ssl certificate."""
+    return "MWI_SSL_KEY_FILE"

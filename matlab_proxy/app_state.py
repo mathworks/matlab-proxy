@@ -105,8 +105,8 @@ class AppState:
         # NLM Connection String set in environment
         if self.settings["nlm_conn_str"] is not None:
             nlm_licensing_str = self.settings["nlm_conn_str"]
-            logger.info(f"Found NLM:[{nlm_licensing_str}] set in environment")
-            logger.info(f"Using NLM string to connect ... ")
+            logger.debug(f"Found NLM:[{nlm_licensing_str}] set in environment")
+            logger.debug(f"Using NLM string to connect ... ")
             self.licensing = {
                 "type": "nlm",
                 "conn_str": nlm_licensing_str,
@@ -116,7 +116,7 @@ class AppState:
         # If NLM connection string is not present, then look for persistent LNU info
         elif self.__get_cached_licensing_file().exists():
             with open(self.__get_cached_licensing_file(), "r") as f:
-                logger.info("Found cached licensing information...")
+                logger.debug("Found cached licensing information...")
                 try:
                     # Load can throw if the file is empty for some reason.
                     licensing = json.loads(f.read())
@@ -151,7 +151,7 @@ class AppState:
                                 await self.__update_and_persist_licensing()
                             )
                             if successful_update:
-                                logger.info("Successful re-use of cached information.")
+                                logger.debug("Successful re-use of cached information.")
                         else:
                             self.__reset_and_delete_cached_licensing()
                     else:
@@ -236,7 +236,7 @@ class AppState:
 
             successful_update = await self.__update_and_persist_licensing()
             if successful_update:
-                logger.info("Login successful, persisting login information.")
+                logger.debug("Login successful, persisting login information.")
 
         except OnlineLicensingError as e:
             self.error = e
@@ -348,7 +348,7 @@ class AppState:
             self.__delete_cached_licensing_file()
 
         elif self.licensing["type"] in ["mhlm", "nlm"]:
-            logger.info("Saving licensing information...")
+            logger.debug("Saving licensing information...")
             cached_licensing_file = self.__get_cached_licensing_file()
             cached_licensing_file.parent.mkdir(parents=True, exist_ok=True)
             with open(cached_licensing_file, "w") as f:
@@ -430,8 +430,8 @@ class AppState:
         self.matlab_ready_file, matlab_log_dir = mwi_connector.get_matlab_ready_file(
             self.matlab_port
         )
-        logger.info(f"MATLAB_LOG_DIR:{str(matlab_log_dir)}")
-        logger.info(f"MATLAB_READY_FILE:{str(self.matlab_ready_file)}")
+        logger.debug(f"MATLAB_LOG_DIR:{str(matlab_log_dir)}")
+        logger.debug(f"MATLAB_READY_FILE:{str(self.matlab_ready_file)}")
 
         # Configure the environment MATLAB needs to start
         matlab_env = os.environ.copy()
@@ -493,7 +493,7 @@ class AppState:
         logger.debug(f"Started Xvfb with PID={xvfb.pid} on DISPLAY={display_port}")
 
         # Start MATLAB Process
-        logger.info(f"Starting MATLAB on port {self.matlab_port}")
+        logger.debug(f"Starting MATLAB on port {self.matlab_port}")
         master, slave = pty.openpty()
         matlab = await asyncio.create_subprocess_exec(
             *self.settings["matlab_cmd"],
