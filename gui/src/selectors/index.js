@@ -111,9 +111,22 @@ export const selectOverlayVisible = createSelector(
 export const selectInformationDetails = createSelector(
     selectMatlabStatus,
     selectIsError,
-    (status, isError) => {
+    selectError,
+    (matlabStatus, isError, error) => {
 
-        switch (status) {
+        // Check for any errors on the front-end 
+        // to see if HTTP Requests are timing out.       
+        if(isError && error.statusCode === 408) {
+            return {
+                icon: 'warning',
+                alert: 'warning',
+                label: 'Unknown',                 
+            }    
+        }  
+
+
+        // Check status of MATLAB for errors
+        switch (matlabStatus) {
             case 'up':
                 return {
                     label: 'Running',
@@ -139,7 +152,7 @@ export const selectInformationDetails = createSelector(
                 }
                 return detail;
             default:
-                throw new Error(`Unknown MATLAB status: "${status}".`);
+                throw new Error(`Unknown MATLAB status: "${matlabStatus}".`);
         }
 
     }

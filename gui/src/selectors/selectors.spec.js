@@ -314,18 +314,25 @@ describe('Test derived selectors', () => {
     expect(selectInformationDetails(modifiedState).icon.toLowerCase()).toContain('error');
   })
 
+  test('When backend is not reachable, selectInformationDetails should return object with icon warning and label unknown', () => {
+    modifiedState = _.cloneDeep(state);
+    modifiedState.error = {message: 'HTTP request timed out', statusCode: 408};
+
+    expect(selectInformationDetails(modifiedState).icon.toLowerCase()).toContain('warning');
+    expect(selectInformationDetails(modifiedState).label.toLowerCase()).toContain('unknown');
+  })
+
   describe.each([
     ['up', 'running'],
     ['starting', 'starting'],
     ['down', 'not running'],
-
   ])(
       'SelectInformationDetails',
       (input, expected) => {
 
         beforeAll(() => {
           modifiedState = _.cloneDeep(state);
-          modifiedState.serverStatus.matlabStatus = input;
+          modifiedState.serverStatus.matlabStatus = input;          
         });
         test(`For MatlabStatus ${input}, selectInformationDetails should return object with label which contains: ${expected}`, () => {
           expect(selectInformationDetails(modifiedState).label.toLowerCase()).toContain(expected);

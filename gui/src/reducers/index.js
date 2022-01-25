@@ -192,6 +192,7 @@ export function error(state = null, action) {
         case RECEIVE_ERROR:
             return {
                 message: action.error,
+                statusCode: action?.statusCode,
                 logs: null
             };
         case RECEIVE_SERVER_STATUS:

@@ -126,10 +126,11 @@ export function receiveStartMatlab(status) {
 
 // TODO Probably no need for multiple actions/action creators for fetch
 // failures?
-export function receiveError(error) {
+export function receiveError(error, statusCode) {
     return {
         type: RECEIVE_ERROR,
-        error
+        error,
+        statusCode
     }
 }
 
@@ -149,9 +150,9 @@ export async function fetchWithTimeout(dispatch, resource, options={}, timeout=1
     } catch(error) {
         // If AbortController is aborted, then AbortError exception is raised due to time out.
         if (error.name === "AbortError"){
-            dispatch(receiveError(`HTTP request for resource ${resource} timed out.`))
+        dispatch(receiveError(`HTTP request for resource ${resource} timed out. Check your internet connection.`,408))
         } else {
-            dispatch(receiveError("Communication with server failed.")) 
+            dispatch(receiveError("Communication with server failed.",404)) 
         }
     }
 } 
