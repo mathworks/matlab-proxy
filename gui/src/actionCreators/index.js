@@ -150,7 +150,7 @@ export async function fetchWithTimeout(dispatch, resource, options={}, timeout=1
     } catch(error) {
         // If AbortController is aborted, then AbortError exception is raised due to time out.
         if (error.name === "AbortError"){
-        dispatch(receiveError(`HTTP request for resource ${resource} timed out. Check your internet connection.`,408))
+        dispatch(receiveError(`HTTP Error 408 - Request Timeout. Check your internet connection and, verify that the server is running.`,408))
         } else {
             dispatch(receiveError("Communication with server failed.",404)) 
         }
@@ -159,7 +159,7 @@ export async function fetchWithTimeout(dispatch, resource, options={}, timeout=1
 
 
 export function fetchServerStatus() {
-    return async function (dispatch, getState) {        
+    return async function (dispatch, getState) {
 
         dispatch(requestServerStatus());
         const response = await fetchWithTimeout(dispatch, './get_status', {}, 10000)
