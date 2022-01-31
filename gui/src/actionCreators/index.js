@@ -147,12 +147,13 @@ export async function fetchWithTimeout(dispatch, resource, options={}, timeout=1
         clearTimeout(id);
 
         return response;
-    } catch(error) {
+    } catch(err) {
+        const errorText = 'Check your internet connection and verify that the server is running.';
         // If AbortController is aborted, then AbortError exception is raised due to time out.
-        if (error.name === "AbortError"){
-        dispatch(receiveError(`HTTP Error 408 - Request Timeout. Check your internet connection and, verify that the server is running.`,408))
+        if (err.name === "AbortError" || err.name === 'TypeError') {        
+            dispatch(receiveError(`HTTP Error 408 - Request Timeout. ${errorText}`,408))
         } else {
-            dispatch(receiveError("Communication with server failed.",404)) 
+            dispatch(receiveError("Communication with server failed.", 500))
         }
     }
 } 
