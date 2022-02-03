@@ -3,6 +3,7 @@ import signal
 import socket
 import sys
 import argparse
+import os
 import matlab_proxy
 from aiohttp import web
 from matlab_proxy import mwi_environment_variables as mwi_env
@@ -110,3 +111,35 @@ def add_signal_handlers(loop):
         loop.add_signal_handler(signal, lambda: loop.stop())
 
     return loop
+
+
+def prettify(boundary_filler=" ", text_arr=[]):
+    """Prettify array of strings with borders for stdout
+
+    Args:
+        boundary_filler (str, optional): Upper and lower border filler for text. Defaults to " ".
+        text_arr (list, optional):The text array to prettify. Each element will be added to a newline. Defaults to [].
+
+    Returns:
+        [str]: Prettified String
+    """
+
+    size = os.get_terminal_size()
+    cols, _ = size.columns, size.lines
+
+    if any(len(text) > cols for text in text_arr):
+        result = ""
+        for text in text_arr:
+            result += text + "\n"
+        return result
+
+    upper = "\n" + "".ljust(cols, boundary_filler) + "\n" if len(text_arr) > 0 else ""
+    lower = "".ljust(cols, boundary_filler) if len(text_arr) > 0 else ""
+
+    content = ""
+    for text in text_arr:
+        content += text.center(cols) + "\n"
+
+    result = upper + content + lower
+
+    return result

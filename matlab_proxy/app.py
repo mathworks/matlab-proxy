@@ -587,12 +587,6 @@ def main():
         f' with base_url: {app["settings"]["base_url"]} and app_port:{app["settings"]["app_port"]}.'
     )
 
-    prefix = (
-        "MATLAB Proxy "
-        if os.environ.get(mwi_env.get_env_name_mhlm_context()) is None
-        else f'MATLAB Integration for {app["state"].settings["env_config"]["extension_name_short_description"]}'
-    )
-
     ssl_context = app["settings"]["ssl_context"]
     if ssl_context != None:
         access_protocol = "https"
@@ -600,7 +594,13 @@ def main():
         access_protocol = "http"
 
     logger.info(
-        f'\n================================\nThe {prefix} can be accessed on {access_protocol}://localhost:{app["settings"]["app_port"]}{app["settings"]["base_url"]}/index.html\n================================'
+        util.prettify(
+            boundary_filler="=",
+            text_arr=[
+                f"MATLAB can be accessed at:",
+                f'{access_protocol}://localhost:{app["settings"]["app_port"]}{app["settings"]["base_url"]}/index.html',
+            ],
+        )
     )
 
     loop.run_forever()
