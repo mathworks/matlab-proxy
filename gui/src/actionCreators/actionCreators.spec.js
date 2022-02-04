@@ -165,29 +165,7 @@ describe('Test fetchWithTimeout method', () => {
     expect(abortSpy).toBeCalledTimes(1);
     const received = store.getActions();
     expect(received.map((a) => a.type)).toEqual(expectedActions);
-  });
-
-  it('should send a delayed response before timeout expires, thereby not triggering abort() method of AbortController', async () => {
-
-    const timeout = 1000
-    const delay = (response, after=500) => () => new Promise(resolve => setTimeout(resolve, after)).then(() => response);
-
-    // Send a delayed response, well after the timeout for the request has expired.
-    // This will trigger the abort() method of the AbortController()
-    fetchMock.mock('/get_status', delay(200, timeout - 100)); 
-
-    const abortSpy = jest.spyOn(AbortController.prototype, 'abort');
-
-    // should not have dispatched any actions if request-response cycle is successful in fetchWithTimeout method
-    const expectedActions = [];
- 
-    const response = await actionCreators.fetchWithTimeout(store.dispatch, '/get_status', {}, timeout);    
-    const received = store.getActions();
-
-    expect(abortSpy).not.toBeCalledTimes(1);
-    expect(response.ok).toBe(true);
-    expect(received.map((a) => a.type)).toEqual(expectedActions);
-  });
+  });  
 
 });
 
