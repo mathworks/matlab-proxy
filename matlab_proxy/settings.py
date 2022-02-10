@@ -45,7 +45,7 @@ def get_ws_env_settings():
 
 def get_dev_settings(config):
     devel_file = Path(__file__).resolve().parent / "./devel.py"
-    test_temp_dir = get_test_temp_dir()
+    mwi_config_folder = get_test_temp_dir()
     ws_env, ws_env_suffix = get_ws_env_settings()
     return {
         "matlab_path": Path(),
@@ -64,7 +64,7 @@ def get_dev_settings(config):
         "matlab_protocol": "http",
         "matlab_display": ":1",
         "nlm_conn_str": os.environ.get(mwi_env.get_env_name_network_license_manager()),
-        "matlab_config_file": test_temp_dir / "proxy_app_config.json",
+        "matlab_config_file": mwi_config_folder / "proxy_app_config.json",
         "ws_env": ws_env,
         "mwa_api_endpoint": f"https://login{ws_env_suffix}.mathworks.com/authenticationws/service/v4",
         "mhlm_api_endpoint": f"https://licensing{ws_env_suffix}.mathworks.com/mls/service/v1/entitlement/list",
@@ -72,6 +72,8 @@ def get_dev_settings(config):
         "mwi_custom_http_headers": mwi_custom_http_headers.get(),
         "env_config": mwi_validators.validate_env_config(config),
         "ssl_context": None,
+        "mwi_logs_root_dir": mwi_config_folder / "ports",
+        "mwi_proxy_lock_file_name": "mwi_proxy.lock",
     }
 
 
@@ -122,6 +124,11 @@ def get(config=matlab_proxy.get_default_config_name(), dev=False):
             os.getenv(mwi_env.get_env_name_ssl_key_file(), None),
             os.getenv(mwi_env.get_env_name_ssl_cert_file(), None),
         )
+
+        # All config related to matlab-proxy will be saved to user's home folder.
+        # This will allow for other user's to launch the integration from the same system
+        # and not have their config's overwritten.
+        mwi_config_folder = Path.home() / ".matlab" / "MWI"
         return {
             "matlab_path": matlab_path,
             "matlab_version": get_matlab_version(matlab_path),
@@ -146,7 +153,7 @@ def get(config=matlab_proxy.get_default_config_name(), dev=False):
             "nlm_conn_str": mwi_validators.validate_mlm_license_file(
                 os.environ.get(mwi_env.get_env_name_network_license_manager())
             ),
-            "matlab_config_file": Path.home() / ".matlab" / "proxy_app_config.json",
+            "matlab_config_file": mwi_config_folder / "proxy_app_config.json",
             "ws_env": ws_env,
             "mwa_api_endpoint": f"https://login{ws_env_suffix}.mathworks.com/authenticationws/service/v4",
             "mhlm_api_endpoint": f"https://licensing{ws_env_suffix}.mathworks.com/mls/service/v1/entitlement/list",
@@ -156,6 +163,11 @@ def get(config=matlab_proxy.get_default_config_name(), dev=False):
             "ssl_context": get_ssl_context(
                 ssl_cert_file=ssl_cert_file, ssl_key_file=ssl_key_file
             ),
+            # This directory will be used to store connector.securePort(matlab_ready_file) and its corresponding files. This will be
+            # a central place to store logs of all the running instances of MATLAB launched by matlab-proxy
+            "mwi_logs_root_dir": mwi_config_folder / "ports",
+            # Name of the lock file which will be created by this instance of matlab-proxy process.
+            "mwi_proxy_lock_file_name": "mwi_proxy.lock",
         }
 
 
@@ -194,21 +206,6 @@ def create_xvfb_cmd():
     ]
 
     return xvfb_cmd, dpipe
-
-
-def get_matlab_tempdir():
-    """The temp directory used by MATLAB based on tempdir.m"""
-
-    for env_name in mwi_env.get_env_name_matlab_tempdir():
-        matlab_tempdir = os.environ.get(env_name)
-        if matlab_tempdir is not None:
-            break
-
-    # MATLAB defaults to '/tmp'
-    if matlab_tempdir is None:
-        matlab_tempdir = "/tmp"
-
-    return matlab_tempdir
 
 
 def get_test_temp_dir():

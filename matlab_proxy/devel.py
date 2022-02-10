@@ -4,8 +4,7 @@
 import asyncio
 from aiohttp import web
 import socket, time, os, sys
-from matlab_proxy import mwi_environment_variables as mwi_env
-from matlab_proxy import mwi_embedded_connector as mwi_connector
+from matlab_proxy import mwi_environment_variables as mwi_env, settings
 
 desktop_html = b"""
 <h1>Fake MATLAB Web Desktop</h1>
@@ -134,15 +133,20 @@ async def fake_matlab_started(app):
 
     # Real MATLAB always uses  $MATLAB_LOG_DIR/connection.securePort as the ready file
     # We mock reading from the environment variable by calling the helper functions
-    matlab_ready_file, matlab_log_dir = mwi_connector.get_matlab_ready_file(app["port"])
+    matlab_ready_file_dir = settings.get(dev=True)["mwi_logs_root_dir"] / str(
+        app["port"]
+    )
+    matlab_ready_file_dir.mkdir(parents=True, exist_ok=True)
+
+    app["matlab_ready_file"] = matlab_ready_file_dir / "connector.securePort"
 
     ready_delay = app["ready_delay"]
     try:
         await asyncio.sleep(ready_delay)
         print(
-            f"Creating fake MATLAB Embedded Connector ready file at {matlab_ready_file}"
+            f"Creating fake MATLAB Embedded Connector ready file at {app['matlab_ready_file']}"
         )
-        matlab_ready_file.touch()
+        app["matlab_ready_file"].touch()
     except asyncio.CancelledError:
         pass
 
@@ -164,8 +168,8 @@ async def cleanup_background_tasks(app):
     """
     # Delete ready file on tear down
     # NOTE MATLAB does not delete this file on shutdown.
-    matlab_ready_file, matlab_log_dir = mwi_connector.get_matlab_ready_file(app["port"])
-    matlab_ready_file.unlink()
+
+    app["matlab_ready_file"].unlink()
 
 
 def matlab(args):

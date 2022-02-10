@@ -1,7 +1,6 @@
 # Copyright 2020-2021 The MathWorks, Inc.
 
 import asyncio
-from matlab_proxy import mwi_embedded_connector as mwi_connector
 from matlab_proxy import mwi_environment_variables as mwi_env
 from matlab_proxy import util
 import os
@@ -40,8 +39,19 @@ class AppState:
         """
         self.settings = settings
         self.processes = {"matlab": None, "xvfb": None}
+
+        # The port on which MATLAB(launched by this matlab-proxy process) starts on.
         self.matlab_port = None
+
+        # The file created and written by MATLAB's Embedded connector to signal readiness.
         self.matlab_ready_file = None
+
+        # The directory in which the instance of MATLAB (launched by this matlab-proxy process) will write logs to.
+        self.matlab_ready_file_dir = None
+
+        # The file created by this instance of matlab-proxy to signal to other matlab-proxy processes
+        # that this self.matlab_port will be used by this instance.
+        self.mwi_proxy_lock_file = None
         self.licensing = None
         self.tasks = {}
         self.logs = {
@@ -354,8 +364,15 @@ class AppState:
             with open(cached_licensing_file, "w") as f:
                 f.write(json.dumps(self.licensing))
 
-    def get_free_matlab_port(self):
-        """Returns a free port for MATLAB Embedded Connector in the allowed range."""
+    def prepare_lock_files_for_MATLAB_launch(self):
+        """Finds and reserves a free port for MATLAB Embedded Connector in the allowed range.
+        Creates the lock file to prevent any other matlab-proxy process to use the reserved port of this
+        process.
+
+        Raises:
+            e: socket.error if the exception raised is other than port already occupied.
+        """
+
         # NOTE It is not guranteed that the port will remain free!
         # FIXME Because of https://github.com/http-party/node-http-proxy/issues/1342 the
         # node application in development mode always uses port 31515 to bypass the
@@ -372,16 +389,53 @@ class AppState:
             # try-except.
             # s.bind(("", 0))
             # self.matlab_port = s.getsockname()[1]
+
             for port in mw.range_matlab_connector_ports():
                 try:
                     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     s.bind(("", port))
-                    s.close()
-                    break
+
+                    matlab_ready_file_dir = self.settings["mwi_logs_root_dir"] / str(
+                        port
+                    )
+
+                    mwi_proxy_lock_file = (
+                        matlab_ready_file_dir
+                        / self.settings["mwi_proxy_lock_file_name"]
+                    )
+
+                    matlab_ready_file = matlab_ready_file_dir / "connector.securePort"
+
+                    # Check if the mwi_proxy_lock_file exists.
+                    # Implies there was a competing matlab-proxy process which found the same port before this process
+                    if mwi_proxy_lock_file.exists():
+                        logger.debug(
+                            f"Skipping port number {port} for MATLAB as lock file already exists at {mwi_proxy_lock_file}"
+                        )
+                        s.close()
+
+                    else:
+                        # Create a folder to hold the matlab_ready_file that will be created by MATLAB to signal readiness.
+                        # This is the same folder to which MATLAB will write logs to.
+                        matlab_ready_file_dir.mkdir(parents=True, exist_ok=True)
+
+                        # Creating the mwi_proxy.lock file to indicate to any other matlab-proxy processes
+                        # that this self.matlab_port number is taken up by this process.
+                        mwi_proxy_lock_file.touch()
+
+                        # Update member variables of AppState class
+
+                        # Store the port number on which MATLAB will be launched for this matlab-proxy process.
+                        self.matlab_port = port
+                        self.mwi_proxy_lock_file = mwi_proxy_lock_file
+                        self.matlab_ready_file_dir = matlab_ready_file_dir
+                        self.matlab_ready_file = matlab_ready_file
+                        s.close()
+                        return
+
                 except socket.error as e:
                     if e.errno != errno.EADDRINUSE:
                         raise e
-        return port
 
     async def start_matlab(self, restart_matlab=False):
         """Start MATLAB.
@@ -423,15 +477,14 @@ class AppState:
         self.error = None
         self.logs["matlab"].clear()
 
-        # Reserve a port for MATLAB Embedded Connector
-        self.matlab_port = self.get_free_matlab_port()
+        # Finds and reserves a free port, then prepare lock files for the MATLAB process.
+        self.prepare_lock_files_for_MATLAB_launch()
 
-        # Create a folder to hold the matlab_ready_file that will be created by MATLAB to signal readiness
-        self.matlab_ready_file, matlab_log_dir = mwi_connector.get_matlab_ready_file(
-            self.matlab_port
-        )
-        logger.debug(f"MATLAB_LOG_DIR:{str(matlab_log_dir)}")
+        logger.debug(f"MATLAB_LOG_DIR:{str( self.matlab_ready_file_dir )}")
         logger.debug(f"MATLAB_READY_FILE:{str(self.matlab_ready_file)}")
+        logger.debug(
+            f"Created MWI proxy lock file for this matlab-proxy process at {self.mwi_proxy_lock_file}"
+        )
 
         # Configure the environment MATLAB needs to start
         matlab_env = os.environ.copy()
@@ -445,7 +498,8 @@ class AppState:
         )
         matlab_env["MWAPIKEY"] = self.settings["mwapikey"]
         # The matlab ready file is written into this location by MATLAB
-        matlab_env["MATLAB_LOG_DIR"] = str(matlab_log_dir)
+        # The matlab_ready_file_dir is where MATLAB will write any subsequent logs
+        matlab_env["MATLAB_LOG_DIR"] = str(self.matlab_ready_file_dir)
         matlab_env["MW_CD_ANYWHERE_ENABLED"] = "true"
         if self.licensing["type"] == "mhlm":
             matlab_env["MLM_WEB_LICENSE"] = "true"
@@ -538,15 +592,16 @@ class AppState:
             xvfb.terminate()
             waiters.append(xvfb.wait())
 
-        # Clean up matlab_ready_file
         try:
+            # Clean up both connector.securePort file and mwi_proxy_lock_file
             if self.matlab_ready_file is not None:
-                logger.info(
-                    f"Cleaning up matlab_ready_file...{str(self.matlab_ready_file)}"
-                )
                 self.matlab_ready_file.unlink()
+
+            if self.mwi_proxy_lock_file is not None:
+                self.mwi_proxy_lock_file.unlink()
+
         except FileNotFoundError:
-            # Some other process deleted this file
+            # Files won't exist when stop_matlab is called for the first time.
             pass
 
         # Wait for termination
