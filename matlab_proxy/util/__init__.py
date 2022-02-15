@@ -124,6 +124,15 @@ def prettify(boundary_filler=" ", text_arr=[]):
         [str]: Prettified String
     """
 
+    import sys
+
+    if not sys.stdout.isatty():
+        return (
+            "\n============================\n"
+            + "\n".join(text_arr)
+            + "\n============================\n"
+        )
+
     size = os.get_terminal_size()
     cols, _ = size.columns, size.lines
 

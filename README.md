@@ -25,11 +25,14 @@ The MATLAB Proxy is under active development. For support or to report issues, s
   Install it on your linux machine using:
   ```bash
   # On a Debian/Ubuntu based system:
-  sudo apt install Xvfb
+  $ sudo apt install xvfb
   ```
   ```bash
   # On a RHEL based system:
-  sudo yum install Xvfb
+  $ yum search Xvfb
+  xorg-x11-server-Xvfb.x86_64 : A X Windows System virtual framebuffer X server.
+
+  $ sudo yum install xorg-x11-server-Xvfb
   ```
 * Python versions: **3.6** | **3.7** | **3.8** | **3.9** 
 * [Browser Requirements](https://www.mathworks.com/support/requirements/browser-requirements.html)
