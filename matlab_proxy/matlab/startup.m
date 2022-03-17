@@ -13,7 +13,7 @@ if ~isempty(getenv('MW_LOGIN_USER_ID'))
     token = li.getToken();
     login_level = 2;
     remember_me = true;
-    com.mathworks.matlab_login.MatlabLogin.saveCacheLoginInfo(first_name, ...
+    li = com.mathworks.matlab_login.MatlabLogin.saveCacheLoginInfo(first_name, ...
         last_name, email_address, user_id, token, profile_id, login_level, ...
         remember_me, email_address, display_name);
     % Clear all local variables from users workspace.
@@ -28,7 +28,9 @@ connector.internal.Worker.start
 % Add-on explorer is not supported in this environment.
 % The following settings instructs it to display appropriate error messages when used.
 matlab_settings = settings;
-matlab_settings.matlab.addons.explorer.addSetting('isExplorerSupported');
-matlab_settings.matlab.addons.explorer.isExplorerSupported.PersonalValue = false;
+if ~matlab_settings.matlab.addons.explorer.hasSetting('isExplorerSupported')
+    matlab_settings.matlab.addons.explorer.addSetting('isExplorerSupported');
+end
+matlab_settings.matlab.addons.explorer.isExplorerSupported.TemporaryValue = false;
 
 clear matlab_settings
