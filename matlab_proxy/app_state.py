@@ -500,7 +500,10 @@ class AppState:
         # The matlab ready file is written into this location by MATLAB
         # The matlab_ready_file_dir is where MATLAB will write any subsequent logs
         matlab_env["MATLAB_LOG_DIR"] = str(self.matlab_ready_file_dir)
+        # For r2020b, r2021a
         matlab_env["MW_CD_ANYWHERE_ENABLED"] = "true"
+        # For > r2021b
+        matlab_env["MW_CD_ANYWHERE_DISABLED"] = "false"
         if self.licensing["type"] == "mhlm":
             matlab_env["MLM_WEB_LICENSE"] = "true"
             matlab_env["MLM_WEB_USER_CRED"] = access_token_data["token"]
