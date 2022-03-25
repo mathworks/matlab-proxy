@@ -1,5 +1,6 @@
 # Copyright 2021 The MathWorks, Inc.
 
+import matlab_proxy
 import matlab_proxy.settings as settings
 from matlab_proxy import mwi_environment_variables as mwi_env
 import pytest
@@ -148,3 +149,20 @@ def test_get_dev_false(patch_env_variables, mock_shutil_which):
     assert _settings["matlab_cmd"][0] == "matlab"
     assert os.path.isdir(_settings["matlab_path"])
     assert _settings["matlab_protocol"] == "https"
+
+
+def test_get_mw_context_tags(monkeypatch):
+    """Tests get_mw_context_tags() function to return appropriate MW_CONTEXT_TAGS"""
+
+    # Monkeypatch env var MW_CONTEXT_TAGS to check for if condition
+    dockerhub_mw_context_tags = "MATLAB:DOCKERHUB:V1"
+    monkeypatch.setenv("MW_CONTEXT_TAGS", dockerhub_mw_context_tags)
+
+    extension_name = matlab_proxy.get_default_config_name()
+
+    matlab_proxy_base_context_tags = matlab_proxy.get_mwi_ddux_value(extension_name)
+    expected_result = f"{dockerhub_mw_context_tags},{matlab_proxy_base_context_tags}"
+
+    actual_result = settings.get_mw_context_tags(extension_name)
+
+    assert expected_result == actual_result

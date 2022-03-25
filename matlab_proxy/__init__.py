@@ -26,3 +26,34 @@ def get_executable_name():
         str: Name of the executable
     """
     return "matlab-proxy-app"
+
+
+def __get_matlab_proxy_base_ddux_value():
+    """Returns the DDUX value for MATLAB use when launched its by matlab-proxy
+
+    Returns:
+        str : DDUX value for MATLAB use.
+    """
+
+    return "MATLAB_PROXY:BASE:V1"
+
+
+def get_mwi_ddux_value(extension_name):
+    """Returns DDUX value for matlab-proxy based on the context from which
+    it is being launched from.
+
+    Args:
+        extension_name (str): The name of the extension/environment
+
+    Returns:
+        str: DDUX value for matlab-proxy based on the environment.
+    """
+    matlab_proxy_ddux_value = __get_matlab_proxy_base_ddux_value()
+
+    if extension_name == get_default_config_name():
+        return matlab_proxy_ddux_value
+    else:
+        variant = extension_name.upper().strip()
+        variant = variant.replace(" ", "_").replace("-", "_")
+        mwi_ddux_value = matlab_proxy_ddux_value.replace("BASE", variant)
+        return mwi_ddux_value

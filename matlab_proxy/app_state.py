@@ -11,6 +11,7 @@ from datetime import datetime, timezone, timedelta
 import socket
 import errno
 from collections import deque
+import matlab_proxy
 from matlab_proxy.util import mw, mwi_logger
 from matlab_proxy.util.mwi_exceptions import (
     LicensingError,
@@ -502,8 +503,10 @@ class AppState:
         matlab_env["MATLAB_LOG_DIR"] = str(self.matlab_ready_file_dir)
         # For r2020b, r2021a
         matlab_env["MW_CD_ANYWHERE_ENABLED"] = "true"
-        # For > r2021b
+        # For >= r2021b
         matlab_env["MW_CD_ANYWHERE_DISABLED"] = "false"
+        matlab_env["MW_CONTEXT_TAGS"] = self.settings.get("mw_context_tags")
+
         if self.licensing["type"] == "mhlm":
             matlab_env["MLM_WEB_LICENSE"] = "true"
             matlab_env["MLM_WEB_USER_CRED"] = access_token_data["token"]

@@ -74,10 +74,11 @@ def get_dev_settings(config):
         "ssl_context": None,
         "mwi_logs_root_dir": mwi_config_folder / "ports",
         "mwi_proxy_lock_file_name": "mwi_proxy.lock",
+        "mw_context_tags": get_mw_context_tags(matlab_proxy.get_default_config_name()),
     }
 
 
-def get(config=matlab_proxy.get_default_config_name(), dev=False):
+def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
     """Returns the settings specific to the environment in which the server is running in
     If the environment variable 'TEST' is set  to true, will make some changes to the dev settings.
 
@@ -90,7 +91,7 @@ def get(config=matlab_proxy.get_default_config_name(), dev=False):
     """
 
     if dev:
-        settings = get_dev_settings(config)
+        settings = get_dev_settings(config_name)
 
         # If running tests using Pytest, it will set environment variable TEST to true before running tests.
         # Will make test env specific changes before returning the settings.
@@ -159,7 +160,7 @@ def get(config=matlab_proxy.get_default_config_name(), dev=False):
             "mhlm_api_endpoint": f"https://licensing{ws_env_suffix}.mathworks.com/mls/service/v1/entitlement/list",
             "mwa_login": f"https://login{ws_env_suffix}.mathworks.com",
             "mwi_custom_http_headers": mwi_custom_http_headers.get(),
-            "env_config": mwi_validators.validate_env_config(config),
+            "env_config": mwi_validators.validate_env_config(config_name),
             "ssl_context": get_ssl_context(
                 ssl_cert_file=ssl_cert_file, ssl_key_file=ssl_key_file
             ),
@@ -168,7 +169,32 @@ def get(config=matlab_proxy.get_default_config_name(), dev=False):
             "mwi_logs_root_dir": mwi_config_folder / "ports",
             # Name of the lock file which will be created by this instance of matlab-proxy process.
             "mwi_proxy_lock_file_name": "mwi_proxy.lock",
+            "mw_context_tags": get_mw_context_tags(config_name),
         }
+
+
+def get_mw_context_tags(extension_name):
+    """Returns a string which combines existing MW_CONTEXT_TAGS value and context tags
+    specific to where matlab-proxy is being launched from.
+
+    Returns:
+        str: Which combines existing MW_CONTEXT_TAGS with one from matlab-proxy.
+    """
+    existing_mw_context_tags = os.getenv("MW_CONTEXT_TAGS", "")
+
+    if existing_mw_context_tags:
+        logger.debug(f'Existing MW_CONTEXT_TAGS:"{existing_mw_context_tags}"')
+        existing_mw_context_tags += ","
+
+    mwi_context_tags = matlab_proxy.get_mwi_ddux_value(extension_name)
+    logger.debug(f'DDUX value for matlab-proxy "{mwi_context_tags}"')
+
+    combined_context_tags = existing_mw_context_tags + mwi_context_tags
+    logger.debug(
+        f'Combined DDUX value to be used for MATLAB process: "{combined_context_tags}"'
+    )
+
+    return combined_context_tags
 
 
 def create_xvfb_cmd():

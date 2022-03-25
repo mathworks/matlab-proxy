@@ -513,7 +513,7 @@ async def cleanup_background_tasks(app):
 
 
 # config is has a default initializer because it needs to be callable without inputs from ADEV servers
-def create_app(config=matlab_proxy.get_default_config_name()):
+def create_app(config_name=matlab_proxy.get_default_config_name()):
     """Creates the web server and adds the routes,settings and env_config to the server.
 
     Returns:
@@ -522,7 +522,9 @@ def create_app(config=matlab_proxy.get_default_config_name()):
     app = web.Application()
 
     # Get application settings
-    app["settings"] = settings.get(config, dev=mwi_env.is_development_mode_enabled())
+    app["settings"] = settings.get(
+        config_name, dev=mwi_env.is_development_mode_enabled()
+    )
 
     # Initialise application state
     app["state"] = AppState(app["settings"])
@@ -564,9 +566,9 @@ def main():
 
     # The integration needs to be called with --config flag.
     # Parse the passed cli arguments.
-    desired_configuration = util.parse_cli_args()["config"]
+    desired_configuration_name = util.parse_cli_args()["config"]
 
-    app = create_app(desired_configuration)
+    app = create_app(desired_configuration_name)
 
     loop = asyncio.get_event_loop()
 

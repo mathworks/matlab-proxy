@@ -143,7 +143,7 @@ def validate_base_url(base_url):
 
 def validate_env_config(config):
     """Validates config passed with available "matlab_proxy_configs" entry point in the same
-    python environment.
+    python environment. Computes DDUX value for MATLAB use.
 
     Args:
         config (str): Name of the configuration to use.
@@ -169,6 +169,7 @@ def validate_env_config(config):
 
         logger.debug(f"Successfully validated provided {config} configuration")
         return env_config
+
     else:
         logger.error(
             f"{config} is not a valid config. Available configs are : {list(available_configs.keys())}"

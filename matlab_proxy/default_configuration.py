@@ -9,6 +9,8 @@ config = {
     # Use a single word for extension_name
     # It will be used as a flag when launching the integration.
     # NOTE: This name must be used when setting the entrypoint for matlab_proxy in setup.py
+    # Use '-' or '_' seperated values if more than 1 word is used.
+    # Ex: Hello-World, Alice_Bob.
     "extension_name": matlab_proxy.get_default_config_name(),
     # This value will be used in various places on the website UI.
     # Ensure that this is not more than 3 words.
