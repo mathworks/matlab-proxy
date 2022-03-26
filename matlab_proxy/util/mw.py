@@ -20,7 +20,7 @@ def __get_licensing_url():
     Returns:
         String: Licensing URL
     """
-    return f"{config['doc_url']}blob/main/MATLAB_Licensing_Info.md"
+    return f"{config['doc_url']}blob/main/MATLAB-Licensing-Info.md"
 
 
 async def fetch_entitlements(mhlm_api_endpoint, access_token, matlab_release):

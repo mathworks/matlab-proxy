@@ -1,4 +1,4 @@
-# Copyright 2020-2021 The MathWorks, Inc.
+# Copyright 2020-2022 The MathWorks, Inc.
 import os
 from setuptools.command.install import install
 import setuptools
@@ -51,7 +51,7 @@ long_description = (HERE / "README.md").read_text()
 
 setuptools.setup(
     name="matlab-proxy",
-    version="0.2.6",
+    version="0.2.7",
     url=config["doc_url"],
     author="The MathWorks, Inc.",
     author_email="cloud@mathworks.com",

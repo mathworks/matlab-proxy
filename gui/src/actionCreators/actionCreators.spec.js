@@ -217,7 +217,7 @@ describe('Test Async actionCreators', () => {
   it('dispatches REQUEST_ENV_CONFIG, RECEIVE_ENV_CONFIG when fetching environment configuration', () => {
     fetchMock.getOnce('/get_env_config', {
       body: {
-        "doc_url": "https://github.com/mathworks/matlab-web-proxy/",
+        "doc_url": "https://github.com/mathworks/matlab-proxy/",
         "extension_name": "default_configuration_matlab_desktop_proxy",
         "extension_name_short_description": "MATLAB Web Desktop",
       },
