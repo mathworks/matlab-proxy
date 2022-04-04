@@ -1,0 +1,20 @@
+# Copyright 2021-2022 The MathWorks, Inc.
+# This Dockerfile showcases how to upgrade the matlab-proxy python package 
+# in an existing container image which has both MATLAB and matlab-proxy installed
+
+# Sample build command:
+# docker build  --build-arg IMAGE_WITH_MATLAB_PROXY=my_custom_image_with_matlab_proxy \
+#              -f Dockerfile.upgrade.matlab-proxy -t my_custom_image_with_matlab_proxy .
+
+# Sample run command:
+# docker run --rm -it -p 8888:8888 --shm-shared=512M my_custom_image_with_matlab_proxy 
+
+ARG IMAGE_WITH_MATLAB_PROXY=mathworks/matlab:r2022a
+
+FROM ${IMAGE_WITH_MATLAB_PROXY}
+
+USER root
+
+RUN python3 -m pip install --upgrade matlab-proxy
+
+USER matlab

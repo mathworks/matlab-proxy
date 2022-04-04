@@ -1,12 +1,21 @@
-# Copyright 2021 The MathWorks, Inc.
-# Enables access to the MATLAB Desktop from a web browser
+# Copyright 2021-2022 The MathWorks, Inc.
+# This Dockerfile showcases how to add matlab-proxy into an existing container image with MATLAB installed.
 
-# Based on the publicly available MATLAB image
-FROM mathworks/matlab:r2021b
+# matlab-proxy enables access to the MATLAB Desktop from a web browser
+
+# Sample build command:
+# docker build  --build-arg IMAGE_WITH_MATLAB=my_custom_image_with_matlab \
+#               -f Dockerfile -t my_custom_image_with_matlab_proxy .
+
+# Sample run command:
+# docker run --rm -it -p 8888:8888 --shm-shared=512M my_custom_image_with_matlab_proxy
+
+ARG IMAGE_WITH_MATLAB=mathworks/matlab:r2021b
+
+FROM ${IMAGE_WITH_MATLAB}
 
 USER root
 
-# The container already has python3 (v3.8.5) installed
 # Install dependencies for matlab-proxy
 RUN DEBIAN_FRONTEND=noninteractive && \
     apt-get update && apt-get install --no-install-recommends -y \
@@ -17,7 +26,7 @@ RUN DEBIAN_FRONTEND=noninteractive && \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN python -m pip install matlab-proxy
+RUN python3 -m pip install matlab-proxy
 
 # Set environment variables used by integration
 # MATLAB should then become accessible on http://localhost:8888/matlab/index.html

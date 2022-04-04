@@ -112,7 +112,8 @@ The following options are available in the status panel (some options are only a
 | Help | Open a help pop-up for a detailed description of the options.|
 
 ## Examples
-* For usage in a Docker container, see this [Dockerfile](./examples/Dockerfile) and its [README](./examples/README.md).
+* For installing/usage in a Docker container, see this [Dockerfile](./examples/Dockerfile) and its [README](./examples/README.md).
+* For upgrading **matlab-proxy** in an existing Docker image, see this [Dockerfile.upgrade.matlab-proxy](./examples/Dockerfile.upgrade.matlab-proxy) and its [README](./examples/README.md#upgrading-matlab-proxy-package-in-a-docker-image).*
 * For usage in a Jupyter environment, see [jupyter-matlab-proxy](https://github.com/mathworks/jupyter-matlab-proxy).
 
 ## Limitations
