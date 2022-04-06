@@ -2,7 +2,7 @@
 
 import os, pytest, shutil
 from matlab_proxy import settings
-from matlab_proxy import mwi_environment_variables as mwi_env
+from matlab_proxy.util.mwi import environment_variables as mwi_env
 
 
 def pytest_generate_tests(metafunc):

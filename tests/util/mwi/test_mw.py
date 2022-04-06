@@ -4,7 +4,7 @@ import pytest, secrets, datetime, random, re
 from matlab_proxy import settings
 from matlab_proxy.util import mw
 from datetime import timezone
-from matlab_proxy.util import mwi_exceptions
+from matlab_proxy.util.mwi import exceptions
 from datetime import timedelta
 from collections import namedtuple
 
@@ -182,7 +182,7 @@ async def test_fetch_access_token_licensing_error(mwa_api_data, mocker):
 
     mocked = mocker.patch("aiohttp.ClientSession.post", return_value=mock_resp)
 
-    with pytest.raises(mwi_exceptions.OnlineLicensingError):
+    with pytest.raises(exceptions.OnlineLicensingError):
         resp = await mw.fetch_access_token(
             mwa_api_data.mwa_api_endpoint,
             mwa_api_data.identity_token,
@@ -205,7 +205,7 @@ async def test_fetch_expand_token_licensing_error(mocker, mwa_api_data):
     mock_resp = MockResponse(payload={}, reason="NOT-OK", status=503)
     mocked = mocker.patch("aiohttp.ClientSession.post", return_value=mock_resp)
 
-    with pytest.raises(mwi_exceptions.OnlineLicensingError):
+    with pytest.raises(exceptions.OnlineLicensingError):
         resp = await mw.fetch_expand_token(
             mwa_api_data.mwa_api_endpoint,
             mwa_api_data.identity_token,
@@ -301,7 +301,7 @@ async def test_fetch_entitlements_licensing_error(mocker, mwa_api_data):
     mock_resp = MockResponse(payload={}, reason="NOT-OK", status=503)
     mocked = mocker.patch("aiohttp.ClientSession.post", return_value=mock_resp)
 
-    with pytest.raises(mwi_exceptions.OnlineLicensingError):
+    with pytest.raises(exceptions.OnlineLicensingError):
         resp = await mw.fetch_entitlements(
             mwa_api_data.mhlm_api_endpoint,
             mwa_api_data.access_token,
@@ -365,7 +365,7 @@ async def test_fetch_entitlements_entitlement_error(
     )
     mocked = mocker.patch("aiohttp.ClientSession.post", return_value=mock_resp)
 
-    with pytest.raises(mwi_exceptions.EntitlementError):
+    with pytest.raises(exceptions.EntitlementError):
         resp = await mw.fetch_entitlements(
             mwa_api_data.mhlm_api_endpoint,
             mwa_api_data.access_token,
@@ -450,7 +450,7 @@ def test_parse_mhlm_error():
     """
     logs = ["License Manager Error", "MHLM Licensing Failed"]
     actual_output = mw.parse_mhlm_error(logs)
-    expected_output = mwi_exceptions.OnlineLicensingError
+    expected_output = exceptions.OnlineLicensingError
 
     assert isinstance(actual_output, expected_output)
 
@@ -479,7 +479,7 @@ def test_parse_nlm_error():
     conn_str = "abc@nlm"
 
     actual_output = mw.parse_nlm_error(logs, conn_str)
-    expected_output = mwi_exceptions.NetworkLicensingError
+    expected_output = exceptions.NetworkLicensingError
 
     assert isinstance(actual_output, expected_output)
 
@@ -490,7 +490,7 @@ def test_parse_other_error():
     """
     logs = ["Starting MATLAB proxy-app", "Error parsing config, resetting."]
 
-    expected_output = mwi_exceptions.MatlabError
+    expected_output = exceptions.MatlabError
     actual_output = mw.parse_other_error(logs)
 
     assert isinstance(actual_output, expected_output)

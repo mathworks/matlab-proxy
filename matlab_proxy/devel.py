@@ -2,9 +2,15 @@
 
 # Development specific functions
 import asyncio
+import os
+import socket
+import sys
+import time
+
 from aiohttp import web
-import socket, time, os, sys
-from matlab_proxy import mwi_environment_variables as mwi_env, settings
+
+from matlab_proxy import settings
+from matlab_proxy.util.mwi import environment_variables as mwi_env
 
 desktop_html = b"""
 <h1>Fake MATLAB Web Desktop</h1>

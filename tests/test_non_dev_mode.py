@@ -3,7 +3,7 @@
 import pytest, os, shutil
 from pathlib import Path
 import matlab_proxy
-from matlab_proxy import mwi_environment_variables as mwi_env
+from matlab_proxy.util.mwi import environment_variables as mwi_env
 from tests.test_app import FakeServer
 
 """

@@ -2,7 +2,7 @@
 
 import matlab_proxy
 import matlab_proxy.settings as settings
-from matlab_proxy import mwi_environment_variables as mwi_env
+from matlab_proxy.util.mwi import environment_variables as mwi_env
 import pytest
 import os
 

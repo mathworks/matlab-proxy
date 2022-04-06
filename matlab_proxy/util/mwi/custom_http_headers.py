@@ -1,9 +1,13 @@
 # Copyright 2020-2021 The MathWorks, Inc.
 
-import os, json, sys
+import json
+import os
+import sys
 from json.decoder import JSONDecodeError
-from matlab_proxy.util import mwi_logger
-from matlab_proxy import mwi_environment_variables as mwi_env
+
+from matlab_proxy.util.mwi import environment_variables as mwi_env
+
+from . import logger as mwi_logger
 
 logger = mwi_logger.get()
 

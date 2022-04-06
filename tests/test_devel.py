@@ -2,7 +2,7 @@
 
 import pytest, socket, os, requests, pty, time, subprocess, sys
 from pathlib import Path
-from matlab_proxy import mwi_environment_variables as mwi_env
+from matlab_proxy.util.mwi import environment_variables as mwi_env
 from collections import namedtuple
 
 """

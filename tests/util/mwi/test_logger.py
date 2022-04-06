@@ -4,7 +4,7 @@
 
 import os
 import logging
-from matlab_proxy.util import mwi_logger
+from matlab_proxy.util.mwi import logger as mwi_logger
 
 
 def test_get():

@@ -1,29 +1,28 @@
 # Copyright 2020-2021 The MathWorks, Inc.
 
 import asyncio
-from matlab_proxy import mwi_environment_variables as mwi_env
-from matlab_proxy import util
-import os
-import json
-import pty
-import logging
-from datetime import datetime, timezone, timedelta
-import socket
 import errno
+import json
+import logging
+import os
+import pty
+import socket
 from collections import deque
-import matlab_proxy
-from matlab_proxy.util import mw, mwi_logger
-from matlab_proxy.util.mwi_exceptions import (
-    LicensingError,
-    InternalError,
-    OnlineLicensingError,
+from datetime import datetime, timedelta, timezone
+
+from matlab_proxy import util
+from matlab_proxy.util import mw, mwi
+from matlab_proxy.util.mwi import environment_variables as mwi_env
+from matlab_proxy.util.mwi.exceptions import (
     EntitlementError,
+    InternalError,
+    LicensingError,
     MatlabInstallError,
+    OnlineLicensingError,
     log_error,
 )
 
-
-logger = mwi_logger.get()
+logger = mwi.logger.get()
 
 
 class AppState:

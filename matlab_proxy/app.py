@@ -1,22 +1,21 @@
 # Copyright 2020-2021 The MathWorks, Inc.
 
-import sys
-import os
-import aiohttp
 import asyncio
 import json
-import pkgutil
 import mimetypes
+import pkgutil
+import sys
+
+import aiohttp
 from aiohttp import web
-from matlab_proxy import settings
-from matlab_proxy import mwi_environment_variables as mwi_env
-from matlab_proxy import util
+
 import matlab_proxy
+from matlab_proxy import settings, util
 from matlab_proxy.app_state import AppState
-from matlab_proxy.util import mwi_logger
-from matlab_proxy.util.mwi_exceptions import LicensingError
-from matlab_proxy.util import mwi_validators
 from matlab_proxy.default_configuration import config
+from matlab_proxy.util import mwi
+from matlab_proxy.util.mwi import environment_variables as mwi_env
+from matlab_proxy.util.mwi.exceptions import LicensingError
 
 mimetypes.add_type("font/woff", ".woff")
 mimetypes.add_type("font/woff2", ".woff2")
@@ -286,12 +285,11 @@ def make_static_route_table(app):
     Returns:
         Dict: Containing information about the static files and header information.
     """
-    from pkg_resources import resource_listdir, resource_isdir
+    from pkg_resources import resource_isdir, resource_listdir
+
     from matlab_proxy import gui
     from matlab_proxy.gui import static
-    from matlab_proxy.gui.static import css
-    from matlab_proxy.gui.static import js
-    from matlab_proxy.gui.static import media
+    from matlab_proxy.gui.static import css, js, media
 
     base_url = app["settings"]["base_url"]
 
@@ -497,7 +495,7 @@ async def cleanup_background_tasks(app):
     Args:
         app (aiohttp_server): Instance of aiohttp server
     """
-    logger = mwi_logger.get()
+    logger = mwi.logger.get()
     state = app["state"]
     tasks = state.tasks
     for task_name, task in tasks.items():
@@ -561,7 +559,7 @@ def main():
     """Starting point of the integration. Creates the web app and runs indefinitely."""
 
     # Setup logger for the integration and a web logger. Override any default loggers.
-    logger = mwi_logger.get(init=True)
+    logger = mwi.logger.get(init=True)
     web_logger = None if not mwi_env.is_web_logging_enabled() else logger
 
     # The integration needs to be called with --config flag.

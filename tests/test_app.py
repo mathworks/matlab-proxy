@@ -3,7 +3,7 @@
 import pytest, asyncio, aiohttp, json, time
 from aiohttp import web
 from matlab_proxy import app
-from matlab_proxy.util.mwi_exceptions import MatlabInstallError
+from matlab_proxy.util.mwi.exceptions import MatlabInstallError
 from matlab_proxy import util
 
 

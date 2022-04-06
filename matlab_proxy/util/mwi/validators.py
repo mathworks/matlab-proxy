@@ -10,14 +10,16 @@ With validator: if (valid(input)):
 
 Exceptions are thrown to signal failure.
 """
-import sys
-import socket
 import errno
-import pkg_resources
-import matlab_proxy
 import os
-from matlab_proxy.util import mwi_logger
-from matlab_proxy import mwi_environment_variables as mwi_env
+import socket
+import sys
+
+import matlab_proxy
+import pkg_resources
+
+from . import environment_variables as mwi_env
+from . import logger as mwi_logger
 
 logger = mwi_logger.get()
 
@@ -38,7 +40,8 @@ def validate_mlm_license_file(nlm_conn_str):
         String: Returns the same argument passed to this function if its valid.
     """
     import re
-    from .mwi_exceptions import NetworkLicensingError
+
+    from .exceptions import NetworkLicensingError
 
     if nlm_conn_str is None:
         return None

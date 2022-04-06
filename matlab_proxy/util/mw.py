@@ -1,18 +1,22 @@
 # Copyright 2020-2021 The MathWorks, Inc.
 
+import asyncio
+import os
+import select
 import xml.etree.ElementTree as ET
-import aiohttp, os, asyncio, select
-from matlab_proxy.util.mwi_exceptions import (
-    OnlineLicensingError,
+
+import aiohttp
+from matlab_proxy.default_configuration import config
+from matlab_proxy.util import mwi
+from matlab_proxy.util.mwi.exceptions import (
     EntitlementError,
-    NetworkLicensingError,
     MatlabError,
     XvfbError,
+    NetworkLicensingError,
+    OnlineLicensingError,
 )
-from matlab_proxy.util import mwi_logger
-from matlab_proxy.default_configuration import config
 
-logger = mwi_logger.get()
+logger = mwi.logger.get()
 
 
 def __get_licensing_url():

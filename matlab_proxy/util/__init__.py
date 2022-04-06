@@ -1,15 +1,16 @@
 # Copyright 2020 The MathWorks, Inc.
+import argparse
+import os
 import signal
 import socket
 import sys
-import argparse
-import os
+
 import matlab_proxy
 from aiohttp import web
-from matlab_proxy import mwi_environment_variables as mwi_env
-from matlab_proxy.util import mwi_logger
+from matlab_proxy.util import mwi
+from matlab_proxy.util.mwi import environment_variables as mwi_env
 
-logger = mwi_logger.get()
+logger = mwi.logger.get()
 
 
 def is_python_version_newer_than_3_6():

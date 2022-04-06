@@ -1,6 +1,5 @@
 # Copyright 2020-2021 The MathWorks, Inc.
 
-import matlab_proxy
 import os
 import shutil
 import socket
@@ -9,13 +8,13 @@ import sys
 import tempfile
 import uuid
 import xml.etree.ElementTree as ET
-
-from matlab_proxy import mwi_environment_variables as mwi_env
-from matlab_proxy.util import mwi_custom_http_headers, mwi_validators
-from matlab_proxy.util import mwi_logger
 from pathlib import Path
 
-logger = mwi_logger.get()
+import matlab_proxy
+from matlab_proxy.util import mwi
+from matlab_proxy.util.mwi import environment_variables as mwi_env
+
+logger = mwi.logger.get()
 
 
 def get_matlab_path():
@@ -69,8 +68,8 @@ def get_dev_settings(config):
         "mwa_api_endpoint": f"https://login{ws_env_suffix}.mathworks.com/authenticationws/service/v4",
         "mhlm_api_endpoint": f"https://licensing{ws_env_suffix}.mathworks.com/mls/service/v1/entitlement/list",
         "mwa_login": f"https://login{ws_env_suffix}.mathworks.com",
-        "mwi_custom_http_headers": mwi_custom_http_headers.get(),
-        "env_config": mwi_validators.validate_env_config(config),
+        "mwi_custom_http_headers": mwi.custom_http_headers.get(),
+        "env_config": mwi.validators.validate_env_config(config),
         "ssl_context": None,
         "mwi_logs_root_dir": mwi_config_folder / "ports",
         "mwi_proxy_lock_file_name": "mwi_proxy.lock",
@@ -121,7 +120,7 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
         matlab_path = get_matlab_path()
         ws_env, ws_env_suffix = get_ws_env_settings()
 
-        ssl_key_file, ssl_cert_file = mwi_validators.validate_ssl_key_and_cert_file(
+        ssl_key_file, ssl_cert_file = mwi.validators.validate_ssl_key_and_cert_file(
             os.getenv(mwi_env.get_env_name_ssl_key_file(), None),
             os.getenv(mwi_env.get_env_name_ssl_cert_file(), None),
         )
@@ -142,16 +141,16 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
                 f"try; run('{matlab_startup_file}'); catch; end;",
             ],
             "create_xvfb_cmd": create_xvfb_cmd,
-            "base_url": mwi_validators.validate_base_url(
+            "base_url": mwi.validators.validate_base_url(
                 os.getenv(mwi_env.get_env_name_base_url(), "")
             ),
-            "app_port": mwi_validators.validate_app_port_is_free(
+            "app_port": mwi.validators.validate_app_port_is_free(
                 os.getenv(mwi_env.get_env_name_app_port())
             ),
             "host_interface": os.environ.get(mwi_env.get_env_name_app_host()),
             "mwapikey": str(uuid.uuid4()),
             "matlab_protocol": "https",
-            "nlm_conn_str": mwi_validators.validate_mlm_license_file(
+            "nlm_conn_str": mwi.validators.validate_mlm_license_file(
                 os.environ.get(mwi_env.get_env_name_network_license_manager())
             ),
             "matlab_config_file": mwi_config_folder / "proxy_app_config.json",
@@ -159,8 +158,8 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
             "mwa_api_endpoint": f"https://login{ws_env_suffix}.mathworks.com/authenticationws/service/v4",
             "mhlm_api_endpoint": f"https://licensing{ws_env_suffix}.mathworks.com/mls/service/v1/entitlement/list",
             "mwa_login": f"https://login{ws_env_suffix}.mathworks.com",
-            "mwi_custom_http_headers": mwi_custom_http_headers.get(),
-            "env_config": mwi_validators.validate_env_config(config_name),
+            "mwi_custom_http_headers": mwi.custom_http_headers.get(),
+            "env_config": mwi.validators.validate_env_config(config_name),
             "ssl_context": get_ssl_context(
                 ssl_cert_file=ssl_cert_file, ssl_key_file=ssl_key_file
             ),

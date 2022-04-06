@@ -4,7 +4,8 @@
 
 import logging
 import os
-from matlab_proxy import mwi_environment_variables as mwi_env
+
+from . import environment_variables as mwi_env
 
 
 def get(init=False):
