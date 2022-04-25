@@ -116,6 +116,19 @@ class MatlabError(AppError):
     pass
 
 
+class XvfbError(AppError):
+    """A Class which inherits the AppError class.
+
+    This class represents any errors raised by Xvfb process.
+
+    Args:
+        AppError (Class): Parent Class containing attributes to store
+        messages, logs and stacktrace.
+    """
+
+    pass
+
+
 def log_error(logger, err):
     """Logs any error to stdout.
 

@@ -432,11 +432,99 @@ class AppState:
                         self.matlab_ready_file_dir = matlab_ready_file_dir
                         self.matlab_ready_file = matlab_ready_file
                         s.close()
+
+                        logger.debug(
+                            f"MATLAB_LOG_DIR:{str( self.matlab_ready_file_dir )}"
+                        )
+                        logger.debug(f"MATLAB_READY_FILE:{str(self.matlab_ready_file)}")
+                        logger.debug(
+                            f"Created MWI proxy lock file for this matlab-proxy process at {self.mwi_proxy_lock_file}"
+                        )
                         return
 
                 except socket.error as e:
                     if e.errno != errno.EADDRINUSE:
                         raise e
+
+    async def __setup_env_for_matlab(self) -> dict:
+        """Configure the environment variables required for launching MATLAB by matlab-proxy.
+
+        Returns:
+            [dict]: Containing keys as the Env variable names and values are its corresponding values.
+        """
+        matlab_env = os.environ.copy()
+        # Env setup related to licensing
+        if self.licensing["type"] == "mhlm":
+            try:
+                # Request an access token
+                access_token_data = await mw.fetch_access_token(
+                    self.settings["mwa_api_endpoint"],
+                    self.licensing["identity_token"],
+                    self.licensing["source_id"],
+                )
+                matlab_env["MLM_WEB_LICENSE"] = "true"
+                matlab_env["MLM_WEB_USER_CRED"] = access_token_data["token"]
+                matlab_env["MLM_WEB_ID"] = self.licensing["entitlement_id"]
+                matlab_env["MW_LOGIN_EMAIL_ADDRESS"] = self.licensing["email_addr"]
+                matlab_env["MW_LOGIN_FIRST_NAME"] = self.licensing["first_name"]
+                matlab_env["MW_LOGIN_LAST_NAME"] = self.licensing["last_name"]
+                matlab_env["MW_LOGIN_DISPLAY_NAME"] = self.licensing["display_name"]
+                matlab_env["MW_LOGIN_USER_ID"] = self.licensing["user_id"]
+                matlab_env["MW_LOGIN_PROFILE_ID"] = self.licensing["profile_id"]
+
+                matlab_env["MHLM_CONTEXT"] = (
+                    "MATLAB_JAVASCRIPT_DESKTOP"
+                    if os.getenv(mwi_env.get_env_name_mhlm_context()) is None
+                    else os.getenv(mwi_env.get_env_name_mhlm_context())
+                )
+            except OnlineLicensingError as e:
+                raise e
+
+        elif self.licensing["type"] == "nlm":
+            matlab_env["MLM_LICENSE_FILE"] = self.licensing["conn_str"]
+
+        # Env setup related to MATLAB
+        matlab_env["MW_CRASH_MODE"] = "native"
+        matlab_env["MATLAB_WORKER_CONFIG_ENABLE_LOCAL_PARCLUSTER"] = "true"
+        matlab_env["PCT_ENABLED"] = "true"
+        matlab_env["HTTP_MATLAB_CLIENT_GATEWAY_PUBLIC_PORT"] = "1"
+        matlab_env["MW_DOCROOT"] = str(
+            self.settings["matlab_path"] / "ui" / "webgui" / "src"
+        )
+        matlab_env["MWAPIKEY"] = self.settings["mwapikey"]
+
+        # For r2020b, r2021a
+        matlab_env["MW_CD_ANYWHERE_ENABLED"] = "true"
+        # For >= r2021b
+        matlab_env["MW_CD_ANYWHERE_DISABLED"] = "false"
+
+        # DDUX info for MATLAB
+        matlab_env["MW_CONTEXT_TAGS"] = self.settings.get("mw_context_tags")
+
+        # Adding DISPLAY key which is only available after starting Xvfb successfully.
+        matlab_env["DISPLAY"] = self.settings["matlab_display"]
+
+        # MW_CONNECTOR_SECURE_PORT and MATLAB_LOG_DIR keys to matlab_env as they are available after
+        # reserving port and preparing lockfiles for MATLAB
+        matlab_env["MW_CONNECTOR_SECURE_PORT"] = str(self.matlab_port)
+
+        # The matlab ready file is written into this location(self.matlab_ready_file_dir) by MATLAB
+        # The matlab_ready_file_dir is where MATLAB will write any subsequent logs
+        matlab_env["MATLAB_LOG_DIR"] = str(self.matlab_ready_file_dir)
+
+        # Env setup related to logging
+        # Very verbose logging in debug mode
+        if logger.isEnabledFor(logging.getLevelName("DEBUG")):
+            matlab_env["MW_DIAGNOSTIC_DEST"] = "stdout"
+            matlab_env[
+                "MW_DIAGNOSTIC_SPEC"
+            ] = "connector::http::server=all;connector::lifecycle=all"
+
+        # TODO Introduce a warmup flag to enable this?
+        # matlab_env["CONNECTOR_CONFIGURABLE_WARMUP_TASKS"] = "warmup_hgweb"
+        # matlab_env["CONNECTOR_WARMUP"] = "true"
+
+        return matlab_env
 
     async def start_matlab(self, restart_matlab=False):
         """Start MATLAB.
@@ -463,14 +551,6 @@ class AppState:
             self.logs["matlab"].clear()
             return
 
-        if self.licensing["type"] == "mhlm":
-            # Request an access token
-            access_token_data = await mw.fetch_access_token(
-                self.settings["mwa_api_endpoint"],
-                self.licensing["identity_token"],
-                self.licensing["source_id"],
-            )
-
         # Ensure that previous processes are stopped
         await self.stop_matlab()
 
@@ -478,79 +558,31 @@ class AppState:
         self.error = None
         self.logs["matlab"].clear()
 
-        # Finds and reserves a free port, then prepare lock files for the MATLAB process.
-        self.prepare_lock_files_for_MATLAB_launch()
+        try:
+            # Start Xvfb process and update display number in settings
+            create_xvfb_cmd = self.settings["create_xvfb_cmd"]
+            xvfb_cmd, dpipe = create_xvfb_cmd()
 
-        logger.debug(f"MATLAB_LOG_DIR:{str( self.matlab_ready_file_dir )}")
-        logger.debug(f"MATLAB_READY_FILE:{str(self.matlab_ready_file)}")
-        logger.debug(
-            f"Created MWI proxy lock file for this matlab-proxy process at {self.mwi_proxy_lock_file}"
-        )
+            xvfb, display_port = await mw.create_xvfb_process(xvfb_cmd, dpipe)
 
-        # Configure the environment MATLAB needs to start
-        matlab_env = os.environ.copy()
-        matlab_env["MW_CRASH_MODE"] = "native"
-        matlab_env["MATLAB_WORKER_CONFIG_ENABLE_LOCAL_PARCLUSTER"] = "true"
-        matlab_env["PCT_ENABLED"] = "true"
-        matlab_env["HTTP_MATLAB_CLIENT_GATEWAY_PUBLIC_PORT"] = "1"
-        matlab_env["MW_CONNECTOR_SECURE_PORT"] = str(self.matlab_port)
-        matlab_env["MW_DOCROOT"] = str(
-            self.settings["matlab_path"] / "ui" / "webgui" / "src"
-        )
-        matlab_env["MWAPIKEY"] = self.settings["mwapikey"]
-        # The matlab ready file is written into this location by MATLAB
-        # The matlab_ready_file_dir is where MATLAB will write any subsequent logs
-        matlab_env["MATLAB_LOG_DIR"] = str(self.matlab_ready_file_dir)
-        # For r2020b, r2021a
-        matlab_env["MW_CD_ANYWHERE_ENABLED"] = "true"
-        # For >= r2021b
-        matlab_env["MW_CD_ANYWHERE_DISABLED"] = "false"
-        matlab_env["MW_CONTEXT_TAGS"] = self.settings.get("mw_context_tags")
+            self.settings["matlab_display"] = ":" + str(display_port)
+            self.processes["xvfb"] = xvfb
+            logger.debug(f"Started Xvfb with PID={xvfb.pid} on DISPLAY={display_port}")
 
-        if self.licensing["type"] == "mhlm":
-            matlab_env["MLM_WEB_LICENSE"] = "true"
-            matlab_env["MLM_WEB_USER_CRED"] = access_token_data["token"]
-            matlab_env["MLM_WEB_ID"] = self.licensing["entitlement_id"]
-            matlab_env["MW_LOGIN_EMAIL_ADDRESS"] = self.licensing["email_addr"]
-            matlab_env["MW_LOGIN_FIRST_NAME"] = self.licensing["first_name"]
-            matlab_env["MW_LOGIN_LAST_NAME"] = self.licensing["last_name"]
-            matlab_env["MW_LOGIN_DISPLAY_NAME"] = self.licensing["display_name"]
-            matlab_env["MW_LOGIN_USER_ID"] = self.licensing["user_id"]
-            matlab_env["MW_LOGIN_PROFILE_ID"] = self.licensing["profile_id"]
+            # Finds and reserves a free port, then prepare lock files for the MATLAB process.
+            self.prepare_lock_files_for_MATLAB_launch()
 
-            matlab_env["MHLM_CONTEXT"] = (
-                "MATLAB_JAVASCRIPT_DESKTOP"
-                if os.getenv(mwi_env.get_env_name_mhlm_context()) is None
-                else os.getenv(mwi_env.get_env_name_mhlm_context())
-            )
+            # Configure the environment MATLAB needs to start
+            matlab_env = await self.__setup_env_for_matlab()
 
-        elif self.licensing["type"] == "nlm":
-            matlab_env["MLM_LICENSE_FILE"] = self.licensing["conn_str"]
-
-        # Very verbose logging in debug mode
-        if logger.isEnabledFor(logging.getLevelName("DEBUG")):
-            matlab_env["MW_DIAGNOSTIC_DEST"] = "stdout"
-            matlab_env[
-                "MW_DIAGNOSTIC_SPEC"
-            ] = "connector::http::server=all;connector::lifecycle=all"
-
-        # TODO Introduce a warmup flag to enable this?
-        # matlab_env["CONNECTOR_CONFIGURABLE_WARMUP_TASKS"] = "warmup_hgweb"
-        # matlab_env["CONNECTOR_WARMUP"] = "true"
-
-        # Start Xvfb process
-        create_xvfb_cmd = self.settings["create_xvfb_cmd"]
-        xvfb_cmd, dpipe = create_xvfb_cmd()
-
-        xvfb, display_port = await mw.create_xvfb_process(xvfb_cmd, dpipe, matlab_env)
-
-        # Update settings and matlab_env dict
-        self.settings["matlab_display"] = ":" + str(display_port)
-        self.processes["xvfb"] = xvfb
-
-        matlab_env["DISPLAY"] = self.settings["matlab_display"]
-
-        logger.debug(f"Started Xvfb with PID={xvfb.pid} on DISPLAY={display_port}")
+        # If there's something wrong with setting up, capture the error for logging
+        # and to pass to the front-end. Don't start the MATLAB process by returning early.
+        except Exception as err:
+            self.error = err
+            log_error(logger, err)
+            # stop_matlab() does the teardown work by removing any residual files and processes created till now.
+            await self.stop_matlab()
+            return
 
         # Start MATLAB Process
         logger.debug(f"Starting MATLAB on port {self.matlab_port}")

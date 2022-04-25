@@ -7,6 +7,7 @@ from matlab_proxy.util.mwi_exceptions import (
     EntitlementError,
     NetworkLicensingError,
     MatlabError,
+    XvfbError,
 )
 from matlab_proxy.util import mwi_logger
 from matlab_proxy.default_configuration import config
@@ -255,7 +256,7 @@ def parse_other_error(logs):
     )
 
 
-async def create_xvfb_process(xvfb_cmd, pipe, matlab_env={}):
+async def create_xvfb_process(xvfb_cmd, pipe, env={}):
     """Creates the Xvfb process.
 
     The Xvfb process is run with '-displayfd' flag set. This makes Xvfb choose an available
@@ -272,7 +273,7 @@ async def create_xvfb_process(xvfb_cmd, pipe, matlab_env={}):
     Args:
         xvfb_cmd (List): A list containing the command to run the Xvfb process
         pipe (List): A list containing a pair of file descriptor.
-        matlab_env (Dict): A Dict containing environment variables within which the Xvfb process is created.
+        env (Dict): A Dict containing environment variables for the Xvfb process.
 
     Returns:
         List: Containing the Xvfb process object, and display number on which Xvfb process has started.
@@ -281,7 +282,7 @@ async def create_xvfb_process(xvfb_cmd, pipe, matlab_env={}):
     # Creates subprocess asynchronously with environment variables defined in matlab_env
     # Pipe errors, if any, to the process object instead of stdout.
     xvfb = await asyncio.create_subprocess_exec(
-        *xvfb_cmd, close_fds=False, env=matlab_env, stderr=asyncio.subprocess.PIPE
+        *xvfb_cmd, close_fds=False, env=env, stderr=asyncio.subprocess.PIPE
     )
 
     read_descriptor, write_descriptor = pipe
@@ -306,7 +307,7 @@ async def create_xvfb_process(xvfb_cmd, pipe, matlab_env={}):
             error += line.decode("utf-8")
 
         await xvfb.wait()
-        raise Exception(f"Unable to start the Xvfb process: \n {error}")
+        raise XvfbError(f"Unable to start the Xvfb process: \n {error}")
 
     # Close the read and write descriptors.
     os.close(read_descriptor)
