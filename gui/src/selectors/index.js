@@ -41,7 +41,17 @@ export const selectMatlabUp = createSelector(
 
 export const selectMatlabRunning = createSelector(
     selectMatlabStatus,
-    matlabStatus => matlabStatus === 'up' || matlabStatus === 'starting'
+    matlabStatus => matlabStatus === 'up'
+);
+
+export const selectMatlabStarting = createSelector(
+    selectMatlabStatus,
+    matlabStatus => matlabStatus === 'starting'
+);
+
+export const selectMatlabStopping = createSelector(
+    selectMatlabStatus,
+    matlabStatus => matlabStatus === 'stopping' 
 );
 
 export const selectOverlayHidable = createSelector(
@@ -140,6 +150,14 @@ export const selectInformationDetails = createSelector(
                     alert: 'info',
                     spinner: true
                 };
+
+            case 'stopping':
+                return {
+                        label: 'Stopping',
+                        icon: 'info-reverse',
+                        alert: 'info',
+                        spinner: true
+                };            
             case 'down':
                 const detail = {
                     label: 'Not running',

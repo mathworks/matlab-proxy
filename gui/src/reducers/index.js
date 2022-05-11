@@ -78,6 +78,9 @@ export function matlabStatus(state = 'down', action) {
         case RECEIVE_STOP_MATLAB:
         case RECEIVE_START_MATLAB:
             return action.status.matlab.status;
+        case REQUEST_STOP_MATLAB:
+        case REQUEST_START_MATLAB:
+            return action.status;
         default:
             return state;
     }

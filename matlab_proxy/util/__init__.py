@@ -1,5 +1,6 @@
 # Copyright 2020 The MathWorks, Inc.
 import argparse
+import asyncio
 import os
 import signal
 import socket
@@ -20,6 +21,29 @@ def is_python_version_newer_than_3_6():
         Boolean: True if python version >= 3.7, False otherwise.
     """
     return sys.version_info[:2] >= (3, 7)
+
+
+def get_event_loop():
+    """Returns an asyncio event loop by checking the current python version and uses the appropriate
+    asyncio API
+
+    Returns:
+        asyncio.loop: asyncio event loop.
+    """
+    if is_python_version_newer_than_3_6():
+        # get_running_loop() api is available for python >= 3.7
+        try:
+            # Try to get an existing event loop.
+            # If there's no running event loop, raise RuntimeError.
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # If execution reached this except block, it implies that there
+            # was no running event loop. So, create one.
+            loop = asyncio.get_event_loop()
+    else:
+        loop = asyncio.get_event_loop()
+
+    return loop
 
 
 def parse_cli_args():

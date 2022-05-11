@@ -1,10 +1,14 @@
 # Copyright 2021 The MathWorks, Inc.
 
-import pytest, asyncio, aiohttp, json, time
+import asyncio
+import json
+import time
+
+import aiohttp
+import pytest
 from aiohttp import web
-from matlab_proxy import app
+from matlab_proxy import app, util
 from matlab_proxy.util.mwi.exceptions import MatlabInstallError
-from matlab_proxy import util
 
 
 def test_create_app():
@@ -145,17 +149,13 @@ class FakeServer:
         self.aiohttp_client = aiohttp_client
 
     def __enter__(self):
-        self.server = app.create_app()
-        self.runner = web.AppRunner(self.server)
-        self.loop.run_until_complete(self.runner.setup())
-        self.site = util.prepare_site(self.server, self.runner)
-        self.loop.run_until_complete(self.site.start())
-
+        server = app.create_app()
+        self.server = app.configure_and_start(server)
         return self.loop.run_until_complete(self.aiohttp_client(self.server))
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.loop.run_until_complete(self.runner.shutdown())
-        self.loop.run_until_complete(self.runner.cleanup())
+        self.loop.run_until_complete(self.server.shutdown())
+        self.loop.run_until_complete(self.server.cleanup())
 
 
 @pytest.fixture(name="test_server")
@@ -221,11 +221,12 @@ async def test_start_matlab_route(test_server):
         assert resp.status == 200
 
         resp_json = json.loads(await resp.text())
+
         if resp_json["matlab"]["status"] == "up":
             break
         else:
             count += 1
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(1)
             if count > max_tries:
                 raise ConnectionError
 
@@ -422,7 +423,7 @@ async def test_matlab_proxy_http_post_request(proxy_payload, test_server):
 
     while True:
         resp = await test_server.post(
-            "/http_post_request.html/asdfjkl;/messageservice/json/secure",
+            "/messageservice/json/secure",
             data=json.dumps(proxy_payload),
         )
 
@@ -431,11 +432,8 @@ async def test_matlab_proxy_http_post_request(proxy_payload, test_server):
             count += 1
 
         else:
-            resp_body = await resp.text()
-            proxy_payload["messages"]["ClientType"][0]["properties"][
-                "TYPE"
-            ] = "jsd_rmt_tmw"
-            assert json.dumps(proxy_payload) == resp_body
+            resp_json = await resp.json()
+            assert set(resp_json.keys()).issubset(proxy_payload.keys())
             break
 
         if count > max_tries:

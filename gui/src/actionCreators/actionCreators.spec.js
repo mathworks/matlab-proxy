@@ -28,8 +28,8 @@ describe.each([
   describe.each([
   [actionCreators.requestServerStatus, {type:actions.REQUEST_SERVER_STATUS}],
   [actionCreators.requestSetLicensing, {type:actions.REQUEST_SET_LICENSING}],
-  [actionCreators.requestStopMatlab, {type:actions.REQUEST_STOP_MATLAB}],
-  [actionCreators.requestStartMatlab, {type:actions.REQUEST_START_MATLAB}],
+  [actionCreators.requestStopMatlab, {type:actions.REQUEST_STOP_MATLAB, status: 'stopping'}],
+  [actionCreators.requestStartMatlab, {type:actions.REQUEST_START_MATLAB, status: 'starting'}],
   [actionCreators.requestTerminateIntegration, {type:actions.REQUEST_TERMINATE_INTEGRATION}],
   ])('Test Request actionCreators', (method, expectedAction) => {
 

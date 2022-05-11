@@ -1,9 +1,17 @@
 # Copyright 2021 The MathWorks, Inc.
 
-import pytest, socket, os, requests, pty, time, subprocess, sys
-from pathlib import Path
-from matlab_proxy.util.mwi import environment_variables as mwi_env
+import os
+import pty
+import socket
+import subprocess
+import sys
+import time
 from collections import namedtuple
+from pathlib import Path
+
+import pytest
+import requests
+from matlab_proxy.util.mwi import environment_variables as mwi_env
 
 """
 This file consists of tests which check the devel.py file

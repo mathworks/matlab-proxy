@@ -112,7 +112,7 @@ describe('Controls Component', () => {
     fireEvent.click(confirmButton);
 
     let tableData = container.querySelector('.details');
-    expect(tableData.innerHTML).toMatch('Running');
+    expect(tableData.innerHTML).toContain('Starting. This may take several minutes');
   });
 
 });

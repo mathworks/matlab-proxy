@@ -129,6 +129,19 @@ class XvfbError(AppError):
     pass
 
 
+class EmbeddedConnectorError(MatlabError):
+    """A Class which inherits the MatlabError class.
+
+    This class represents errors raised when proxy fails to communicate with the Embedded Connector.
+
+    Args:
+        AppError (Class): Parent Class containing attributes to store
+        messages, logs and stacktrace.
+    """
+
+    pass
+
+
 def log_error(logger, err):
     """Logs any error to stdout.
 

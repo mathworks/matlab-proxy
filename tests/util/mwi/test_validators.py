@@ -2,10 +2,15 @@
 """Tests for functions in matlab_proxy/util/mwi_validators.py
 """
 
-import pytest, os, tempfile, socket, random
+import os
+import random
+import socket
+import tempfile
+
 import matlab_proxy
-from matlab_proxy.util.mwi import validators
+import pytest
 from matlab_proxy.util.mwi import environment_variables as mwi_env
+from matlab_proxy.util.mwi import validators
 from matlab_proxy.util.mwi.exceptions import NetworkLicensingError
 
 

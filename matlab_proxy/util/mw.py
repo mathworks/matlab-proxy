@@ -11,9 +11,9 @@ from matlab_proxy.util import mwi
 from matlab_proxy.util.mwi.exceptions import (
     EntitlementError,
     MatlabError,
-    XvfbError,
     NetworkLicensingError,
     OnlineLicensingError,
+    XvfbError,
 )
 
 logger = mwi.logger.get()

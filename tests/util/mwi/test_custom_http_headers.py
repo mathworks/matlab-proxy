@@ -1,7 +1,12 @@
 # Copyright 2020-2021 The MathWorks, Inc.
 
+import json
+import os
+import stat
+import time
 from json.decoder import JSONDecodeError
-import pytest, os, time, json, stat
+
+import pytest
 from matlab_proxy.util.mwi import custom_http_headers
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 

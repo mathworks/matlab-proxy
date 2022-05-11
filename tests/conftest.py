@@ -1,6 +1,9 @@
 # Copyright 2020-2021 The MathWorks, Inc.
 
-import os, pytest, shutil
+import os
+import shutil
+
+import pytest
 from matlab_proxy import settings
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 

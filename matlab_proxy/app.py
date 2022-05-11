@@ -31,6 +31,9 @@ mimetypes.add_type("image/png", ".ico")
 # nested subapp (with a name unlikely to cause collisions) containing this API and the
 # static serving.
 
+# Setup logger for the integration and a web logger. Override any default loggers.
+logger = mwi.logger.get(init=True)
+
 
 def marshal_licensing_info(licensing_info):
     """Gather/Marshal licensing information for MHLM and NLM Licensing types.
@@ -76,7 +79,7 @@ def marshal_error(error):
     }
 
 
-def create_status_response(app, loadUrl=None):
+async def create_status_response(app, loadUrl=None):
     """Send a generic status response about the state of server,MATLAB and MATLAB Licensing
 
     Args:
@@ -90,7 +93,7 @@ def create_status_response(app, loadUrl=None):
     return web.json_response(
         {
             "matlab": {
-                "status": state.get_matlab_state(),
+                "status": await state.get_matlab_state(),
                 "version": state.settings["matlab_version"],
             },
             "licensing": marshal_licensing_info(state.licensing),
@@ -123,7 +126,7 @@ async def get_status(req):
     Returns:
         JSONResponse: JSONResponse object containing information about the server, MATLAB and MATLAB Licensing.
     """
-    return create_status_response(req.app)
+    return await create_status_response(req.app)
 
 
 async def start_matlab(req):
@@ -140,7 +143,7 @@ async def start_matlab(req):
     # Start MATLAB
     await state.start_matlab(restart_matlab=True)
 
-    return create_status_response(req.app)
+    return await create_status_response(req.app)
 
 
 async def stop_matlab(req):
@@ -156,7 +159,7 @@ async def stop_matlab(req):
 
     await state.stop_matlab()
 
-    return create_status_response(req.app)
+    return await create_status_response(req.app)
 
 
 async def set_licensing_info(req):
@@ -196,7 +199,7 @@ async def set_licensing_info(req):
         # Start MATLAB
         await state.start_matlab(restart_matlab=True)
 
-    return create_status_response(req.app)
+    return await create_status_response(req.app)
 
 
 async def licensing_info_delete(req):
@@ -218,7 +221,7 @@ async def licensing_info_delete(req):
     # Persist licensing information
     state.persist_licensing()
 
-    return create_status_response(req.app)
+    return await create_status_response(req.app)
 
 
 async def termination_integration_delete(req):
@@ -230,7 +233,7 @@ async def termination_integration_delete(req):
     state = req.app["state"]
 
     # Send response manually because this has to happen before the application exits
-    res = create_status_response(req.app, "../")
+    res = await create_status_response(req.app, "../")
     await res.prepare(req)
     await res.write_eof()
 
@@ -470,7 +473,7 @@ async def matlab_starter(app):
     state = app["state"]
 
     try:
-        if state.is_licensed() and state.get_matlab_state() == "down":
+        if state.is_licensed() and await state.get_matlab_state() == "down":
             await state.start_matlab()
     except asyncio.CancelledError:
         # Ensure MATLAB is terminated
@@ -495,8 +498,12 @@ async def cleanup_background_tasks(app):
     Args:
         app (aiohttp_server): Instance of aiohttp server
     """
-    logger = mwi.logger.get()
+    # First stop matlab
     state = app["state"]
+    await state.stop_matlab()
+
+    # Stop any running async tasks
+    logger = mwi.logger.get()
     tasks = state.tasks
     for task_name, task in tasks.items():
         if not task.cancelled():
@@ -507,10 +514,52 @@ async def cleanup_background_tasks(app):
             except asyncio.CancelledError:
                 pass
 
-    await state.stop_matlab()
+
+def configure_and_start(app):
+    """Configure the site for the app and update app with appropriate values
+
+    Args:
+        app (aiohttp.web.Application): A aiohttp web server.
+
+    Returns:
+        aiohttp.web.Application: Updated web server.
+    """
+    loop = util.get_event_loop()
+
+    web_logger = None if not mwi_env.is_web_logging_enabled() else logger
+
+    # Setup runner
+    runner = web.AppRunner(app, logger=web_logger, access_log=web_logger)
+    loop.run_until_complete(runner.setup())
+
+    # Prepare site to start, then set port of the app.
+    site = util.prepare_site(app, runner)
+
+    # This would be required when MWI_APP_PORT env variable is not set and the site starts on a random port.
+    app["settings"]["app_port"] = site._port
+
+    # Update the site origin in settings.
+    # The origin will be used for communicating with the Embedded connector.
+    app["settings"]["mwi_server_url"] = site.name
+
+    loop.run_until_complete(site.start())
+
+    logger.debug("Starting MATLAB proxy app")
+    logger.debug(
+        f' with base_url: {app["settings"]["base_url"]} and app_port:{app["settings"]["app_port"]}.'
+    )
+
+    logger.info(
+        util.prettify(
+            boundary_filler="=",
+            text_arr=[f"MATLAB can be accessed at:", site.name],
+        )
+    )
+
+    return app
 
 
-# config is has a default initializer because it needs to be callable without inputs from ADEV servers
+# config has a default initializer because it needs to be callable without inputs from ADEV servers
 def create_app(config_name=matlab_proxy.get_default_config_name()):
     """Creates the web server and adds the routes,settings and env_config to the server.
 
@@ -558,51 +607,17 @@ def create_app(config_name=matlab_proxy.get_default_config_name()):
 def main():
     """Starting point of the integration. Creates the web app and runs indefinitely."""
 
-    # Setup logger for the integration and a web logger. Override any default loggers.
-    logger = mwi.logger.get(init=True)
-    web_logger = None if not mwi_env.is_web_logging_enabled() else logger
-
     # The integration needs to be called with --config flag.
     # Parse the passed cli arguments.
     desired_configuration_name = util.parse_cli_args()["config"]
 
-    app = create_app(desired_configuration_name)
+    # Create, configure and start the app.
+    app = create_app(config_name=desired_configuration_name)
+    app = configure_and_start(app)
 
-    loop = asyncio.get_event_loop()
-
-    # Setup runner
-    runner = web.AppRunner(app, logger=web_logger, access_log=web_logger)
-    loop.run_until_complete(runner.setup())
-
-    # Prepare site to start, then set port of the app.
-    site = util.prepare_site(app, runner)
-    # This would be required when MWI_APP_PORT env variable is not set and the site starts on a random port.
-    app["settings"]["app_port"] = site._port
-    loop.run_until_complete(site.start())
-
+    loop = util.get_event_loop()
+    # Add signal handlers for the current python process
     loop = util.add_signal_handlers(loop)
-
-    logger.debug("Starting MATLAB proxy app")
-    logger.debug(
-        f' with base_url: {app["settings"]["base_url"]} and app_port:{app["settings"]["app_port"]}.'
-    )
-
-    ssl_context = app["settings"]["ssl_context"]
-    if ssl_context != None:
-        access_protocol = "https"
-    else:
-        access_protocol = "http"
-
-    logger.info(
-        util.prettify(
-            boundary_filler="=",
-            text_arr=[
-                f"MATLAB can be accessed at:",
-                f'{access_protocol}://localhost:{app["settings"]["app_port"]}{app["settings"]["base_url"]}/index.html',
-            ],
-        )
-    )
-
     loop.run_forever()
 
     async def shutdown():

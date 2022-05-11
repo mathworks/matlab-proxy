@@ -153,18 +153,41 @@ describe('Test derived selectors', () => {
   });
 
 
-  test('selectMatlabRunning should return true when Matlab is up or starting', () => {
+  test('selectMatlabRunning should return true when Matlab is up', () => {
     expect(selectMatlabRunning(state)).toBe(true);
     modifiedState = _.cloneDeep(state);
     modifiedState.serverStatus.matlabStatus = 'starting';
-    expect(selectMatlabRunning(modifiedState)).toBe(true);
+    expect(selectMatlabRunning(modifiedState)).toBe(false);
   });
 
-  test('selectMatlabRunning should false when Matlab status is not up or starting', () => {
-
+  test('selectMatlabRunning should false when Matlab status is not up', () => {
     modifiedState = _.cloneDeep(state);
     modifiedState.serverStatus.matlabStatus = 'down';
     expect(selectMatlabRunning(modifiedState)).toBe(false);
+  });
+
+  test('selectMatlabStopping should true when Matlab status is stopping', () => {
+    modifiedState = _.cloneDeep(state);
+    modifiedState.serverStatus.matlabStatus = 'stopping';
+    expect(selectors.selectMatlabStopping(modifiedState)).toBe(true);
+  });
+
+  test('selectMatlabStopping should false when Matlab status is not stopping', () => {
+    modifiedState = _.cloneDeep(state);
+    modifiedState.serverStatus.matlabStatus = 'up';
+    expect(selectors.selectMatlabStopping(modifiedState)).toBe(false);
+  });
+
+  test('selectMatlabStarting should true when Matlab status is starting', () => {
+    modifiedState = _.cloneDeep(state);
+    modifiedState.serverStatus.matlabStatus = 'starting';
+    expect(selectors.selectMatlabStarting(modifiedState)).toBe(true);
+  });
+
+  test('selectMatlabStarting should false when Matlab status is not starting', () => {
+    modifiedState = _.cloneDeep(state);
+    modifiedState.serverStatus.matlabStatus = 'up';
+    expect(selectors.selectMatlabStopping(modifiedState)).toBe(false);
   });
 
   test('selectOverlayHidable should return true when matlab is up and there is no error ', () => {

@@ -14,6 +14,7 @@ from matlab_proxy import util
 from matlab_proxy.util import mw, mwi
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi.exceptions import (
+    EmbeddedConnectorError,
     EntitlementError,
     InternalError,
     LicensingError,
@@ -170,7 +171,7 @@ class AppState:
                 except Exception as e:
                     self.__reset_and_delete_cached_licensing()
 
-    def get_matlab_state(self):
+    async def get_matlab_state(self):
         """Determine the state of MATLAB to be down/starting/up.
 
         Returns:
@@ -183,7 +184,7 @@ class AppState:
         # MATLAB process never started
         if matlab is None:
             return "down"
-        # MATLAB process previously started, but not running
+        # MATLAB process previously started, but not currently running
         elif matlab.returncode is not None:
             return "down"
         # Xvfb never started
@@ -192,11 +193,21 @@ class AppState:
         # Xvfb process previously started, but not running
         elif xvfb.returncode is not None:
             return "down"
-        # MATLAB processes started and MATLAB Embedded Connector ready file present
-        elif self.matlab_ready_file.exists():
-            return "up"
-        # MATLAB processes started, but MATLAB Embedded Connector not ready
-        return "starting"
+        else:
+            # If execution reaches this else block, it implies that:
+            # 1) MATLAB process has started.
+            # 2) Embedded connector has not started yet.
+
+            # So, even if the embedded connector's status is 'down', we'll
+            # return as 'starting' because the MATLAB process itself has been created
+            # and matlab-proxy is waiting for the embedded connector to start serving content.
+            status = await mwi.embedded_connector.request.get_state(
+                self.settings["mwi_server_url"]
+            )
+            if status == "down":
+                status = "starting"
+
+            return status
 
     async def set_licensing_nlm(self, conn_str):
         """Set the licensing type to NLM and the connection string."""
@@ -537,7 +548,7 @@ class AppState:
         """
 
         # FIXME
-        if self.get_matlab_state() != "down" and restart_matlab is False:
+        if await self.get_matlab_state() != "down" and restart_matlab is False:
             raise Exception("MATLAB already running/starting!")
 
         # FIXME
@@ -603,31 +614,65 @@ class AppState:
                 self.logs["matlab"].append(line)
             await self.handle_matlab_output()
 
-        loop = (
-            asyncio.get_running_loop()
-            if util.is_python_version_newer_than_3_6()
-            else asyncio.get_event_loop()
-        )
+        loop = util.get_event_loop()
 
         self.tasks["matlab_stderr_reader"] = loop.create_task(matlab_stderr_reader())
 
     async def stop_matlab(self):
         """Terminate MATLAB."""
 
-        matlab = self.processes["matlab"]
-        xvfb = self.processes["xvfb"]
+        # Cancel the asyncio task which reads MATLAB process' stderr
+        if "matlab_stderr_reader" in self.tasks:
+            try:
+                self.tasks["matlab_stderr_reader"].cancel()
+            except asyncio.CancelledError:
+                pass
 
-        waiters = []
+            del self.tasks["matlab_stderr_reader"]
+
+        matlab = self.processes["matlab"]
+
         # Terminate
         if matlab is not None and matlab.returncode is None:
-            logger.info(f"Terminating MATLAB (PID={matlab.pid})")
-            matlab.terminate()
-            waiters.append(matlab.wait())
+            # Instead of calling the .terminate() method first, which leads to MATLAB exiting with error code: 15,
+            # try to shutdown MATLAB gracefully by sending the 'exit' command to the Embedded connector.
+            # This will let MATLAB to safely checkin licenses and shutdown gracefully.
+            # If the request fails, call the .terminate() method on the process.
 
+            logger.info(f"Terminating MATLAB (PID={matlab.pid})")
+            data = mwi.embedded_connector.helpers.get_data_to_eval_mcode("exit")
+            url = mwi.embedded_connector.helpers.get_mvm_endpoint(
+                self.settings["mwi_server_url"]
+            )
+            try:
+                resp_json = await mwi.embedded_connector.send_request(
+                    url=url, method="POST", data=data, headers=None
+                )
+                if resp_json["messages"]["EvalResponse"][0]["isError"]:
+                    raise EmbeddedConnectorError(
+                        "Failed to send HTTP request to Embedded connector"
+                    )
+
+                # Wait for matlab to shutdown gracefully
+                await matlab.wait()
+                assert (
+                    matlab.returncode == 0
+                ), "Failed to gracefully shutdown MATLAB via the embedded connector"
+
+            except Exception as err:
+                log_error(logger, err)
+                # Additional try-catch as error could be thrown in Windows.
+                try:
+                    matlab.terminate()
+                    await matlab.wait()
+                except:
+                    pass
+
+        xvfb = self.processes["xvfb"]
         if xvfb is not None and xvfb.returncode is None:
             logger.info(f"Terminating Xvfb (PID={xvfb.pid})")
             xvfb.terminate()
-            waiters.append(xvfb.wait())
+            await xvfb.wait()
 
         try:
             # Clean up both connector.securePort file and mwi_proxy_lock_file
@@ -641,10 +686,6 @@ class AppState:
             # Files won't exist when stop_matlab is called for the first time.
             pass
 
-        # Wait for termination
-        for waiter in waiters:
-            await waiter
-
         # Clear logs if MATLAB stopped intentionally
         self.logs["matlab"].clear()
 
@@ -657,10 +698,12 @@ class AppState:
         await matlab.wait()
 
         rc = self.processes["matlab"].returncode
-        logger.info(f"MATLAB has exited with errorcode: {rc}")
+        logger.info(
+            f"MATLAB has shutdown with {'exit' if rc == 0 else 'error'} code: {rc}"
+        )
 
         # Look for errors if MATLAB was not intentionally stopped and had an error code
-        if len(self.logs["matlab"]) > 0 and self.processes["matlab"].returncode != 0:
+        if len(self.logs["matlab"]) > 0 and rc != 0:
             err = None
             logs = [log.decode().rstrip() for log in self.logs["matlab"]]
 

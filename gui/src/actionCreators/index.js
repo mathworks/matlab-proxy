@@ -101,6 +101,7 @@ export function receiveTerminateIntegration(status) {
 export function requestStopMatlab() {
     return {
         type: REQUEST_STOP_MATLAB,
+        status: 'stopping'
     };
 }
 
@@ -114,6 +115,7 @@ export function receiveStopMatlab(status) {
 export function requestStartMatlab() {
     return {
         type: REQUEST_START_MATLAB,
+        status: 'starting'
     };
 }
 

@@ -1,13 +1,16 @@
 # Copyright 2021 The MathWorks, Inc.
 
-import pytest, secrets, datetime, random, re
+import datetime
+import random
+import re
+import secrets
+from collections import namedtuple
+from datetime import timedelta, timezone
+
+import pytest
 from matlab_proxy import settings
 from matlab_proxy.util import mw
-from datetime import timezone
 from matlab_proxy.util.mwi import exceptions
-from datetime import timedelta
-from collections import namedtuple
-
 
 """This file tests methods present in matlab_proxy/util/mw.py
 """

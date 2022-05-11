@@ -1,10 +1,11 @@
 # Copyright 2021 The MathWorks, Inc.
 
+import os
+
 import matlab_proxy
 import matlab_proxy.settings as settings
-from matlab_proxy.util.mwi import environment_variables as mwi_env
 import pytest
-import os
+from matlab_proxy.util.mwi import environment_variables as mwi_env
 
 """This file tests methods defined in settings.py file
 """

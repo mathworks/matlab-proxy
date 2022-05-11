@@ -2,8 +2,9 @@
 """This file tests methods present in matlab_proxy/util/mwi_logger.py
 """
 
-import os
 import logging
+import os
+
 from matlab_proxy.util.mwi import logger as mwi_logger
 
 

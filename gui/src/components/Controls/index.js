@@ -9,6 +9,8 @@ import {
     selectLicensingIsMhlm,
     selectLicensingProvided,
     selectMatlabRunning,
+    selectMatlabStarting,
+    selectMatlabStopping,
     selectMatlabVersion,
     selectError
 } from '../../selectors';
@@ -33,6 +35,8 @@ function Controls({
     const licensed = useSelector(selectLicensingProvided);
     const mhlmLicense = useSelector(selectLicensingIsMhlm);
     const matlabRunning = useSelector(selectMatlabRunning);
+    const matlabStarting = useSelector(selectMatlabStarting);
+    const matlabStopping = useSelector(selectMatlabStopping);    
     const matlabVersion = useSelector(selectMatlabVersion);
     const error = useSelector(selectError);
 
@@ -93,7 +97,7 @@ MATLAB version: ${matlabVersion}%0D%0A`,
                 data-testid='startMatlabBtn'
                 className={getBtnClass(matlabRunning ? 'restart' : 'start')}
                 onClick={() => callback(Confirmations.START)}
-                disabled={!licensed}
+                disabled={!licensed || matlabStarting || matlabStopping}
                 data-for="control-button-tooltip"
                 data-tip={`${matlabRunning ? 'Restart' : 'Start'}  your MATLAB session`}
             >

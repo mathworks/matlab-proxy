@@ -74,6 +74,7 @@ def get_dev_settings(config):
         "mwi_logs_root_dir": mwi_config_folder / "ports",
         "mwi_proxy_lock_file_name": "mwi_proxy.lock",
         "mw_context_tags": get_mw_context_tags(matlab_proxy.get_default_config_name()),
+        "mwi_server_url": None,
     }
 
 
@@ -169,6 +170,8 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
             # Name of the lock file which will be created by this instance of matlab-proxy process.
             "mwi_proxy_lock_file_name": "mwi_proxy.lock",
             "mw_context_tags": get_mw_context_tags(config_name),
+            # The url where the matlab-proxy server is accessible at
+            "mwi_server_url": None,
         }
 
 

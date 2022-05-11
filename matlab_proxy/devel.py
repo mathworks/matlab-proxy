@@ -70,8 +70,45 @@ async def get_request_handler(request):
     return web.Response(text=await request.text())
 
 
+async def fake_matlab_mvm_endpoint(request):
+    """API Endpoint used for testing the fake matlab's mvm endpoint.
+
+    When the FakeServer's instance is running the tear down method which calls stop_matlab(),
+    which inturn hits this endpoint. The stop_matlab() call expects this endpoint to respond appropriately and
+    and waits for this server to shutdown and exit.
+
+    Args:
+        request (HTTPRequest): HTTPRequest object
+
+    Returns:
+        HTTPResponse: HTTPResponse object which returns a successful evaluation of eval code.
+    """
+
+    # This endpoint is hit when FakeServer instance is running its teardown method is called
+    # which stops matlab.
+    resp = web.json_response({"messages": {"EvalResponse": [{"isError": False}]}})
+    await resp.prepare(request)
+    await resp.write_eof()
+
+    await request.app.shutdown()
+    await request.app.cleanup()
+
+
 async def post_request_handler(request):
-    """API Endpoint used for testing the HTTP POST Request for the proxy server.
+    """API endpoint used for testing a POST endpoint for the fake matlab server. Returns the same json in the request body
+    as a response.
+
+    Args:
+        request (HTTPRequest): HTTPRequest object
+
+    Returns:
+        HTTPResponse: HTTPResponse object which returns the received json
+    """
+    return web.json_response(await request.json())
+
+
+async def fake_matlab_ping_endpoint(request):
+    """API Endpoint used for testing the fake matlab's ping endpoint
 
     Args:
         request (HTTPRequest): HTTPRequest object
@@ -79,7 +116,7 @@ async def post_request_handler(request):
     Returns:
         HTTPResponse: HTTPResponse object which returns the received text.
     """
-    return web.Response(text=await request.text())
+    return web.json_response({"messages": {"PingResponse": [{"messageFaults": []}]}})
 
 
 async def put_request_handler(request):
@@ -176,6 +213,7 @@ async def cleanup_background_tasks(app):
     # NOTE MATLAB does not delete this file on shutdown.
 
     app["matlab_ready_file"].unlink()
+    sys.exit(0)
 
 
 def matlab(args):
@@ -196,10 +234,14 @@ def matlab(args):
     app.router.add_route("GET", "/http_get_request.html", get_request_handler)
 
     app.router.add_route(
-        "POST",
-        "/http_post_request.html/{variable}/messageservice/json/secure",
-        post_request_handler,
+        "POST", "/messageservice/json/secure", fake_matlab_mvm_endpoint
     )
+
+    app.router.add_route(
+        "POST", "/messageservice/json/state", fake_matlab_ping_endpoint
+    )
+
+    app.router.add_route("POST", "/post_endpoint", post_request_handler)
 
     app.router.add_route("PUT", "/http_put_request.html", put_request_handler)
 
