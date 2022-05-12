@@ -406,8 +406,9 @@ class AppState:
                     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     s.bind(("", port))
 
+                    # Use the app_port number to identify the server as that is user visible
                     matlab_ready_file_dir = self.settings["mwi_logs_root_dir"] / str(
-                        port
+                        self.settings["app_port"]
                     )
 
                     mwi_proxy_lock_file = (
@@ -432,7 +433,8 @@ class AppState:
 
                         # Creating the mwi_proxy.lock file to indicate to any other matlab-proxy processes
                         # that this self.matlab_port number is taken up by this process.
-                        mwi_proxy_lock_file.touch()
+                        with open(mwi_proxy_lock_file, "w") as lock_file:
+                            lock_file.write(self.settings["mwi_server_url"] + "/")
 
                         # Update member variables of AppState class
 

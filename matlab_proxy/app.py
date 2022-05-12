@@ -257,7 +257,8 @@ async def root_redirect(request):
     Returns:
         HTTPResponse: HTTPResponse Object containing the index.html file.
     """
-    return aiohttp.web.HTTPFound("./index.html")
+    base_url = request.app["settings"]["base_url"]
+    return aiohttp.web.HTTPFound(f"{base_url}/index.html")
 
 
 async def static_get(req):
@@ -540,7 +541,7 @@ def configure_and_start(app):
 
     # Update the site origin in settings.
     # The origin will be used for communicating with the Embedded connector.
-    app["settings"]["mwi_server_url"] = site.name
+    app["settings"]["mwi_server_url"] = site.name + app["settings"]["base_url"]
 
     loop.run_until_complete(site.start())
 
@@ -552,10 +553,14 @@ def configure_and_start(app):
     logger.info(
         util.prettify(
             boundary_filler="=",
-            text_arr=[f"MATLAB can be accessed at:", site.name],
+            text_arr=[f"MATLAB can be accessed at:", app["settings"]["mwi_server_url"]],
         )
     )
 
+    # Startup tasks are being done here as app.on_startup leads
+    # to a race condition for mwi_server_url information which is
+    # extracted from the site info.
+    loop.run_until_complete(start_background_tasks(app))
     return app
 
 
@@ -596,9 +601,9 @@ def create_app(config_name=matlab_proxy.get_default_config_name()):
         "DELETE", f"{base_url}/terminate_integration", termination_integration_delete
     )
     app.router.add_route("*", f"{base_url}/", root_redirect)
+    app.router.add_route("*", f"{base_url}", root_redirect)
     app.router.add_route("*", f"{base_url}/{{proxyPath:.*}}", matlab_view)
 
-    app.on_startup.append(start_background_tasks)
     app.on_cleanup.append(cleanup_background_tasks)
 
     return app

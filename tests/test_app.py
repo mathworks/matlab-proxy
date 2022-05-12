@@ -22,9 +22,8 @@ def test_create_app():
     # Verify router is configured with some routes
     assert test_server.router._resources is not None
 
-    # Verify app server has startup and cleanup tasks
-    # By default there is 1 start up and clean up task
-    assert len(test_server._on_startup) > 1
+    # Verify app server has a cleanup task
+    # By default there is 1 for clean up task
     assert len(test_server.on_cleanup) > 1
 
 
