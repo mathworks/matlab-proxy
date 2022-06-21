@@ -29,7 +29,7 @@ connector.internal.Worker.start
 % The following settings instructs it to display appropriate error messages when used.
 matlab_settings = settings;
 if ~matlab_settings.matlab.addons.explorer.hasSetting('isExplorerSupported')
-    matlab_settings.matlab.addons.explorer.addSetting('isExplorerSupported');
+    matlab_settings = matlab_settings.matlab.addons.explorer.addSetting('isExplorerSupported');
 end
 matlab_settings.matlab.addons.explorer.isExplorerSupported.TemporaryValue = false;
 
