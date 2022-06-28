@@ -1,4 +1,4 @@
-# Copyright 2020-2021 The MathWorks, Inc.
+# Copyright 2020-2022 The MathWorks, Inc.
 
 import os
 import shutil
@@ -139,7 +139,7 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
                 "-nodesktop",
                 "-softwareopengl",
                 "-r",
-                f"try; run('{matlab_startup_file}'); catch; end;",
+                f"try; run('{matlab_startup_file}'); catch ME; disp(ME.message); end;",
             ],
             "create_xvfb_cmd": create_xvfb_cmd,
             "base_url": mwi.validators.validate_base_url(
