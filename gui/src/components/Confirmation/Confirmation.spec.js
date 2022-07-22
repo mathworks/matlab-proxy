@@ -1,4 +1,4 @@
-// Copyright 2021 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import React from 'react';
 import Confirmation from './index';
@@ -13,8 +13,8 @@ describe('Confirmation Component', () => {
         <div data-testid="childNode"></div>
       </div>
     );
-    confirmMock = jest.fn().mockImplementation(() => {});
-    cancelMock = jest.fn().mockImplementation(() => {});
+    confirmMock = jest.fn().mockImplementation(() => { });
+    cancelMock = jest.fn().mockImplementation(() => { });
   });
 
   beforeEach(() => {
@@ -30,7 +30,7 @@ describe('Confirmation Component', () => {
         hasFetched: true,
         isSubmitting: false,
         fetchFailCount: 0,
-        wsEnv:'mw'
+        wsEnv: 'mw'
       },
       loadUrl: null,
       error: null,
@@ -43,7 +43,7 @@ describe('Confirmation Component', () => {
   });
 
   it('throws console.error when rendered without the required prop types', () => {
-    const errorMock = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const errorMock = jest.spyOn(console, 'error').mockImplementation(() => { });
 
     render(<Confirmation />);
     // Three required prop types, hence console.error will be called 3 times
@@ -86,30 +86,30 @@ describe('Confirmation Component', () => {
 
   test.each([
     ['confirmButton'], ['cancelButton']])(
-    'Test to check if confirmation component disappears when %s is clicked',
-    (input) => {
+      'Test to check if confirmation component disappears when %s is clicked',
+      (input) => {
 
-  // Hide the tutorial and make the overlay visible.
-    initialState.tutorialHidden = true;
-    initialState.overlayVisibility = true;
+        // Hide the tutorial and make the overlay visible.
+        initialState.tutorialHidden = true;
+        initialState.overlayVisibility = true;
 
-    const { debug, getByTestId, container } = render(<App />, {
-      initialState: initialState,
-    });
+        const { debug, getByTestId, container } = render(<App />, {
+          initialState: initialState,
+        });
 
-    let startMatlabButton = getByTestId('startMatlabBtn');
-    fireEvent.click(startMatlabButton);
+        let startMatlabButton = getByTestId('startMatlabBtn');
+        fireEvent.click(startMatlabButton);
 
-    // Upon clicking on start/restart MATLAB, should display the confirmation component.
-    expect(container.querySelector('#confirmation')).toBeInTheDocument();
+        // Upon clicking on start/restart MATLAB, should display the confirmation component.
+        expect(container.querySelector('#confirmation')).toBeInTheDocument();
 
-    const btn = getByTestId(input);
-    fireEvent.click(btn);
+        const btn = getByTestId(input);
+        fireEvent.click(btn);
 
-    // Upon clicking the input button, should return to rendering the Information Component
-    // and close the confirmation component
-    expect(container.querySelector('#confirmation')).not.toBeInTheDocument();
-    }
-  );
+        // Upon clicking the input button, should return to rendering the Information Component
+        // and close the confirmation component
+        expect(container.querySelector('#confirmation')).not.toBeInTheDocument();
+      }
+    );
 
 });

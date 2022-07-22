@@ -1,4 +1,4 @@
-# Copyright 2020-2022 The MathWorks, Inc.
+# Copyright (c) 2020-2022 The MathWorks, Inc.
 import os
 from setuptools.command.install import install
 import setuptools
@@ -51,7 +51,7 @@ long_description = (HERE / "README.md").read_text()
 
 setuptools.setup(
     name="matlab-proxy",
-    version="0.2.10",
+    version="0.3.0",
     url=config["doc_url"],
     author="The MathWorks, Inc.",
     author_email="cloud@mathworks.com",
@@ -72,13 +72,13 @@ setuptools.setup(
         "Intended Audience :: Developers",
         "Natural Language :: English",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
     ],
-    python_requires="~=3.6",
-    install_requires=["aiohttp>=3.7.4"],
+    python_requires="~=3.7",
+    install_requires=["aiohttp>=3.7.4", "aiohttp_session[secure]"],
     tests_require=tests_require,
     extras_require={
         "dev": ["aiohttp-devtools", "black", "ruamel.yaml"] + tests_require
@@ -90,7 +90,8 @@ setuptools.setup(
             f"{matlab_proxy.get_default_config_name()} = matlab_proxy.default_configuration:config"
         ],
         "console_scripts": [
-            f"{matlab_proxy.get_executable_name()} = matlab_proxy.app:main"
+            f"{matlab_proxy.get_executable_name()} = matlab_proxy.app:main",
+            f"{matlab_proxy.get_executable_name()}-list-servers = matlab_proxy.util.list_servers:print_server_info",
         ],
     },
     include_package_data=True,

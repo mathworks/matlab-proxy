@@ -1,4 +1,4 @@
-// Copyright 2021 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import React from 'react';
 import Error from './index';
@@ -13,7 +13,7 @@ describe('Error Component', () => {
   });
 
   it('throws console.error when rendered without message prop type', () => {
-    const errorMock = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const errorMock = jest.spyOn(console, 'error').mockImplementation(() => { });
 
     render(<Error />);
     expect(errorMock).toHaveBeenCalledTimes(1);

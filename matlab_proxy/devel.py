@@ -1,4 +1,4 @@
-# Copyright 2020-2021 The MathWorks, Inc.
+# Copyright (c) 2020-2022 The MathWorks, Inc.
 
 # Development specific functions
 import asyncio
@@ -176,12 +176,10 @@ async def fake_matlab_started(app):
 
     # Real MATLAB always uses  $MATLAB_LOG_DIR/connection.securePort as the ready file
     # We mock reading from the environment variable by calling the helper functions
-    matlab_ready_file_dir = settings.get(dev=True)["mwi_logs_root_dir"] / str(
-        app["port"]
-    )
-    matlab_ready_file_dir.mkdir(parents=True, exist_ok=True)
+    mwi_logs_dir = settings.get(dev=True)["mwi_logs_root_dir"] / str(app["port"])
+    mwi_logs_dir.mkdir(parents=True, exist_ok=True)
 
-    app["matlab_ready_file"] = matlab_ready_file_dir / "connector.securePort"
+    app["matlab_ready_file"] = mwi_logs_dir / "connector.securePort"
 
     ready_delay = app["ready_delay"]
     try:

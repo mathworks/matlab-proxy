@@ -1,4 +1,4 @@
-// Copyright 2020-2021 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import configureMockStore from 'redux-mock-store';
 import thunk from 'redux-thunk';
@@ -12,45 +12,45 @@ const mockStore = configureMockStore(middlewares);
 
 
 describe.each([
-  [actionCreators.setTutorialHidden, [true], {type:actions.SET_TUTORIAL_HIDDEN, hidden:true}],
-  [actionCreators.setTutorialHidden, [false],  {type:actions.SET_TUTORIAL_HIDDEN, hidden:false}],
-  [actionCreators.setOverlayVisibility, [true],  {type:actions.SET_OVERLAY_VISIBILITY, visibility:true}],
-  [actionCreators.setOverlayVisibility, [false],  {type:actions.SET_OVERLAY_VISIBILITY, visibility:false}],
-  [actionCreators.setTriggerPosition, [12,12],  {type:actions.SET_TRIGGER_POSITION, x:12, y:12}],
-  [actionCreators.setTriggerPosition, [52,112],  {type:actions.SET_TRIGGER_POSITION, x:52, y:112}],
-  ])('Test Set actionCreators', (method, input, expectedAction) => {
-    test(`check if an action of type  ${expectedAction.type} is returned when method actionCreator.${method.name}() is called`, () => {
-        expect(method(...input)).toEqual(expectedAction);
-    });
+  [actionCreators.setTutorialHidden, [true], { type: actions.SET_TUTORIAL_HIDDEN, hidden: true }],
+  [actionCreators.setTutorialHidden, [false], { type: actions.SET_TUTORIAL_HIDDEN, hidden: false }],
+  [actionCreators.setOverlayVisibility, [true], { type: actions.SET_OVERLAY_VISIBILITY, visibility: true }],
+  [actionCreators.setOverlayVisibility, [false], { type: actions.SET_OVERLAY_VISIBILITY, visibility: false }],
+  [actionCreators.setTriggerPosition, [12, 12], { type: actions.SET_TRIGGER_POSITION, x: 12, y: 12 }],
+  [actionCreators.setTriggerPosition, [52, 112], { type: actions.SET_TRIGGER_POSITION, x: 52, y: 112 }],
+])('Test Set actionCreators', (method, input, expectedAction) => {
+  test(`check if an action of type  ${expectedAction.type} is returned when method actionCreator.${method.name}() is called`, () => {
+    expect(method(...input)).toEqual(expectedAction);
   });
+});
 
 
-  describe.each([
-  [actionCreators.requestServerStatus, {type:actions.REQUEST_SERVER_STATUS}],
-  [actionCreators.requestSetLicensing, {type:actions.REQUEST_SET_LICENSING}],
-  [actionCreators.requestStopMatlab, {type:actions.REQUEST_STOP_MATLAB, status: 'stopping'}],
-  [actionCreators.requestStartMatlab, {type:actions.REQUEST_START_MATLAB, status: 'starting'}],
-  [actionCreators.requestTerminateIntegration, {type:actions.REQUEST_TERMINATE_INTEGRATION}],
-  ])('Test Request actionCreators', (method, expectedAction) => {
+describe.each([
+  [actionCreators.requestServerStatus, { type: actions.REQUEST_SERVER_STATUS }],
+  [actionCreators.requestSetLicensing, { type: actions.REQUEST_SET_LICENSING }],
+  [actionCreators.requestStopMatlab, { type: actions.REQUEST_STOP_MATLAB, status: 'stopping' }],
+  [actionCreators.requestStartMatlab, { type: actions.REQUEST_START_MATLAB, status: 'starting' }],
+  [actionCreators.requestTerminateIntegration, { type: actions.REQUEST_TERMINATE_INTEGRATION }],
+])('Test Request actionCreators', (method, expectedAction) => {
 
-    test(`check if an action of type  ${expectedAction.type} is returned when method actionCreator.${method.name}() is called`, () => {
-        expect(method()).toEqual(expectedAction);
-    });
+  test(`check if an action of type  ${expectedAction.type} is returned when method actionCreator.${method.name}() is called`, () => {
+    expect(method()).toEqual(expectedAction);
   });
+});
 
 
-  describe.each([
-  [actionCreators.receiveSetLicensing, {type: 'MHLM'}, {type:actions.RECEIVE_SET_LICENSING, status:{type:'MHLM'}}],
-  [actionCreators.receiveStopMatlab,{matlabStatus:'down'}, {type:actions.RECEIVE_STOP_MATLAB, status:{matlabStatus:'down'}}],
-  [actionCreators.receiveStartMatlab,{matlabStatus:'up'}, {type:actions.RECEIVE_START_MATLAB, status:{matlabStatus:'up'}}],
-  [actionCreators.receiveError, {message:'ERROR: License Manager Error -9', logs: null}, {type:actions.RECEIVE_ERROR, error: {message:'ERROR: License Manager Error -9', logs: null}}],
-  [actionCreators.receiveTerminateIntegration,{licensing:{}}, {type:actions.RECEIVE_TERMINATE_INTEGRATION, status:{licensing:{}}, loadUrl:'../'}],
-  ])('Test Receive actionCreators', (method, input, expectedAction) => {
+describe.each([
+  [actionCreators.receiveSetLicensing, { type: 'MHLM' }, { type: actions.RECEIVE_SET_LICENSING, status: { type: 'MHLM' } }],
+  [actionCreators.receiveStopMatlab, { matlabStatus: 'down' }, { type: actions.RECEIVE_STOP_MATLAB, status: { matlabStatus: 'down' } }],
+  [actionCreators.receiveStartMatlab, { matlabStatus: 'up' }, { type: actions.RECEIVE_START_MATLAB, status: { matlabStatus: 'up' } }],
+  [actionCreators.receiveError, { message: 'ERROR: License Manager Error -9', logs: null }, { type: actions.RECEIVE_ERROR, error: { message: 'ERROR: License Manager Error -9', logs: null } }],
+  [actionCreators.receiveTerminateIntegration, { licensing: {} }, { type: actions.RECEIVE_TERMINATE_INTEGRATION, status: { licensing: {} }, loadUrl: '../' }],
+])('Test Receive actionCreators', (method, input, expectedAction) => {
 
-    test(`check if an action of type  ${expectedAction.type} is returned when method actionCreator.${method.name}() is called`, () => {
-        expect(method(input)).toEqual(expectedAction);
-    });
+  test(`check if an action of type  ${expectedAction.type} is returned when method actionCreator.${method.name}() is called`, () => {
+    expect(method(input)).toEqual(expectedAction);
   });
+});
 
 
 
@@ -86,7 +86,7 @@ describe('Test Sync actionCreators', () => {
 
     const receivedActions = store.getActions();
 
-    expect(receivedActions.map((element) => element.type)).toEqual( expectedActionTypes);
+    expect(receivedActions.map((element) => element.type)).toEqual(expectedActionTypes);
   });
 });
 
@@ -122,12 +122,12 @@ describe('Test fetchWithTimeout method', () => {
         licensing: {},
       },
       headers: { 'content-type': 'application/json' },
-    });    
+    });
 
     const response = await actionCreators.fetchWithTimeout(store.dispatch, '/get_status', {}, 10000);
     const body = await response.json()
-    
-    expect(body).not.toBeNull();  
+
+    expect(body).not.toBeNull();
   });
 
   it('dispatches RECIEVE_ERROR when no response is received', async () => {
@@ -138,7 +138,7 @@ describe('Test fetchWithTimeout method', () => {
 
     try {
       const response = await actionCreators.fetchWithTimeout(store.dispatch, '/get_status', {}, 100);
-    } catch(error) {
+    } catch (error) {
       expect(error).toBeInstanceOf(TypeError)
       const received = store.getActions();
       expect(received.map((a) => a.type)).toEqual(expectedActions);
@@ -149,23 +149,23 @@ describe('Test fetchWithTimeout method', () => {
   it('should send a delayed response after timeout expires, thereby triggering abort() method of AbortController', async () => {
 
     const timeout = 10
-    const delay = (response, after=500) => () => new Promise(resolve => setTimeout(resolve, after)).then(() => response);
+    const delay = (response, after = 500) => () => new Promise(resolve => setTimeout(resolve, after)).then(() => response);
 
     // Send a delayed response, well after the timeout for the request has expired.
     // This should trigger the abort() method of the AbortController()
-    fetchMock.mock('/get_status', delay(200, timeout + 100)); 
+    fetchMock.mock('/get_status', delay(200, timeout + 100));
 
     const abortSpy = jest.spyOn(AbortController.prototype, 'abort');
     const expectedActions = [
       actions.RECEIVE_ERROR,
     ];
- 
-    await actionCreators.fetchWithTimeout(store.dispatch, '/get_status', {}, timeout);    
+
+    await actionCreators.fetchWithTimeout(store.dispatch, '/get_status', {}, timeout);
 
     expect(abortSpy).toBeCalledTimes(1);
     const received = store.getActions();
     expect(received.map((a) => a.type)).toEqual(expectedActions);
-  });  
+  });
 
 });
 
@@ -315,7 +315,7 @@ describe('Test Async actionCreators', () => {
       });
   });
 
-    it('should dispatch REQUEST_STOP_MATLAB AND RECEIVE_STOP_MATLAB when we stop matlab', () => {
+  it('should dispatch REQUEST_STOP_MATLAB AND RECEIVE_STOP_MATLAB when we stop matlab', () => {
     fetchMock.putOnce('./start_matlab', {
       body: {
         matlab: {

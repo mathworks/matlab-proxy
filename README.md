@@ -1,9 +1,11 @@
 # MATLAB Proxy
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/mathworks/matlab-proxy/Testing%20MATLAB%20Proxy?logo=github)](https://github.com/mathworks/matlab-proxy/actions) [![PyPI badge](https://img.shields.io/pypi/v/matlab-proxy.svg?logo=pypi)](https://pypi.python.org/pypi/matlab-proxy) [![codecov](https://codecov.io/gh/mathworks/matlab-proxy/branch/main/graph/badge.svg?token=ZW3SESKCSS)](https://codecov.io/gh/mathworks/matlab-proxy)
 
-Copyright (c) 2021 The MathWorks, Inc. All rights reserved.
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/mathworks/matlab-proxy/Testing%20MATLAB%20Proxy?logo=github)](https://github.com/mathworks/matlab-proxy/actions) &nbsp; [![PyPI badge](https://img.shields.io/pypi/v/matlab-proxy.svg?logo=pypi)](https://pypi.python.org/pypi/matlab-proxy) &nbsp;  [![codecov](https://codecov.io/gh/mathworks/matlab-proxy/branch/main/graph/badge.svg?token=ZW3SESKCSS)](https://codecov.io/gh/mathworks/matlab-proxy) &nbsp; [![Downloads](https://static.pepy.tech/personalized-badge/matlab-proxy?period=month&units=international_system&left_color=grey&right_color=blue&left_text=PyPI%20downloads/month)](https://pepy.tech/project/matlab-proxy)
+
+Copyright (c) 2020-2022 The MathWorks, Inc. All rights reserved.
 
 ----
+
 `matlab-proxy` is a Python® package which enables you to launch MATLAB® and access it from a web browser.
 
 Installation of this package creates an executable `matlab-proxy-app`, which launches MATLAB and provides a URL to access it. 
@@ -11,6 +13,18 @@ Installation of this package creates an executable `matlab-proxy-app`, which lau
 The MATLAB Proxy is under active development. For support or to report issues, see the [Feedback](#feedback) section.
 
 ----
+
+**Table of Contents**
+- [Requirements](#requirements)
+- [Installation](#installation)
+  - [PyPI](#pypi)
+  - [Building From Sources](#building-from-sources)
+- [Usage](#usage)
+- [Examples](#examples)
+- [Limitations](#limitations)
+- [Security](#security)
+- [Feedback](#feedback)
+
 ## Requirements
 * Linux® operating system
 
@@ -34,7 +48,7 @@ The MATLAB Proxy is under active development. For support or to report issues, s
 
   $ sudo yum install xorg-x11-server-Xvfb
   ```
-* Python versions: **3.6** | **3.7** | **3.8** | **3.9** 
+* Python versions: **3.7** | **3.8** | **3.9**  | **3.10**
 * [Browser Requirements](https://www.mathworks.com/support/requirements/browser-requirements.html)
 
 ## Installation
@@ -120,6 +134,13 @@ The following options are available in the status panel (some options are only a
 This package supports the same subset of MATLAB features and commands as MATLAB® Online, except there is no support for Simulink® Online.
 [Click here for a full list of Specifications and Limitations for MATLAB Online](https://www.mathworks.com/products/matlab-online/limitations.html). 
 
+## Security
+We take your security concerns seriously, and will attempt to address all concerns.
+`matlab-proxy` uses several other python packages, and depend on them to fix their own vulnerabilities.
+
+All security patches will be released as a new version of the package.
+Patches are never backported to older versions or releases of the package.
+Using the latest version will provide the latest available security updates or patches.
 
 ## Feedback
 

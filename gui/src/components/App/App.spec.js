@@ -1,4 +1,4 @@
-// Copyright 2020-2021 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import React from 'react';
 import { render, fireEvent, within } from '../../test/utils/react-test';
@@ -20,7 +20,7 @@ describe('App Component', () => {
         hasFetched: true,
         isSubmitting: false,
         fetchFailCount: 0,
-        wsEnv:'mw'
+        wsEnv: 'mw'
       },
       loadUrl: null,
       error: null,
@@ -168,7 +168,7 @@ describe('App Component', () => {
     initialState.tutorialHidden = true;
     initialState.overlayVisibility = true;
 
-    const {  getByTestId, container, getByRole } = render(<App />, {
+    const { getByTestId, container, getByRole } = render(<App />, {
       initialState: initialState,
     });
 
@@ -187,7 +187,7 @@ describe('App Component', () => {
     const hrefMock = jest.fn();
     delete window.location;
 
-    window.location = {href : hrefMock}
+    window.location = { href: hrefMock }
     const { debug } = render(<App />, { initialState: initialState });
 
     expect(window.location.href).toMatch('localhost');

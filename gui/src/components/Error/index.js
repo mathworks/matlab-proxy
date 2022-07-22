@@ -1,11 +1,11 @@
-// Copyright 2020 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import React from 'react';
 import PropTypes from 'prop-types';
 import Linkify from 'react-linkify';
 import './Error.css';
 
-function Error({message, logs, children}) {
+function Error({ message, logs, children }) {
 
     const logReport = logs
         ? (

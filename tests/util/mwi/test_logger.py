@@ -1,4 +1,4 @@
-# Copyright 2021 The MathWorks, Inc.
+# Copyright (c) 2020-2022 The MathWorks, Inc.
 """This file tests methods present in matlab_proxy/util/mwi_logger.py
 """
 

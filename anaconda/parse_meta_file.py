@@ -1,4 +1,4 @@
-# Copyright 2020-2021 The MathWorks, Inc.
+# Copyright (c) 2020-2022 The MathWorks, Inc.
 
 # This file contains code used to publish the repository to Anaconda
 
@@ -52,7 +52,7 @@ def modify_python_version(yaml_content):
     for field in fields:
         try:
             python_index = yaml_content["requirements"][field].index("python")
-            yaml_content["requirements"][field][python_index] = "python >=3.6"
+            yaml_content["requirements"][field][python_index] = "python >=3.7"
         except ValueError:
             pass
 

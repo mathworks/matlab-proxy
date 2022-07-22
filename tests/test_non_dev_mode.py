@@ -1,4 +1,4 @@
-# Copyright 2021 The MathWorks, Inc.
+# Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import os
 import shutil
@@ -68,7 +68,7 @@ def build_frontend_fixture():
             {
                 "dir": "media",
                 "file": "media.txt",
-                "file_content": "Copyright 2020 The Mathworks, Inc.",
+                "file_content": "Copyright (c) 2020-2022 The Mathworks, Inc.",
             },
         ]
 

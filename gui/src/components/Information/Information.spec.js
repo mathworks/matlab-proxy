@@ -1,4 +1,4 @@
-// Copyright 2021 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import React from 'react';
 import Information from './index';
@@ -13,7 +13,7 @@ describe('Information Component', () => {
         Child1
       </div>
     );
-    closeHandler = jest.fn().mockImplementation(() => {});
+    closeHandler = jest.fn().mockImplementation(() => { });
 
     initialState = {
       triggerPosition: { x: 539, y: 0 },
@@ -46,7 +46,7 @@ describe('Information Component', () => {
   });
 
   it('should throw console.error when rendered without closeHandler prop', () => {
-    const errorMock = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const errorMock = jest.spyOn(console, 'error').mockImplementation(() => { });
 
     render(<Information />);
 

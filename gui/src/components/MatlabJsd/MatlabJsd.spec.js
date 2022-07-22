@@ -1,4 +1,4 @@
-// Copyright 2020-2021 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import React from 'react';
 import MatlabJsd from './index';
@@ -11,8 +11,8 @@ describe('MatlabJsd Component', () => {
 
   it('throws console.error when rendered without required prop-type', () => {
     // Mocking console.error to do nothing.
-    const errorMock = jest.spyOn(console, 'error').mockImplementation(() => {});
-    const errorMessage =   'The prop `url` is marked as required in `MatlabJsd`, but its value is `undefined`.'
+    const errorMock = jest.spyOn(console, 'error').mockImplementation(() => { });
+    const errorMessage = 'The prop `url` is marked as required in `MatlabJsd`, but its value is `undefined`.'
 
     const { queryByTitle } = render(<MatlabJsd />);
 

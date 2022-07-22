@@ -1,4 +1,4 @@
-% Copyright 2020-2022 The MathWorks, Inc.
+% Copyright (c) 2020-2022 The MathWorks, Inc.
 
 % Configure logged in user if possible
 if ~isempty(getenv('MW_LOGIN_USER_ID'))

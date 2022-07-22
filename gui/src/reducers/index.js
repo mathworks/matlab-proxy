@@ -1,4 +1,4 @@
-// Copyright 2020-2021 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import { combineReducers } from 'redux';
 
@@ -22,16 +22,16 @@ import {
     RECEIVE_ENV_CONFIG,
 } from '../actions';
 
-export function triggerPosition(state={x: window.innerWidth / 2 + 27, y: 0}, action) {
+export function triggerPosition(state = { x: window.innerWidth / 2 + 27, y: 0 }, action) {
     switch (action.type) {
         case SET_TRIGGER_POSITION:
-            return {x: action.x, y: action.y};
+            return { x: action.x, y: action.y };
         default:
             return state;
     }
 }
 
-export function tutorialHidden(state=false, action) {
+export function tutorialHidden(state = false, action) {
     switch (action.type) {
         case SET_TUTORIAL_HIDDEN:
             return action.hidden;
@@ -49,7 +49,7 @@ export function overlayVisibility(state = false, action) {
                 action.previousMatlabPending === true
                 && action.status.matlab.status === "up"
             ) return false;
-            // fall through
+        // fall through
         default:
             return state;
     }
@@ -86,7 +86,7 @@ export function matlabStatus(state = 'down', action) {
     }
 }
 
-export function matlabVersion(state=null, action) {
+export function matlabVersion(state = null, action) {
     switch (action.type) {
         case RECEIVE_SERVER_STATUS:
         case RECEIVE_SET_LICENSING:
@@ -99,7 +99,7 @@ export function matlabVersion(state=null, action) {
     }
 }
 
-export function wsEnv(state=null, action) {
+export function wsEnv(state = null, action) {
     switch (action.type) {
         case RECEIVE_SERVER_STATUS:
         case RECEIVE_SET_LICENSING:
@@ -213,12 +213,12 @@ export function error(state = null, action) {
     }
 }
 
-export function envConfig(state = null, action) {  
+export function envConfig(state = null, action) {
     switch (action.type) {
         case RECEIVE_ENV_CONFIG:
-        return action.config;
+            return action.config;
         default:
-        return state;
+            return state;
     }
 }
 

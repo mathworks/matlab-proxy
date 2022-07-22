@@ -1,4 +1,4 @@
-// Copyright 2020 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import React, { useState } from 'react';
 import MHLM from './MHLM';
@@ -53,16 +53,16 @@ function LicensingGatherer() {
                             {/* Because the MHLM tab contains an iframe which is slow to load, always render both tabs and select the active one with React */}
                             <div id="setup-tabs-content" className="tab-content">
                                 <div role="tabpanel" className={`tab-pane ${mhlmActive}`} id="mhlm" aria-labelledby="mhlm-tab">
-                                    <MHLM/>
+                                    <MHLM />
                                 </div>
                                 <div role="tabpanel" className={`tab-pane ${nlmActive}`} id="nlm" aria-labelledby="nlm-tab">
-                                    <NLM/>
+                                    <NLM />
                                 </div>
                                 <div>
                                     <p id="LicensingGathererNote">
                                         For more details, see&nbsp;
                                         <a
-                                            href="https://github.com/mathworks/jupyter-matlab-proxy/blob/main/MATLAB-Licensing-Info.md"
+                                            href="https://github.com/mathworks/matlab-proxy/blob/main/MATLAB-Licensing-Info.md"
                                             target="_blank"
                                             rel="noopener noreferrer"
                                         >

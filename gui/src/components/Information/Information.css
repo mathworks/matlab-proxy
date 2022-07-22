@@ -1,4 +1,4 @@
-/* Copyright 2020 The MathWorks, Inc. */
+/* Copyright (c) 2020-2022 The MathWorks, Inc. */
 
 #information .alert:not(.error-container) {
     padding: 0;
@@ -10,7 +10,8 @@
     padding-left: 45px;
 }
 
-.modal-content, .alert {
+.modal-content,
+.alert {
     border-radius: 10px;
 }
 
@@ -43,7 +44,8 @@
 }
 
 #information .error-logs-container .error-container.alert {
-    padding: 0; /* if this is inside an expand-collapse, padding just gets in the way */
+    padding: 0;
+    /* if this is inside an expand-collapse, padding just gets in the way */
 }
 
 #information .error-msg {
@@ -84,6 +86,7 @@
     0% {
         transform: rotate(0deg);
     }
+
     100% {
         transform: rotate(360deg);
     }

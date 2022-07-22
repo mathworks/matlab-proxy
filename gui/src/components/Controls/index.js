@@ -1,4 +1,4 @@
-// Copyright 2020-2021 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import React, { useMemo } from 'react';
 import PropTypes from 'prop-types';
@@ -36,11 +36,11 @@ function Controls({
     const mhlmLicense = useSelector(selectLicensingIsMhlm);
     const matlabRunning = useSelector(selectMatlabRunning);
     const matlabStarting = useSelector(selectMatlabStarting);
-    const matlabStopping = useSelector(selectMatlabStopping);    
+    const matlabStopping = useSelector(selectMatlabStopping);
     const matlabVersion = useSelector(selectMatlabVersion);
     const error = useSelector(selectError);
 
-//     const canTerminateIntegration = !submitting;
+    //     const canTerminateIntegration = !submitting;
     const canResetLicensing = licensed && !submitting;
 
     const feedbackBody = useMemo(
@@ -64,7 +64,7 @@ MATLAB version: ${matlabVersion}%0D%0A`,
         },
         TERMINATE: {
             type: 'confirmation',
-            message: 'Are you sure you want to terminate MATLAB and this Jupyter integration?',
+            message: 'Are you sure you want to terminate MATLAB and the backing matlab-proxy server?',
             callback: fetchTerminateIntegration
         },
         SIGN_OUT: {
@@ -77,7 +77,7 @@ MATLAB version: ${matlabVersion}%0D%0A`,
         }
     };
 
-    function getBtnClass (btn) {
+    function getBtnClass(btn) {
         let cls = 'btn companion_btn ';
         if (error) {
             if ((ERROR_TYPE_MAP[btn] || []).includes(error.type)) {
@@ -144,7 +144,7 @@ MATLAB version: ${matlabVersion}%0D%0A`,
                 id="feedback"
                 data-testid='feedbackLink'
                 className="btn btn_color_mediumgray companion_btn"
-                href={ `mailto:jupyter-support@mathworks.com?subject=MATLAB Integration for Jupyter Feedback&body=${feedbackBody}` }
+                href={`mailto:cloud@mathworks.com?subject=MATLAB-PROXY Feedback&body=${feedbackBody}`}
                 data-for="control-button-tooltip"
                 data-tip="Send feedback (opens your default email application)"
             >

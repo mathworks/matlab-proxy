@@ -1,4 +1,5 @@
 # Advanced Usage
+Copyright (c) 2020-2022 The MathWorks, Inc. All rights reserved.
 
 This page lists some of the advanced manuevers that may be of specific interest to help configure the package for use in your environment.
 
@@ -19,11 +20,13 @@ The following table describes all the environment variables that you can set to 
 | **MWI_APP_PORT** | integer | `8080` | Specify the port for the HTTP server to listen on. |
 | **MWI_LOG_LEVEL** | string | `"CRITICAL"` | Specify the Python log level to be one of the following `NOTSET`, `DEBUG`, `INFO`, `WARN`, `ERROR`, or `CRITICAL`. For more information on Python log levels, see [Logging Levels](https://docs.python.org/3/library/logging.html#logging-levels) .<br />The default value is `INFO`. |
 | **MWI_LOG_FILE** | string | `"/tmp/logs.txt"` | Specify the full path to the file where you want debug logs from this integration to be written. |
-| **MWI_WEB_LOGGING_ENABLED** | string | `"True"` | Set this value to `"true"` to see additional web server logs. |
+| **MWI_ENABLE_WEB_LOGGING** | string | `"True"` | Set this value to `"True"` to see additional web server logs. |
 | **MWI_CUSTOM_HTTP_HEADERS** | string  |`'{"Content-Security-Policy": "frame-ancestors *.example.com:*"}'`<br /> OR <br />`"/path/to/your/custom/http-headers.json"` |Specify valid HTTP headers as JSON data in a string format. <br /> Alternatively, specify the full path to the JSON file containing valid HTTP headers instead. These headers are injected into the HTTP response sent to the browser. </br> For  more information, see the [Custom HTTP Headers](#custom-http-headers) section.|
 | **TMPDIR** or **TMP** | string | `"/path/for/MATLAB/to/use/as/tmp"` | Set either one of these variables to control the temporary folder used by MATLAB. `TMPDIR` takes precedence over `TMP` and if neither variable is set, `/tmp` is the default value used by MATLAB. |
-| **MWI_SSL_CERT_FILE** | string | `"/path/to/certificate.pem"` | The certfile string must be the path to a single file in PEM format containing the certificate as well as any number of CA certificates needed to establish the certificate’s authenticity. |
-| **MWI_SSL_KEY_FILE** | string | `"/path/to/keyfile.key"` | The keyfile string, if present, must point to a file containing the private key in. Otherwise the private key will be taken from certfile as well. |
+| **MWI_SSL_CERT_FILE** | string | `"/path/to/certificate.pem"` | The certfile string must be the path to a single file in PEM format containing the certificate as well as any number of CA certificates needed to establish the certificate’s authenticity. See [SSL Support](./SECURITY.md#ssl-support) for more information.|
+| **MWI_SSL_KEY_FILE** | string | `"/path/to/keyfile.key"` | The keyfile string, if present, must point to a file containing the private key. Otherwise the private key will be taken from certfile as well. |
+| **MWI_ENABLE_TOKEN_AUTH** | string | `"True"` | When set to `True`, matlab-proxy will require users to provide the security token to access the proxy. <br />The default value is `False` . See [Token-Based Authentication](./SECURITY.md#token-based-authentication) for more information.|
+| **MWI_AUTH_TOKEN** | string (optional) | `"AnyURLSafeToken"` | Optionally, provide a custom `token` for use with `MWI_ENABLE_TOKEN_AUTH`. A token can safely contain any combination of alpha numeric text along with the following permitted characters: `- .  _  ~`.<br />When absent matlab-proxy will generate a random URL safe token. |
 
 
 ## Custom HTTP Headers 

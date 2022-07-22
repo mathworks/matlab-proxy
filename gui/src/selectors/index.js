@@ -1,4 +1,4 @@
-// Copyright 2020-2021 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import { createSelector } from 'reselect';
 
@@ -51,7 +51,7 @@ export const selectMatlabStarting = createSelector(
 
 export const selectMatlabStopping = createSelector(
     selectMatlabStatus,
-    matlabStatus => matlabStatus === 'stopping' 
+    matlabStatus => matlabStatus === 'stopping'
 );
 
 export const selectOverlayHidable = createSelector(
@@ -126,13 +126,13 @@ export const selectInformationDetails = createSelector(
 
         // Check for any errors on the front-end 
         // to see if HTTP Requests are timing out.       
-        if(isError && error.statusCode === 408) {
+        if (isError && error.statusCode === 408) {
             return {
                 icon: 'warning',
                 alert: 'warning',
-                label: 'Unknown',                 
-            }    
-        }  
+                label: 'Unknown',
+            }
+        }
 
 
         // Check status of MATLAB for errors
@@ -153,11 +153,11 @@ export const selectInformationDetails = createSelector(
 
             case 'stopping':
                 return {
-                        label: 'Stopping',
-                        icon: 'info-reverse',
-                        alert: 'info',
-                        spinner: true
-                };            
+                    label: 'Stopping',
+                    icon: 'info-reverse',
+                    alert: 'info',
+                    spinner: true
+                };
             case 'down':
                 const detail = {
                     label: 'Not running',

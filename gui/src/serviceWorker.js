@@ -1,4 +1,4 @@
-// Copyright 2020 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 // This optional code is used to register a service worker.
 // register() is not called by default.

@@ -1,4 +1,4 @@
-# Copyright 2020-2021 The MathWorks, Inc
+# Copyright (c) 2020-2022 The MathWorks, Inc
 
 name: Release to PyPI
 
@@ -39,10 +39,10 @@ jobs:
         with:
           ref: ${{github.sha}}
 
-      - name: Set up Python 3.6
+      - name: Set up Python 3.7
         uses: actions/setup-python@v2
         with:
-          python-version: 3.6
+          python-version: 3.7
 
       - name: Install dependencies
         # Installing wheel package will slightly speed-up installing dependencies.
@@ -66,10 +66,10 @@ jobs:
         with:
           ref: ${{github.sha}}
 
-      - name: Set up Python 3.6
+      - name: Set up Python 3.7
         uses: actions/setup-python@v2
         with:
-          python-version: 3.6
+          python-version: 3.7
 
       - name: Install Python build dependencies
         run: |
@@ -97,10 +97,10 @@ jobs:
   #       with:
   #         ref: ${{github.sha}}
 
-  #     - name: Set up Python 3.6
+  #     - name: Set up Python 3.7
   #       uses: actions/setup-python@v2
   #       with:
-  #         python-version: 3.6
+  #         python-version: 3.7
 
   #     - name: Install Python build dependencies
   #       run: |
@@ -120,5 +120,5 @@ jobs:
   #         cd ./anaconda
   #         conda skeleton pypi matlab-proxy
   #         python parse_meta_file.py
-  #         conda build ./matlab-proxy --python 3.6 --output-folder ./build
+  #         conda build ./matlab-proxy --python 3.7 --output-folder ./build
   #         $CONDA/bin/anaconda upload --label main ./build/linux-64/matlab*.tar.gz

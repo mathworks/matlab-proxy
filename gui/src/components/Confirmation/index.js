@@ -1,4 +1,4 @@
-// Copyright 2020-2021 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import React from 'react';
 import PropTypes from 'prop-types';
@@ -20,7 +20,7 @@ function Confirmation({ confirm, cancel, children }) {
                         {children}
                     </div>
                     <div className="modal-footer">
-                        <button onClick={cancel}  data-testid='cancelButton' className="btn companion_btn btn_color_blue">Cancel</button>
+                        <button onClick={cancel} data-testid='cancelButton' className="btn companion_btn btn_color_blue">Cancel</button>
                         <button onClick={confirm} data-testid='confirmButton' className="btn btn_color_blue">Confirm</button>
                     </div>
                 </div>

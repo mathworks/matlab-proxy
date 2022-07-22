@@ -1,4 +1,4 @@
-// Copyright 2020-2021 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import React from 'react';
 import { useSelector } from 'react-redux';
@@ -17,14 +17,14 @@ function Help({
     const overlayHidable = useSelector(selectOverlayHidable);
 
     const onCloseClick = event => {
-        if(event.target === event.currentTarget) {
+        if (event.target === event.currentTarget) {
             event.preventDefault();
             dismissAllHandler();
         }
-    };    
+    };
 
     const config = useSelector(selectHasFetchedEnvConfig);
-    
+
     const url = config.doc_url;
 
     const targetEnvMsg = config.extension_name === "" ? `MATLAB Web Desktop` : `MATLAB Integration for ${config.extension_name_short_description}`;
@@ -52,7 +52,7 @@ function Help({
                             <p className="icon-custom-restart">Restart your MATLAB session. Available if MATLAB is running or starting.</p>
                             <p className="icon-custom-stop">Stop your MATLAB session. Use this option if you want to free up RAM and CPU resources. Available if MATLAB is running or starting.</p>
                             <p className="icon-custom-sign-out">
-                                Sign out of MATLAB. Use this to stop MATLAB and to sign in with an alternative account. Available if using online licensing.<br/>
+                                Sign out of MATLAB. Use this to stop MATLAB and to sign in with an alternative account. Available if using online licensing.<br />
                                 Unset network license manager server address. Use this to stop MATLAB and enter new licensing information. Available if using network license manager.
                             </p>
                             <p className="icon-custom-feedback">{`Send feedback about the ${targetEnvMsg}. This action opens your default email application.`}</p>

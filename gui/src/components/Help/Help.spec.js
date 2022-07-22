@@ -1,4 +1,4 @@
-// Copyright 2021 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import React from 'react';
 import App from '../App'
@@ -8,7 +8,7 @@ import { render, fireEvent } from '../../test/utils/react-test';
 describe('Help Component', () => {
   let closeHandler, initialState;
   beforeEach(() => {
-    closeHandler = jest.fn().mockImplementation(() => {});
+    closeHandler = jest.fn().mockImplementation(() => { });
     initialState = {
       triggerPosition: { x: 539, y: 0 },
       tutorialHidden: false,
@@ -30,14 +30,14 @@ describe('Help Component', () => {
     jest.clearAllMocks();
   });
   it('should throw console.error for not passing in prop types', () => {
-    const errorMock = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const errorMock = jest.spyOn(console, 'error').mockImplementation(() => { });
 
     render(<Help />);
     expect(errorMock).toHaveBeenCalledTimes(1);
   });
 
   it('should render without crashing', () => {
-     render(<Help closeHandler={closeHandler} />);
+    render(<Help closeHandler={closeHandler} />);
   });
 
   it('should fire onClose event of Help modal when Back button is clicked', () => {
@@ -76,7 +76,7 @@ describe('Help Component', () => {
     expect(helpComponent).toBeInTheDocument();
 
     // Grab and click on the Back button in the help Component.
-    const backButton =  getByTestId('backBtn');
+    const backButton = getByTestId('backBtn');
     fireEvent.click(backButton);
 
     //The Help dialog should disappear

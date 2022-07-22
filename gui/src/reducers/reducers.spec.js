@@ -1,4 +1,4 @@
-// Copyright 2020-2021 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import * as reducers from './index';
 import * as actions from '../actions';
@@ -173,7 +173,7 @@ describe('reducers', () => {
     });
 
     it('should return matlab status down as default', () => {
-       action = _.cloneDeep(genericAction);
+      action = _.cloneDeep(genericAction);
       expect(reducers.matlabStatus(undefined, action)).toEqual('down');
     });
   });

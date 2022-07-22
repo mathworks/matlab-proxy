@@ -1,4 +1,4 @@
-# Copyright 2020-2021 The MathWorks, Inc.
+# Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import asyncio
 import errno
@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 
 from matlab_proxy import util
 from matlab_proxy.util import mw, mwi
+from matlab_proxy.util.mwi import token_auth
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi.exceptions import (
     EmbeddedConnectorError,
@@ -44,15 +45,24 @@ class AppState:
         # The port on which MATLAB(launched by this matlab-proxy process) starts on.
         self.matlab_port = None
 
-        # The file created and written by MATLAB's Embedded connector to signal readiness.
-        self.matlab_ready_file = None
-
         # The directory in which the instance of MATLAB (launched by this matlab-proxy process) will write logs to.
-        self.matlab_ready_file_dir = None
+        self.mwi_logs_dir = None
 
-        # The file created by this instance of matlab-proxy to signal to other matlab-proxy processes
-        # that this self.matlab_port will be used by this instance.
-        self.mwi_proxy_lock_file = None
+        # Dictionary of all files used to manage the MATLAB session.
+        self.matlab_session_files = {
+            # The file created by this instance of matlab-proxy to signal to other matlab-proxy processes
+            # that this self.matlab_port will be used by this instance.
+            "mwi_proxy_lock_file": None,
+            # The file created and written by MATLAB's Embedded connector to signal readiness.
+            "matlab_ready_file": None,
+        }
+
+        # Dictionary of all files used to manage the server session.
+        self.mwi_server_session_files = {
+            # This file will contain the access URL to the server, this will include any tokens required by the server for access.
+            "mwi_server_info_file": None,
+        }
+
         self.licensing = None
         self.tasks = {}
         self.logs = {
@@ -406,17 +416,13 @@ class AppState:
                     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     s.bind(("", port))
 
-                    # Use the app_port number to identify the server as that is user visible
-                    matlab_ready_file_dir = self.settings["mwi_logs_root_dir"] / str(
-                        self.settings["app_port"]
-                    )
+                    mwi_logs_root_dir = self.settings["mwi_logs_root_dir"]
 
-                    mwi_proxy_lock_file = (
-                        matlab_ready_file_dir
-                        / self.settings["mwi_proxy_lock_file_name"]
+                    # The mwi_proxy.lock file indicates to any other matlab-proxy processes
+                    # that this self.matlab_port number is taken up by this process.
+                    mwi_proxy_lock_file = mwi_logs_root_dir / (
+                        self.settings["mwi_proxy_lock_file_name"] + "." + str(port)
                     )
-
-                    matlab_ready_file = matlab_ready_file_dir / "connector.securePort"
 
                     # Check if the mwi_proxy_lock_file exists.
                     # Implies there was a competing matlab-proxy process which found the same port before this process
@@ -427,36 +433,80 @@ class AppState:
                         s.close()
 
                     else:
+                        # Use the app_port number to identify the server as that is user visible
+                        mwi_logs_dir = mwi_logs_root_dir / str(
+                            self.settings["app_port"]
+                        )
+
                         # Create a folder to hold the matlab_ready_file that will be created by MATLAB to signal readiness.
                         # This is the same folder to which MATLAB will write logs to.
-                        matlab_ready_file_dir.mkdir(parents=True, exist_ok=True)
+                        mwi_logs_dir.mkdir(parents=True, exist_ok=True)
 
-                        # Creating the mwi_proxy.lock file to indicate to any other matlab-proxy processes
-                        # that this self.matlab_port number is taken up by this process.
-                        with open(mwi_proxy_lock_file, "w") as lock_file:
-                            lock_file.write(self.settings["mwi_server_url"] + "/")
+                        # Create the lock file first to minimize the critical section.
+                        mwi_proxy_lock_file.touch()
+                        logger.info(
+                            f"Communicating with MATLAB on port:{port}, lock file: {mwi_proxy_lock_file}"
+                        )
+
+                        # Created by MATLAB when it is ready to service requests.
+                        matlab_ready_file = mwi_logs_dir / "connector.securePort"
 
                         # Update member variables of AppState class
-
                         # Store the port number on which MATLAB will be launched for this matlab-proxy process.
                         self.matlab_port = port
-                        self.mwi_proxy_lock_file = mwi_proxy_lock_file
-                        self.matlab_ready_file_dir = matlab_ready_file_dir
-                        self.matlab_ready_file = matlab_ready_file
+                        self.mwi_logs_dir = mwi_logs_dir
+                        self.matlab_session_files[
+                            "mwi_proxy_lock_file"
+                        ] = mwi_proxy_lock_file
+                        self.matlab_session_files[
+                            "matlab_ready_file"
+                        ] = matlab_ready_file
                         s.close()
 
                         logger.debug(
-                            f"MATLAB_LOG_DIR:{str( self.matlab_ready_file_dir )}"
-                        )
-                        logger.debug(f"MATLAB_READY_FILE:{str(self.matlab_ready_file)}")
-                        logger.debug(
-                            f"Created MWI proxy lock file for this matlab-proxy process at {self.mwi_proxy_lock_file}"
+                            f"matlab_session_files:{self.matlab_session_files}"
                         )
                         return
 
                 except socket.error as e:
                     if e.errno != errno.EADDRINUSE:
                         raise e
+
+    def create_server_info_file(self):
+        mwi_logs_root_dir = self.settings["mwi_logs_root_dir"]
+        # Use the app_port number to identify the server as that is user visible
+        mwi_logs_dir = mwi_logs_root_dir / str(self.settings["app_port"])
+        # Create a folder to hold the matlab_ready_file that will be created by MATLAB to signal readiness.
+        # This is the same folder to which MATLAB will write logs to.
+        mwi_logs_dir.mkdir(parents=True, exist_ok=True)
+
+        mwi_server_info_file = mwi_logs_dir / "mwi_server.info"
+        mwi_auth_token_str = token_auth.get_mwi_auth_token_access_str(self.settings)
+        with open(mwi_server_info_file, "w") as fh:
+            fh.write(self.settings["mwi_server_url"] + mwi_auth_token_str + "\n")
+        self.mwi_server_session_files["mwi_server_info_file"] = mwi_server_info_file
+        logger.debug(f"Server info stored into: {mwi_server_info_file}")
+
+        logger.info(
+            util.prettify(
+                boundary_filler="=",
+                text_arr=[
+                    f"MATLAB can be accessed at:",
+                    self.settings["mwi_server_url"] + mwi_auth_token_str,
+                ],
+            )
+        )
+
+    def clean_up_mwi_server_session(self):
+        # Clean up mwi_server_session_files
+        try:
+            for session_file in self.mwi_server_session_files.items():
+                if session_file[1] is not None:
+                    logger.info(f"Deleting:{session_file[1]}")
+                    session_file[1].unlink()
+        except FileNotFoundError:
+            # Files may not exist if cleanup is called before they are created
+            pass
 
     async def __setup_env_for_matlab(self) -> dict:
         """Configure the environment variables required for launching MATLAB by matlab-proxy.
@@ -520,9 +570,9 @@ class AppState:
         # reserving port and preparing lockfiles for MATLAB
         matlab_env["MW_CONNECTOR_SECURE_PORT"] = str(self.matlab_port)
 
-        # The matlab ready file is written into this location(self.matlab_ready_file_dir) by MATLAB
-        # The matlab_ready_file_dir is where MATLAB will write any subsequent logs
-        matlab_env["MATLAB_LOG_DIR"] = str(self.matlab_ready_file_dir)
+        # The matlab ready file is written into this location(self.mwi_logs_dir) by MATLAB
+        # The mwi_logs_dir is where MATLAB will write any subsequent logs
+        matlab_env["MATLAB_LOG_DIR"] = str(self.mwi_logs_dir)
 
         # Env setup related to logging
         # Very verbose logging in debug mode
@@ -623,6 +673,17 @@ class AppState:
     async def stop_matlab(self):
         """Terminate MATLAB."""
 
+        # Clean up session files which determine various states of the server &/ MATLAB.
+        # Do this first as stopping MATLAB/Xvfb take longer and may fail
+        try:
+            for session_file in self.matlab_session_files.items():
+                if session_file[1] is not None:
+                    logger.info(f"Deleting:{session_file[1]}")
+                    session_file[1].unlink()
+        except FileNotFoundError:
+            # Files won't exist when stop_matlab is called for the first time.
+            pass
+
         # Cancel the asyncio task which reads MATLAB process' stderr
         if "matlab_stderr_reader" in self.tasks:
             try:
@@ -633,63 +694,68 @@ class AppState:
             del self.tasks["matlab_stderr_reader"]
 
         matlab = self.processes["matlab"]
-
-        # Terminate
         if matlab is not None and matlab.returncode is None:
-            # Instead of calling the .terminate() method first, which leads to MATLAB exiting with error code: 15,
-            # try to shutdown MATLAB gracefully by sending the 'exit' command to the Embedded connector.
-            # This will let MATLAB to safely checkin licenses and shutdown gracefully.
-            # If the request fails, call the .terminate() method on the process.
-
-            logger.info(f"Terminating MATLAB (PID={matlab.pid})")
-            data = mwi.embedded_connector.helpers.get_data_to_eval_mcode("exit")
-            url = mwi.embedded_connector.helpers.get_mvm_endpoint(
-                self.settings["mwi_server_url"]
-            )
             try:
-                resp_json = await mwi.embedded_connector.send_request(
-                    url=url, method="POST", data=data, headers=None
+                logger.info(
+                    f"Calling terminate on MATLAB process with PID: {matlab.pid}!"
                 )
-                if resp_json["messages"]["EvalResponse"][0]["isError"]:
-                    raise EmbeddedConnectorError(
-                        "Failed to send HTTP request to Embedded connector"
-                    )
-
-                # Wait for matlab to shutdown gracefully
+                matlab.terminate()
                 await matlab.wait()
-                assert (
-                    matlab.returncode == 0
-                ), "Failed to gracefully shutdown MATLAB via the embedded connector"
-
-            except Exception as err:
-                log_error(logger, err)
-                # Additional try-catch as error could be thrown in Windows.
-                try:
-                    matlab.terminate()
-                    await matlab.wait()
-                except:
-                    pass
+            except:
+                logger.info(
+                    f"Exception occured during termination of MATLAB process with PID: {matlab.pid}!"
+                )
+                pass
 
         xvfb = self.processes["xvfb"]
+        logger.debug(f"Attempting XVFB Termination Xvfb)")
         if xvfb is not None and xvfb.returncode is None:
             logger.info(f"Terminating Xvfb (PID={xvfb.pid})")
             xvfb.terminate()
             await xvfb.wait()
 
-        try:
-            # Clean up both connector.securePort file and mwi_proxy_lock_file
-            if self.matlab_ready_file is not None:
-                self.matlab_ready_file.unlink()
-
-            if self.mwi_proxy_lock_file is not None:
-                self.mwi_proxy_lock_file.unlink()
-
-        except FileNotFoundError:
-            # Files won't exist when stop_matlab is called for the first time.
-            pass
-
         # Clear logs if MATLAB stopped intentionally
+        logger.debug("Clearing logs!")
         self.logs["matlab"].clear()
+
+        ## Termination using EXIT command to MATLAB via the FEVAL interface.
+        ## Commenting this out now, as the API crashes MATLAB on exit.
+        # if matlab is not None and matlab.returncode is None:
+        #     # Instead of calling the .terminate() method first, which leads to MATLAB exiting with error code: 15,
+        #     # try to shutdown MATLAB gracefully by sending the 'exit' command to the Embedded connector.
+        #     # This will let MATLAB to safely checkin licenses and shutdown gracefully.
+        #     # If the request fails, call the .terminate() method on the process.
+
+        #     logger.info(f"Terminating MATLAB (PID={matlab.pid})")
+        #     data = mwi.embedded_connector.helpers.get_data_to_eval_mcode("exit")
+        #     url = mwi.embedded_connector.helpers.get_mvm_endpoint(
+        #         self.settings["mwi_server_url"]
+        #     )
+        #     try:
+        #         resp_json = await mwi.embedded_connector.send_request(
+        #             url=url, method="POST", data=data, headers=None
+        #         )
+        #         if resp_json["messages"]["EvalResponse"][0]["isError"]:
+        #             raise EmbeddedConnectorError(
+        #                 "Failed to send HTTP request to Embedded connector"
+        #             )
+
+        #         # Wait for matlab to shutdown gracefully
+        #         await matlab.wait()
+        #         assert (
+        #             matlab.returncode == 0
+        #         ), "Failed to gracefully shutdown MATLAB via the embedded connector"
+
+        #     except Exception as err:
+        #         log_error(logger, err)
+        #         # Additional try-catch as error could be thrown in Windows.
+        #         try:
+        #             matlab.terminate()
+        #             await matlab.wait()
+        #         except:
+        #             pass
+
+        logger.debug("Completed Shutdown!!!")
 
     async def handle_matlab_output(self):
         """Parse MATLAB output from stdout and raise errors if any."""

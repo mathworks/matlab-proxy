@@ -1,0 +1,123 @@
+<!-- Copyright (c) 2020-2022 The MathWorks, Inc. -->
+<!-- This page lists the token used to authorize the server.-->
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+  <meta name="description" content="matlab-proxy Token Authorization">
+  <meta name="author" content="The MathWorks Inc.">
+  <link rel="icon" href="./favicon.ico">
+
+  <title>matlab-proxy Token Authorization</title>
+
+  <!-- Bootstrap core CSS -->
+  <!-- Custom styles for this template -->
+  <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous"> -->
+  <link href="./bootstrap.3.4.1.min.css" rel="stylesheet">
+  <link href="./signin.css" rel="stylesheet">
+  <link href="./navbar.css" rel="stylesheet">
+
+  <script type="text/javascript">
+    function isServerAuthenticated() {
+      // Check whether server is authorized
+      var url_string = document.URL
+      var base_url = url_string.split("token.html")[0]
+      var url = new URL(url_string);
+      var token = url.searchParams.get("mwi_auth_token");
+      var auth_endpoint = base_url + "authenticate_request"
+      if (token) {
+        auth_endpoint += "?mwi_auth_token=" + token
+      }
+      console.log("auth_endpoint: " + auth_endpoint);
+      fetch(auth_endpoint)
+        .then(function (response) {
+          if (response.ok) {
+            console.log('This page is authorized!')
+            // User may have requested for token.html directly, bypassing the "mwi_auth_token" endpoint
+            // This case is handled in the showToken function
+            return;
+          } else {
+            console.log('This page is NOT authorized!')
+            // Redirect to endpoint which can display the token if it passes authentication
+            window.location.replace(base_url + "mwi_auth_token")
+          }
+        }).catch(function (error) {
+          console.log(error);
+        });
+    }
+
+    function showToken() {
+      isServerAuthenticated();
+      // Get URL parameter "mwi_auth_token"
+      var mwi_auth_token = urlParams['mwi_auth_token']
+      if (mwi_auth_token) {
+        document.getElementById("mwi_auth_token").innerHTML = mwi_auth_token;
+      } else {
+        // The server is authenticated but the token is absent in the URL
+        // Redirect to the endpoint which shows the token
+        var url_string = document.URL
+        var base_url = url_string.split("token.html")[0]
+        window.location.replace(base_url + "mwi_auth_token")
+      }
+    }
+
+    // Helper to query URL parameter
+    let urlParams = {};
+    (window.onpopstate = function () {
+      let match,
+        pl = /\+/g,  // Regex for replacing addition symbol with a space
+        search = /([^&=]+)=?([^&]*)/g,
+        decode = function (s) {
+          return decodeURIComponent(s.replace(pl, " "));
+        },
+        query = window.location.search.substring(1);
+
+      while (match = search.exec(query)) {
+        if (decode(match[1]) in urlParams) {
+          if (!Array.isArray(urlParams[decode(match[1])])) {
+            urlParams[decode(match[1])] = [urlParams[decode(match[1])]];
+          }
+          urlParams[decode(match[1])].push(decode(match[2]));
+        } else {
+          urlParams[decode(match[1])] = decode(match[2]);
+        }
+      }
+    })();
+  </script>
+</head>
+
+<body onload="showToken()">
+  <div class="container">
+    <!-- Static navbar -->
+    <nav class="navbar navbar-default">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand">matlab-proxy</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav navbar-right">
+            <li><a href="https://github.com/mathworks/matlab-proxy/blob/main/SECURITY.md#token-based-authentication"
+                target="_blank">Help</a>
+            </li>
+          </ul>
+        </div>
+        <!--/.nav-collapse -->
+      </div>
+      <!--/.container-fluid -->
+    </nav>
+
+    <div class="container">
+      <div class="starter-template">
+        <h2 id="mwi_auth_token_header">This server's authentication token is: </h2>
+        <p style="color:red;font-size: medium;font-weight: bold;" id="mwi_auth_token">Unknown</p>
+      </div>
+    </div>
+
+  </div> <!-- /container -->
+</body>
+
+</html>

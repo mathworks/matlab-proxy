@@ -1,4 +1,4 @@
-# Copyright 2021-2022 The MathWorks, Inc.
+# Copyright (c) 2020-2022 The MathWorks, Inc.
 
 """ 
 This file contains the methods to communicate with the embedded connector.

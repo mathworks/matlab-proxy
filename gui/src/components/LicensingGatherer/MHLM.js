@@ -1,4 +1,4 @@
-// Copyright 2020-2021 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
@@ -36,31 +36,31 @@ function setLoginNonce(username) {
 }
 
 function initLogin(clientNonce, serverNonce, sourceId) {
-  const initPayload = {
-      event: "load",
-      clientTransactionId: clientNonce,
-      transactionId: serverNonce,
-      release: "",
-      platform: "web",
-      clientString: "desktop-jupyter",
-      clientId: "",
-      sourceId: sourceId,
-      profileTier: "MINIMUM",
-      showCreateAccount: false,
-      showRememberMe: false,
-      showLicenseField: false,
-      entitlementId: "",
-      showPrivacyPolicy: true,
-      contextualText: "",
-      legalText: "",
-      cachedIdentifier: "",
-      cachedRememberMe: "",
-      token: "",
-      unauthorized: false
-  };
+    const initPayload = {
+        event: "load",
+        clientTransactionId: clientNonce,
+        transactionId: serverNonce,
+        release: "",
+        platform: "web",
+        clientString: "desktop-jupyter",
+        clientId: "",
+        sourceId: sourceId,
+        profileTier: "MINIMUM",
+        showCreateAccount: false,
+        showRememberMe: false,
+        showLicenseField: false,
+        entitlementId: "",
+        showPrivacyPolicy: true,
+        contextualText: "",
+        legalText: "",
+        cachedIdentifier: "",
+        cachedRememberMe: "",
+        token: "",
+        unauthorized: false
+    };
 
-  const loginFrame = document.getElementById("loginframe").contentWindow;
-  loginFrame.postMessage(JSON.stringify(initPayload), "*");
+    const loginFrame = document.getElementById("loginframe").contentWindow;
+    loginFrame.postMessage(JSON.stringify(initPayload), "*");
 }
 
 function MHLM() {
@@ -74,7 +74,7 @@ function MHLM() {
             if (wsEnv.includes('integ')) {
                 subdomain = `${subdomain}-${wsEnv}`;
             }
-            return  `https://${subdomain}.mathworks.com`;
+            return `https://${subdomain}.mathworks.com`;
         },
         [wsEnv]
     );

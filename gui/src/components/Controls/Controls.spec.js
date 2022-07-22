@@ -1,4 +1,4 @@
-// Copyright 2021 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import React from 'react';
 import Controls from './index';
@@ -26,7 +26,7 @@ describe('Controls Component', () => {
       error: null,
     };
 
-    callbackFn = jest.fn().mockImplementation((confirmationType) => {});
+    callbackFn = jest.fn().mockImplementation((confirmationType) => { });
   });
 
   afterEach(() => {

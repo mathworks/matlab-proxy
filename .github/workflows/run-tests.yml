@@ -1,4 +1,4 @@
-# Copyright 2020-2021 The MathWorks, Inc
+# Copyright (c) 2020-2022 The MathWorks, Inc
 
 name: Testing MATLAB Proxy
 
@@ -31,9 +31,10 @@ jobs:
 
   python_tests:
     runs-on: ubuntu-latest
+    continue-on-error: True
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9, 3.10.x]
 
     steps:
       - name: Checkout

@@ -1,4 +1,4 @@
-// Copyright 2020 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
@@ -99,7 +99,7 @@ function App() {
         if (!hasFetchedEnvConfig) {
             dispatch(fetchEnvConfig());
         }
-        
+
     }, [dispatch, hasFetchedEnvConfig]);
 
     useEffect(() => {
@@ -107,9 +107,9 @@ function App() {
         if (!hasFetchedServerStatus) {
             dispatch(fetchServerStatus());
         }
-        
+
     }, [dispatch, hasFetchedServerStatus]);
-    
+
     // Periodic fetch server status
     useInterval(() => {
         dispatch(fetchServerStatus());
@@ -137,7 +137,7 @@ function App() {
     } else if (licensingProvided && !dialog) {
         overlayContent = (
             <Information closeHandler={toggleOverlayVisible}>
-                <Controls callback={args => setDialogModel(args)}/>
+                <Controls callback={args => setDialogModel(args)} />
             </Information>
         );
     }

@@ -1,11 +1,6 @@
 from matlab_proxy import util
 
 
-def test_is_python_version_newer_than_3_6():
-    """Test to check python version is 3.7 or later"""
-    assert util.is_python_version_newer_than_3_6() is not None
-
-
 def test_get_supported_termination_signals():
     assert len(util.__get_supported_termination_signals()) >= 1
 

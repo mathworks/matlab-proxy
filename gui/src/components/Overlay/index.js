@@ -1,4 +1,4 @@
-// Copyright 2020 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import React from 'react';
 import PropTypes from 'prop-types';
@@ -6,7 +6,7 @@ import './Overlay.css';
 
 function Overlay({
     children,
-    transparent=false
+    transparent = false
 }) {
 
     return (

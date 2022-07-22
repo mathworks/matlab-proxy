@@ -1,4 +1,4 @@
-# Copyright 2021 The MathWorks, Inc.
+# Copyright (c) 2020-2022 The MathWorks, Inc.
 """This file lists and exposes the environment variables which are used by the integration."""
 
 import os
@@ -19,8 +19,17 @@ def get_env_name_logging_level():
     return "MWI_LOG_LEVEL"
 
 
-def get_env_name_web_logging_enabled():
-    """Enable the logging of asyncio web traffic by setting to true"""
+def get_env_name_enable_web_logging():
+    """wef > v0.2.10 Enable the logging of asyncio web traffic by setting to true"""
+    return "MWI_ENABLE_WEB_LOGGING"
+
+
+def get_old_env_name_enable_web_logging():
+    """
+    Enable the logging of asyncio web traffic by setting to true
+    This name is deprecated and was last published in version v0.2.10 of matlab-proxy.
+    """
+
     return "MWI_WEB_LOGGING_ENABLED"
 
 
@@ -93,7 +102,19 @@ def is_testing_mode_enabled():
 
 def is_web_logging_enabled():
     """Returns true if the web logging is required to be enabled"""
-    return os.environ.get(get_env_name_web_logging_enabled(), "false").lower() == "true"
+
+    if os.environ.get(get_old_env_name_enable_web_logging(), None) is not None:
+        from matlab_proxy.util import mwi
+
+        logger = mwi.logger.get()
+        logger.warning(
+            f"Usage of {get_old_env_name_enable_web_logging()} is being deprecated from v0.2.10 and will be removed in a future release.\n Use {get_env_name_enable_web_logging()} instead. "
+        )
+        return (
+            os.environ.get(get_old_env_name_enable_web_logging(), "false").lower()
+            == "true"
+        )
+    return os.environ.get(get_env_name_enable_web_logging(), "false").lower() == "true"
 
 
 def get_env_name_ssl_cert_file():
@@ -104,3 +125,13 @@ def get_env_name_ssl_cert_file():
 def get_env_name_ssl_key_file():
     """Specifies the key used by webserver to sign the ssl certificate."""
     return "MWI_SSL_KEY_FILE"
+
+
+def get_env_name_enable_mwi_auth_token():
+    """Specifies whether the server should provide Token-Based Authentication"""
+    return "MWI_ENABLE_TOKEN_AUTH"
+
+
+def get_env_name_mwi_auth_token():
+    """User specified token for use with Token-Based Authentication"""
+    return "MWI_AUTH_TOKEN"

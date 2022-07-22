@@ -1,4 +1,4 @@
-// Copyright 2020 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import { fireEvent, render } from "../../test/utils/react-test";
 import React from "react";
@@ -11,7 +11,7 @@ import * as actionCreators from "../../actionCreators";
 describe("OverlayTrigger Component", () => {
   let initialState, mockStore;
   beforeEach(() => {
-    
+
     mockStore = configureMockStore();
 
     initialState = {

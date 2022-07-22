@@ -1,4 +1,4 @@
-# Copyright 2020-2021 The MathWorks, Inc.
+# Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import asyncio
 import json
@@ -9,13 +9,18 @@ import sys
 import aiohttp
 from aiohttp import web
 
+from aiohttp_session import setup as aiohttp_session_setup
+from aiohttp_session.cookie_storage import EncryptedCookieStorage
+from cryptography import fernet
+
 import matlab_proxy
 from matlab_proxy import settings, util
 from matlab_proxy.app_state import AppState
 from matlab_proxy.default_configuration import config
-from matlab_proxy.util import mwi
+from matlab_proxy.util import mwi, list_servers
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi.exceptions import LicensingError
+from matlab_proxy.util.mwi import token_auth
 
 mimetypes.add_type("font/woff", ".woff")
 mimetypes.add_type("font/woff2", ".woff2")
@@ -127,6 +132,21 @@ async def get_status(req):
         JSONResponse: JSONResponse object containing information about the server, MATLAB and MATLAB Licensing.
     """
     return await create_status_response(req.app)
+
+
+async def authenticate_request(req):
+    """API Endpoint to authenticate request to access server
+
+    Returns:
+        Response with status = 200 if request is authentic else return status = 401
+    """
+    if await token_auth.authenticate_request(req):
+        logger.debug("!!!!!! REQUEST IS AUTHORIZED !!!!")
+        return web.Response(status=200)
+    else:
+        # Return HTTPUnauthorized
+        logger.debug("!!!!!! REQUEST IS NOT AUTHORIZED !!!!")
+        return web.Response(status=401)
 
 
 async def start_matlab(req):
@@ -248,6 +268,7 @@ async def termination_integration_delete(req):
         sys.exit(0)
 
 
+@token_auth.decorator_authenticate_access
 async def root_redirect(request):
     """API Endpoint to return the root index.html file.
 
@@ -501,6 +522,7 @@ async def cleanup_background_tasks(app):
     """
     # First stop matlab
     state = app["state"]
+    state.clean_up_mwi_server_session()
     await state.stop_matlab()
 
     # Stop any running async tasks
@@ -514,6 +536,27 @@ async def cleanup_background_tasks(app):
                 await task
             except asyncio.CancelledError:
                 pass
+
+
+@token_auth.decorator_authenticate_access
+async def get_mwi_auth_token(request):
+    """Endpoint to print the MWI token."""
+    logger.info("!!!!!! Inside get_mwi_auth_token !!!!!")
+    app_settings = request.app["settings"]
+    is_mwi_token_auth_enabled = app_settings["mwi_is_mwi_token_auth_enabled"]
+    base_url = app_settings["base_url"]
+    mwi_auth_token = app_settings["mwi_auth_token"]
+    if is_mwi_token_auth_enabled:
+        logger.info("get_mwi_auth_token: Responding with token information!!")
+        return aiohttp.web.HTTPFound(
+            f"{base_url}/token.html?mwi_auth_token={mwi_auth_token}"
+        )
+    else:
+        logger.info("get_mwi_auth_token: Token Auth mode not enabled")
+        return aiohttp.web.Response(
+            content_type="text/html",
+            body=f"Token-Based Authentication is not enabled!",
+        )
 
 
 def configure_and_start(app):
@@ -550,12 +593,7 @@ def configure_and_start(app):
         f' with base_url: {app["settings"]["base_url"]} and app_port:{app["settings"]["app_port"]}.'
     )
 
-    logger.info(
-        util.prettify(
-            boundary_filler="=",
-            text_arr=[f"MATLAB can be accessed at:", app["settings"]["mwi_server_url"]],
-        )
-    )
+    app["state"].create_server_info_file()
 
     # Startup tasks are being done here as app.on_startup leads
     # to a race condition for mwi_server_url information which is
@@ -590,6 +628,9 @@ def create_app(config_name=matlab_proxy.get_default_config_name()):
 
     base_url = app["settings"]["base_url"]
     app.router.add_route("GET", f"{base_url}/get_status", get_status)
+    app.router.add_route(
+        "GET", f"{base_url}/authenticate_request", authenticate_request
+    )
     app.router.add_route("GET", f"{base_url}/get_env_config", get_env_config)
     app.router.add_route("PUT", f"{base_url}/start_matlab", start_matlab)
     app.router.add_route("DELETE", f"{base_url}/stop_matlab", stop_matlab)
@@ -602,9 +643,18 @@ def create_app(config_name=matlab_proxy.get_default_config_name()):
     )
     app.router.add_route("*", f"{base_url}/", root_redirect)
     app.router.add_route("*", f"{base_url}", root_redirect)
-    app.router.add_route("*", f"{base_url}/{{proxyPath:.*}}", matlab_view)
+    mwi_auth_token_name = app["settings"]["mwi_auth_token_name"]
+    app.router.add_route("GET", f"{base_url}/get_mwi_auth_token", get_mwi_auth_token)
 
+    app.router.add_route("*", f"{base_url}/{{proxyPath:.*}}", matlab_view)
     app.on_cleanup.append(cleanup_background_tasks)
+
+    # Setup the session storage
+    fernet_key = fernet.Fernet.generate_key()
+    f = fernet.Fernet(fernet_key)
+    aiohttp_session_setup(
+        app, EncryptedCookieStorage(f, cookie_name="matlab-proxy-session")
+    )
 
     return app
 
@@ -628,11 +678,12 @@ def main():
     async def shutdown():
         """Shuts down the app in the event of a signal interrupt."""
         logger.info("Shutting down MATLAB proxy-app")
+        await app.shutdown()
+        await app.cleanup()
         for task in asyncio.Task.all_tasks():
             logger.debug(f"calling cancel on all_tasks: {task}")
             task.cancel()
-        await app.shutdown()
-        await app.cleanup()
+            await task
 
         asyncio.ensure_future(exit())
 

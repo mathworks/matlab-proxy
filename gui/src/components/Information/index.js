@@ -1,4 +1,4 @@
-// Copyright 2020 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
@@ -73,7 +73,7 @@ function Information({
     ) : null;
 
     const onCloseClick = event => {
-        if(event.target === event.currentTarget) {
+        if (event.target === event.currentTarget) {
             event.preventDefault();
             closeHandler();
         }
@@ -101,7 +101,7 @@ function Information({
                                 </button>
                             )
                         }
-                        <span className={`alert_icon icon-alert-${details.icon}`}/>
+                        <span className={`alert_icon icon-alert-${details.icon}`} />
                         <h4 className="modal-title alert_heading" id="information-dialog-title">Status Information</h4>
                     </div >
                     <div className="modal-body">

@@ -1,0 +1,115 @@
+<!-- Copyright (c) 2020-2022 The MathWorks, Inc. -->
+<!-- This page is used to collect the authorization token from the user to provide access to the attempted URL -->
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+  <meta name="description" content="matlab-proxy Token Authorization">
+  <meta name="author" content="The MathWorks Inc.">
+  <link rel="icon" href="./favicon.ico">
+
+  <title>matlab-proxy Token Authorization</title>
+
+  <!-- Bootstrap core CSS -->
+  <!-- Custom styles for this template -->
+  <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous"> -->
+  <link href="./bootstrap.3.4.1.min.css" rel="stylesheet">
+  <link href="./signin.css" rel="stylesheet">
+  <link href="./navbar.css" rel="stylesheet">
+
+  <script type="text/javascript">
+    // Validation is achieved by accessing the originally requested URL 
+    function onFormSubmit() {
+      var token = document.getElementById('inputMWIToken').value;
+      console.log("MWI TOKEN ENTERED: " + token)
+
+      // Dont need to verify the token, simply attempt to use it with the regenerated URL
+      var url = window.location.href
+      console.log("url:" + url)
+
+      // get the original url
+      var originalEndpoint = urlParams['attempted_url']
+      // Strip any URL Parameters in the original endpoint
+      originalEndpoint = originalEndpoint.split("?")[0]
+      console.log("original endpoing with parameters removed:" + originalEndpoint)
+
+      var redirectUrl = window.location.origin + originalEndpoint + '?mwi_auth_token=' + token
+
+      // Reset form value before redirecting
+      document.getElementById('inputMWIToken').value = ''
+      console.log("Redirect to URL: " + redirectUrl)
+      window.location.href = redirectUrl
+    }
+
+    // Helper to query URL parameter
+    let urlParams = {};
+    (window.onpopstate = function () {
+      let match,
+        pl = /\+/g,  // Regex for replacing addition symbol with a space
+        search = /([^&=]+)=?([^&]*)/g,
+        decode = function (s) {
+          return decodeURIComponent(s.replace(pl, " "));
+        },
+        query = window.location.search.substring(1);
+
+      while (match = search.exec(query)) {
+        if (decode(match[1]) in urlParams) {
+          if (!Array.isArray(urlParams[decode(match[1])])) {
+            urlParams[decode(match[1])] = [urlParams[decode(match[1])]];
+          }
+          urlParams[decode(match[1])].push(decode(match[2]));
+        } else {
+          urlParams[decode(match[1])] = decode(match[2]);
+        }
+      }
+    })();
+  </script>
+</head>
+
+<body>
+  <div class="container">
+    <!-- Static navbar -->
+    <nav class="navbar navbar-default">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand">matlab-proxy</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav navbar-right">
+            <li><a href="https://github.com/mathworks/matlab-proxy/blob/main/SECURITY.md#token-based-authentication"
+                target="_blank">Help</a>
+            </li>
+          </ul>
+        </div>
+        <!--/.nav-collapse -->
+      </div>
+      <!--/.container-fluid -->
+    </nav>
+
+    <div class="container">
+      <form class="form-signin" onsubmit="return false">
+        <h2 class="form-signin-heading">Authentication Required</h2>
+        <br>
+        <input type="password" id="inputMWIToken" class="form-control" placeholder="Enter token to access server."
+          required autofocus>
+        <button class="btn btn-lg btn-primary btn-block" type="submit" onclick=onFormSubmit()>Log in</button>
+        <div class="starter-template">
+          <h3>This server has enabled Token authentication</h3>
+          <p class="lead">Enter the token for this server in the input above.
+            <br>Please contact your System Administrator, or
+            <br>Click <a
+              href="https://github.com/mathworks/matlab-proxy/blob/main/SECURITY.md#token-based-authentication"
+              target="_blank">here</a> for more information.
+          </p>
+        </div>
+      </form>
+    </div>
+
+  </div> <!-- /container -->
+</body>
+
+</html>

@@ -1,4 +1,4 @@
-// Copyright 2021 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import React from 'react';
 import LicenseGatherer from './index';
@@ -38,12 +38,12 @@ describe('LicenseGatherer component', () => {
 
   it('should throw error', () => {
 
-    const errorMock = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const errorMock = jest.spyOn(console, 'error').mockImplementation(() => { })
 
-    try{
+    try {
       render(<LicenseGatherer />);
     }
-    catch(error){
+    catch (error) {
       expect(error).toBeInstanceOf(TypeError);
       expect(errorMock).toHaveBeenCalledTimes(2);
     }
@@ -51,7 +51,7 @@ describe('LicenseGatherer component', () => {
   });
 
   it('should render without crashing', () => {
-    render(<LicenseGatherer />, {initialState: initialState});
+    render(<LicenseGatherer />, { initialState: initialState });
   });
 
 
@@ -59,7 +59,7 @@ describe('LicenseGatherer component', () => {
 
     initialState.serverStatus.wsEnv = 'mw-integ'
 
-    const {container, debug} = render(<LicenseGatherer />, {initialState: initialState});
+    const { container, debug } = render(<LicenseGatherer />, { initialState: initialState });
 
     const mhlmTab = container.querySelector('#mhlm-tab');
 
@@ -73,7 +73,7 @@ describe('LicenseGatherer component', () => {
   });
 
   it('should have rendered mhlm tab by default without crashing', () => {
-    const { container } = render(<LicenseGatherer />, {initialState: initialState});
+    const { container } = render(<LicenseGatherer />, { initialState: initialState });
 
     const mhlmTab = container.querySelector('#mhlm-tab');
 
@@ -87,7 +87,7 @@ describe('LicenseGatherer component', () => {
   });
 
   it('should have rendered nlm tab content without crashing', () => {
-    const { container } = render(<LicenseGatherer />, {initialState: initialState});
+    const { container } = render(<LicenseGatherer />, { initialState: initialState });
 
     const nlmTab = container.querySelector('#nlm-tab');
     expect(nlmTab).toBeInTheDocument();

@@ -1,4 +1,4 @@
-// Copyright 2020 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 export const SET_TRIGGER_POSITION = 'SET_TRIGGER_POSITION';
 export const SET_TUTORIAL_HIDDEN = 'SET_TUTORIAL_HIDDEN';

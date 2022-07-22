@@ -1,4 +1,4 @@
-# Copyright 2020-2022 The MathWorks, Inc.
+# Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import os
 import shutil
@@ -13,6 +13,7 @@ from pathlib import Path
 import matlab_proxy
 from matlab_proxy.util import mwi
 from matlab_proxy.util.mwi import environment_variables as mwi_env
+from matlab_proxy.util.mwi import token_auth
 
 logger = mwi.logger.get()
 
@@ -42,9 +43,20 @@ def get_ws_env_settings():
     return ws_env, ws_env_suffix
 
 
+def get_mwi_config_folder(dev=False):
+    if dev:
+        return get_test_temp_dir()
+    else:
+        return Path.home() / ".matlab" / "MWI"
+
+
+def get_mwi_logs_root_dir(dev=False):
+    return get_mwi_config_folder(dev) / "ports"
+
+
 def get_dev_settings(config):
     devel_file = Path(__file__).resolve().parent / "./devel.py"
-    mwi_config_folder = get_test_temp_dir()
+    mwi_config_folder = get_mwi_config_folder(dev=True)
     ws_env, ws_env_suffix = get_ws_env_settings()
     return {
         "matlab_path": Path(),
@@ -71,10 +83,13 @@ def get_dev_settings(config):
         "mwi_custom_http_headers": mwi.custom_http_headers.get(),
         "env_config": mwi.validators.validate_env_config(config),
         "ssl_context": None,
-        "mwi_logs_root_dir": mwi_config_folder / "ports",
+        "mwi_logs_root_dir": get_mwi_logs_root_dir(dev=True),
         "mwi_proxy_lock_file_name": "mwi_proxy.lock",
         "mw_context_tags": get_mw_context_tags(matlab_proxy.get_default_config_name()),
         "mwi_server_url": None,
+        "mwi_auth_token": None,
+        "mwi_is_mwi_token_auth_enabled": False,
+        "mwi_auth_token_name": mwi_env.get_env_name_mwi_auth_token().lower(),
     }
 
 
@@ -126,10 +141,12 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
             os.getenv(mwi_env.get_env_name_ssl_cert_file(), None),
         )
 
+        mwi_auth_token = token_auth.generate_mwi_auth_token()
+
         # All config related to matlab-proxy will be saved to user's home folder.
         # This will allow for other user's to launch the integration from the same system
         # and not have their config's overwritten.
-        mwi_config_folder = Path.home() / ".matlab" / "MWI"
+        mwi_config_folder = get_mwi_config_folder()
         return {
             "matlab_path": matlab_path,
             "matlab_version": get_matlab_version(matlab_path),
@@ -148,7 +165,9 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
             "app_port": mwi.validators.validate_app_port_is_free(
                 os.getenv(mwi_env.get_env_name_app_port())
             ),
-            "host_interface": os.environ.get(mwi_env.get_env_name_app_host()),
+            "host_interface": os.environ.get(
+                mwi_env.get_env_name_app_host(), "127.0.0.1"
+            ),
             "mwapikey": str(uuid.uuid4()),
             "matlab_protocol": "https",
             "nlm_conn_str": mwi.validators.validate_mlm_license_file(
@@ -166,12 +185,15 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
             ),
             # This directory will be used to store connector.securePort(matlab_ready_file) and its corresponding files. This will be
             # a central place to store logs of all the running instances of MATLAB launched by matlab-proxy
-            "mwi_logs_root_dir": mwi_config_folder / "ports",
+            "mwi_logs_root_dir": get_mwi_logs_root_dir(),
             # Name of the lock file which will be created by this instance of matlab-proxy process.
             "mwi_proxy_lock_file_name": "mwi_proxy.lock",
             "mw_context_tags": get_mw_context_tags(config_name),
             # The url where the matlab-proxy server is accessible at
             "mwi_server_url": None,
+            "mwi_auth_token": mwi_auth_token,
+            "mwi_is_mwi_token_auth_enabled": mwi_auth_token != None,
+            "mwi_auth_token_name": mwi_env.get_env_name_mwi_auth_token().lower(),
         }
 
 

@@ -1,4 +1,4 @@
-// Copyright 2020-2021 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
@@ -75,7 +75,7 @@ function OverlayTrigger() {
 
     // Blank overlay to use when moving the icon because iframes swallow events
     // if not masked
-    const blankOverlay = dragging ? <Overlay transparent={true}/> : null;
+    const blankOverlay = dragging ? <Overlay transparent={true} /> : null;
 
     const handleCloseTutorial = () => {
         dispatch(setTutorialHidden(true));
@@ -83,21 +83,21 @@ function OverlayTrigger() {
 
     const tutorial = tutorialHidden ? null : (
         <div id="trigger-tutorial" className="trigger-tutorial modal-content">
-            <p>To control the MATLAB session (for example to restart or sign out), click the <span className="icon-custom-trigger icon trigger-tutorial-icon" title="tools icon"/> icon.</p>
+            <p>To control the MATLAB session (for example to restart or sign out), click the <span className="icon-custom-trigger icon trigger-tutorial-icon" title="tools icon" /> icon.</p>
             <p>The color of the badge shows the MATLAB status.</p>
-            <p>To position this widget anywhere on screen, click and drag the <span className="drag-handle icon" title="grab handle icon"/> icon.</p>
+            <p>To position this widget anywhere on screen, click and drag the <span className="drag-handle icon" title="grab handle icon" /> icon.</p>
             <button className="btn btn_color_blue pull-right" data-testid='tutorialCloseBtn' onClick={handleCloseTutorial}>Close</button>
         </div>
     );
 
     const tooltip = tutorialHidden ? (
         <ReactTooltip
-                id="trigger-button-tooltip"
-                place="bottom"
-                type="info"
-                effect="solid"
-            />
-        ) : null;
+            id="trigger-button-tooltip"
+            place="bottom"
+            type="info"
+            effect="solid"
+        />
+    ) : null;
 
     return (
         <>

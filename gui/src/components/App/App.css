@@ -1,24 +1,24 @@
-/* Copyright 2020 The MathWorks, Inc. */
+/* Copyright (c) 2020-2022 The MathWorks, Inc. */
 
 @import "./3p/css/bootstrap.min.css";
 @import "./3p/css/site7.min.css";
 
 html body {
-    overflow: hidden;
+  overflow: hidden;
 }
 
 .main {
-    height: 100%;
+  height: 100%;
 }
 
 .feedback {
-    position: fixed;
-    bottom: 40px;
-    left: 30px;
+  position: fixed;
+  bottom: 40px;
+  left: 30px;
 }
 
 .feedback span {
-    margin-right: 8px;
+  margin-right: 8px;
 }
 
 .App {
@@ -55,6 +55,7 @@ html body {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }

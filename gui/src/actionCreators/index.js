@@ -1,4 +1,4 @@
-// Copyright 2020 The MathWorks, Inc.
+// Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import {
     SET_TRIGGER_POSITION,
@@ -136,9 +136,9 @@ export function receiveError(error, statusCode) {
     }
 }
 
-export async function fetchWithTimeout(dispatch, resource, options={}, timeout=10000){    
+export async function fetchWithTimeout(dispatch, resource, options = {}, timeout = 10000) {
     // Create an abort controller for this request and set a timeout for it to abort.
-    const controller = new AbortController();  
+    const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
 
     try {
@@ -149,16 +149,16 @@ export async function fetchWithTimeout(dispatch, resource, options={}, timeout=1
         clearTimeout(id);
 
         return response;
-    } catch(err) {
+    } catch (err) {
         const errorText = 'Check your internet connection and verify that the server is running.';
         // If AbortController is aborted, then AbortError exception is raised due to time out.
-        if (err.name === "AbortError" || err.name === 'TypeError') {        
-            dispatch(receiveError(`HTTP Error 408 - Request Timeout. ${errorText}`,408))
+        if (err.name === "AbortError" || err.name === 'TypeError') {
+            dispatch(receiveError(`HTTP Error 408 - Request Timeout. ${errorText}`, 408))
         } else {
             dispatch(receiveError("Communication with server failed.", 500))
         }
     }
-} 
+}
 
 
 export function fetchServerStatus() {
@@ -174,7 +174,7 @@ export function fetchServerStatus() {
 
 export function fetchEnvConfig() {
     return async function (dispatch, getState) {
-        
+
         dispatch(requestEnvConfig());
         const response = await fetchWithTimeout(dispatch, './get_env_config', {}, 10000);
         const data = await response.json();
@@ -187,7 +187,7 @@ export function fetchEnvConfig() {
 export function fetchSetLicensing(info) {
     return async function (dispatch, getState) {
 
-        const options =  {
+        const options = {
             method: 'PUT',
             mode: 'same-origin',
             cache: 'no-cache',
@@ -209,7 +209,7 @@ export function fetchSetLicensing(info) {
 export function fetchUnsetLicensing() {
     return async function (dispatch, getState) {
 
-        const options =  {
+        const options = {
             method: 'DELETE',
             mode: 'same-origin',
             cache: 'no-cache',
@@ -227,7 +227,7 @@ export function fetchUnsetLicensing() {
 export function fetchTerminateIntegration() {
     return async function (dispatch, getState) {
 
-        const options =  {
+        const options = {
             method: 'DELETE',
             mode: 'same-origin',
             cache: 'no-cache',
@@ -245,7 +245,7 @@ export function fetchTerminateIntegration() {
 export function fetchStopMatlab() {
     return async function (dispatch, getState) {
 
-        const options =  {
+        const options = {
             method: 'DELETE',
             mode: 'same-origin',
             cache: 'no-cache',
@@ -263,7 +263,7 @@ export function fetchStopMatlab() {
 export function fetchStartMatlab() {
     return async function (dispatch, getState) {
 
-        const options =  {
+        const options = {
             method: 'PUT',
             mode: 'same-origin',
             cache: 'no-cache',
