@@ -1,5 +1,4 @@
 # MATLAB Proxy
-
 [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/mathworks/matlab-proxy/Testing%20MATLAB%20Proxy?logo=github)](https://github.com/mathworks/matlab-proxy/actions) &nbsp; [![PyPI badge](https://img.shields.io/pypi/v/matlab-proxy.svg?logo=pypi)](https://pypi.python.org/pypi/matlab-proxy) &nbsp;  [![codecov](https://codecov.io/gh/mathworks/matlab-proxy/branch/main/graph/badge.svg?token=ZW3SESKCSS)](https://codecov.io/gh/mathworks/matlab-proxy) &nbsp; [![Downloads](https://static.pepy.tech/personalized-badge/matlab-proxy?period=month&units=international_system&left_color=grey&right_color=blue&left_text=PyPI%20downloads/month)](https://pepy.tech/project/matlab-proxy)
 
 Copyright (c) 2020-2022 The MathWorks, Inc. All rights reserved.
@@ -26,16 +25,18 @@ The MATLAB Proxy is under active development. For support or to report issues, s
 - [Feedback](#feedback)
 
 ## Requirements
-* Linux® operating system
+* Linux® or a Windows® Operating System
 
 * MATLAB® R2020b or later is installed and on the system PATH.
   ```bash
   # Confirm MATLAB is on the PATH
   which matlab
-  ```
+  ```  
 * The dependencies required to run MATLAB.
   Refer to the Dockerfiles in the [matlab-deps](https://github.com/mathworks-ref-arch/container-images/tree/master/matlab-deps) repository for the desired version of MATLAB.
-* X Virtual Frame Buffer (Xvfb)
+  
+* X Virtual Frame Buffer (Xvfb) : (only for Linux® based systems)
+
   Install it on your linux machine using:
   ```bash
   # On a Debian/Ubuntu based system:
@@ -129,6 +130,28 @@ The following options are available in the status panel (some options are only a
 * For installing/usage in a Docker container, see this [Dockerfile](./examples/Dockerfile) and its [README](./examples/README.md).
 * For upgrading **matlab-proxy** in an existing Docker image, see this [Dockerfile.upgrade.matlab-proxy](./examples/Dockerfile.upgrade.matlab-proxy) and its [README](./examples/README.md#upgrading-matlab-proxy-package-in-a-docker-image).*
 * For usage in a Jupyter environment, see [jupyter-matlab-proxy](https://github.com/mathworks/jupyter-matlab-proxy).
+
+## Platform Support
+
+### Linux
+This package is fully supported for the Linux Operating System.
+
+### Windows
+
+Windows® Operating System support was introduced in package version `v0.4.0`. If you encounter any errors, see the [Feedback](#feedback) section to report them.
+
+Install the version >=0.4.0 to use the package on Windows.
+```bash
+# To upgrade an existing installation of matlab-proxy package:
+$ pip install --upgrade matlab-proxy>=0.4.0
+
+# Or to make a new installation of the latest version:
+$ pip install matlab-proxy 
+```
+
+### MacOS
+
+This package is not supported for the Apple® Mac Operating System. 
 
 ## Limitations
 This package supports the same subset of MATLAB features and commands as MATLAB® Online, except there is no support for Simulink® Online.

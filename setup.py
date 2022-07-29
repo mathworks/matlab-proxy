@@ -1,27 +1,42 @@
 # Copyright (c) 2020-2022 The MathWorks, Inc.
 import os
-from setuptools.command.install import install
-import setuptools
-import matlab_proxy
 from pathlib import Path
 from shutil import which
-from matlab_proxy.default_configuration import config
 
-npm_install = ["npm", "--prefix", "gui", "install", "gui"]
-npm_build = ["npm", "run", "--prefix", "gui", "build"]
+import setuptools
+from setuptools.command.install import install
+
+import matlab_proxy
+from matlab_proxy.default_configuration import config
 
 
 class InstallNpm(install):
     def run(self):
 
         # Ensure npm is present
-        if which("npm") is None:
+        npm_path = which("npm")
+        if not npm_path:
             raise Exception(
                 "npm must be installed and on the path during package install!"
             )
 
+        npm_install = [npm_path, "install"]
+        npm_build = [npm_path, "run", "build"]
+
+        pwd = Path(os.getcwd())
+        gui_path = pwd / "gui"
+
+        # Change to directory where GUI files are present
+        os.chdir(gui_path)
+
+        # Install dependencies and build GUI files
         self.spawn(npm_install)
         self.spawn(npm_build)
+
+        # Change back to matlab_proxy root folder
+        os.chdir(pwd)
+
+        # Copy the built GUI files and move them inside matlab_proxy
         target_dir = Path(self.build_lib) / matlab_proxy.__name__ / "gui"
         self.mkpath(str(target_dir))
         self.copy_tree("gui/build", str(target_dir))
@@ -35,23 +50,23 @@ class InstallNpm(install):
         super().run()
 
 
-tests_require = [
+TESTS_REQUIRES = [
     "pytest",
     "pytest-env",
     "pytest-cov",
     "pytest-mock",
     "pytest-aiohttp",
-    "requests",
     "psutil",
 ]
+
+INSTALL_REQUIRES = ["aiohttp>=3.7.4", "psutil", "aiohttp_session[secure]"]
 
 HERE = Path(__file__).parent.resolve()
 long_description = (HERE / "README.md").read_text()
 
-
 setuptools.setup(
     name="matlab-proxy",
-    version="0.3.0",
+    version="0.4.0",
     url=config["doc_url"],
     author="The MathWorks, Inc.",
     author_email="cloud@mathworks.com",
@@ -78,10 +93,10 @@ setuptools.setup(
         "Programming Language :: Python :: 3.10",
     ],
     python_requires="~=3.7",
-    install_requires=["aiohttp>=3.7.4", "aiohttp_session[secure]"],
-    tests_require=tests_require,
+    install_requires=INSTALL_REQUIRES,
+    tests_require=TESTS_REQUIRES,
     extras_require={
-        "dev": ["aiohttp-devtools", "black", "ruamel.yaml"] + tests_require
+        "dev": ["aiohttp-devtools", "black", "ruamel.yaml"] + TESTS_REQUIRES
     },
     # The entrypoint will be used by multiple packages that have this package as an installation
     # dependency. These packages can use the same API, get_entrypoint_name(), to make their configs discoverable

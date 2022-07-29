@@ -9,6 +9,7 @@ import tempfile
 
 import matlab_proxy
 import pytest
+from matlab_proxy.util import system
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import validators
 from matlab_proxy.util.mwi.exceptions import NetworkLicensingError
@@ -60,6 +61,7 @@ def test_get_with_environment_variables(monkeypatch):
         conn_str = validators.validate_mlm_license_file(os.getenv(env_name))
         assert conn_str == str(path)
     finally:
+        os.close(fd)
         os.remove(path)
 
 
@@ -149,6 +151,7 @@ def test_validate_mwi_ssl_key_and_cert_file(monkeypatch):
     ssl_cert_file_env_name = mwi_env.get_env_name_ssl_cert_file()
     ssl_key_file_env_name = mwi_env.get_env_name_ssl_key_file()
     fd, path = tempfile.mkstemp()
+
     monkeypatch.setenv(ssl_cert_file_env_name, path)
     monkeypatch.setenv(ssl_key_file_env_name, path)
     try:
@@ -187,4 +190,7 @@ def test_validate_mwi_ssl_key_and_cert_file(monkeypatch):
             )
         assert e.value.code == 1
     finally:
+        # Need to close the file descriptor in Windows
+        # Or else PermissionError is raised.
+        os.close(fd)
         os.remove(path)

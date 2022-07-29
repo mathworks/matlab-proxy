@@ -1,7 +1,6 @@
 # Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import os
-import pty
 import socket
 import subprocess
 import sys
@@ -10,7 +9,7 @@ from collections import namedtuple
 from pathlib import Path
 
 import pytest
-import requests
+import aiohttp
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 
 """
@@ -74,16 +73,14 @@ def matlab_process_setup_fixture():
 
             devel_file = Path to devel_file
             matlab_cmd = The matlab command to start the matlab process
-            master, slave =  Returns the master, slave file descriptors of returned by pty.openpty() function
     """
 
     matlab_setup_variables = namedtuple(
         "matlab_setup_variables",
-        ["devel_file", "matlab_cmd", "master", "slave"],
+        ["devel_file", "matlab_cmd"],
     )
     devel_file = Path(os.path.join(os.getcwd(), "matlab_proxy", "devel.py"))
 
-    master, slave = pty.openpty()
     python_executable = sys.executable
 
     matlab_cmd = [
@@ -94,7 +91,7 @@ def matlab_process_setup_fixture():
         "--ready-delay",
         "0",
     ]
-    variables = matlab_setup_variables(devel_file, matlab_cmd, master, slave)
+    variables = matlab_setup_variables(devel_file, matlab_cmd)
 
     return variables
 
@@ -111,7 +108,6 @@ def matlab_process_valid_nlm_fixture(
 
     matlab_process = subprocess.Popen(
         matlab_process_setup.matlab_cmd,
-        stdin=matlab_process_setup.slave,
         stderr=subprocess.PIPE,
     )
 
@@ -121,7 +117,7 @@ def matlab_process_valid_nlm_fixture(
     matlab_process.wait()
 
 
-def test_matlab_valid_nlm(matlab_process_valid_nlm):
+async def test_matlab_valid_nlm(matlab_process_valid_nlm):
     """Test if the Fake Matlab server has started and is able to serve content.
 
     This test checks if the fake matlab process is able to start a web server and serve some
@@ -143,9 +139,12 @@ def test_matlab_valid_nlm(matlab_process_valid_nlm):
     count = 0
     while True:
         try:
-            resp = requests.get(url)
-            assert resp.status_code == 200
-            assert resp.content is not None
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as resp:
+                    assert resp.content_type == "text/html"
+                    assert resp.status == 200
+                    assert resp.content is not None
+
             break
         except:
             count += 1
@@ -172,7 +171,6 @@ def matlab_process_invalid_nlm_fixture(
 
     matlab_process = subprocess.Popen(
         matlab_process_setup.matlab_cmd,
-        stdin=matlab_process_setup.slave,
         stderr=subprocess.PIPE,
     )
 
@@ -194,6 +192,21 @@ async def test_matlab_invalid_nlm(matlab_process_invalid_nlm):
 
     matlab_port = os.environ["MW_CONNECTOR_SECURE_PORT"]
     url = f"http://localhost:{matlab_port}/index-jsd-cr.html"
+    max_tries = 2
+    count = 0
 
-    with pytest.raises(requests.exceptions.ConnectionError):
-        resp = requests.get(url)
+    with pytest.raises(ConnectionError):
+        while True:
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url) as resp:
+                        assert resp.content_type == "text/html"
+                        assert resp.status == 200
+                        assert resp.content is not None
+
+                break
+            except:
+                count += 1
+                if count > max_tries:
+                    raise ConnectionError
+                time.sleep(0.5)

@@ -1,5 +1,6 @@
 # Copyright (c) 2020-2022 The MathWorks, Inc.
 import matlab_proxy
+from matlab_proxy import util
 
 
 def test_get_mwi_ddux_value():
@@ -11,7 +12,7 @@ def test_get_mwi_ddux_value():
 
     assert expected_result == actual_result
 
-    expected_result = "MATLAB_PROXY:HELLO_WORLD:V1"
+    expected_result = f"MATLAB_PROXY:HELLO_WORLD:{util.system.get_os().upper()}:V1"
     actual_result = matlab_proxy.get_mwi_ddux_value("hello world")
 
     assert expected_result == actual_result

@@ -4,10 +4,8 @@
 This file contains the methods to communicate with the embedded connector.
 """
 
-
 import json
 
-import aiohttp
 from matlab_proxy.util.mwi.exceptions import EmbeddedConnectorError
 
 from .helpers import get_data_for_ping_request, get_ping_endpoint
@@ -29,6 +27,7 @@ async def send_request(url: str, data: dict, method: str, headers: dict = None) 
     Returns:
         dict: The json response from Embedded connector
     """
+    import aiohttp
 
     if not url or not method:
         raise EmbeddedConnectorError(

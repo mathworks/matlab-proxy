@@ -95,6 +95,7 @@ async def create_status_response(app, loadUrl=None):
         JSONResponse: A JSONResponse object containing the generic state of the server, MATLAB and MATLAB Licensing.
     """
     state = app["state"]
+
     return web.json_response(
         {
             "matlab": {
@@ -250,6 +251,7 @@ async def termination_integration_delete(req):
     Args:
         req (HTTPRequest): HTTPRequest Object
     """
+    logger.debug("Terminating the integration...")
     state = req.app["state"]
 
     # Send response manually because this has to happen before the application exits
@@ -257,6 +259,7 @@ async def termination_integration_delete(req):
     await res.prepare(req)
     await res.write_eof()
 
+    logger.debug("Shutting down the server...")
     # End termination with 0 exit code to indicate intentional termination
     await req.app.shutdown()
     await req.app.cleanup()
@@ -264,6 +267,7 @@ async def termination_integration_delete(req):
     'with pytest.raises()', there by causing the test : test_termination_integration_delete() 
     to fail. Inorder to avoid this, adding the below if condition to check to skip sys.exit(0) when testing
     """
+    logger.debug("Exiting with return code 0")
     if not mwi_env.is_testing_mode_enabled():
         sys.exit(0)
 
@@ -523,7 +527,8 @@ async def cleanup_background_tasks(app):
     # First stop matlab
     state = app["state"]
     state.clean_up_mwi_server_session()
-    await state.stop_matlab()
+
+    await state.stop_matlab(force_quit=True)
 
     # Stop any running async tasks
     logger = mwi.logger.get()
@@ -671,21 +676,23 @@ def main():
     app = configure_and_start(app)
 
     loop = util.get_event_loop()
+
     # Add signal handlers for the current python process
     loop = util.add_signal_handlers(loop)
-    loop.run_forever()
+    try:
+        loop.run_forever()
+    except SystemExit:
+        pass
 
     async def shutdown():
         """Shuts down the app in the event of a signal interrupt."""
         logger.info("Shutting down MATLAB proxy-app")
+
         await app.shutdown()
         await app.cleanup()
-        for task in asyncio.Task.all_tasks():
-            logger.debug(f"calling cancel on all_tasks: {task}")
-            task.cancel()
-            await task
 
-        asyncio.ensure_future(exit())
+        # Shutdown any running tasks.
+        await util.cancel_tasks(asyncio.all_tasks())
 
     try:
         loop.run_until_complete(shutdown())

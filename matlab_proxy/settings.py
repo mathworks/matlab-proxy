@@ -166,7 +166,7 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
                 os.getenv(mwi_env.get_env_name_app_port())
             ),
             "host_interface": os.environ.get(
-                mwi_env.get_env_name_app_host(), "127.0.0.1"
+                mwi_env.get_env_name_app_host(), "localhost"
             ),
             "mwapikey": str(uuid.uuid4()),
             "matlab_protocol": "https",
@@ -262,6 +262,7 @@ def get_test_temp_dir():
     """The temp directory to be used by tests"""
     test_temp_dir = Path(tempfile.gettempdir()) / "MWI" / "tests"
     test_temp_dir.mkdir(parents=True, exist_ok=True)
+
     return test_temp_dir
 
 

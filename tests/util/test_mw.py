@@ -9,7 +9,7 @@ from datetime import timedelta, timezone
 
 import pytest
 from matlab_proxy import settings
-from matlab_proxy.util import mw
+from matlab_proxy.util import mw, system
 from matlab_proxy.util.mwi import exceptions
 
 """This file tests methods present in matlab_proxy/util/mw.py
@@ -516,6 +516,12 @@ async def test_create_xvfb_process(loop):
     Creates 2 xvfb processes with '-displayfd' flag and  checks if the processes are
     running on unique display ports
     """
+
+    # No need to test Xvfb process creation on a Windows system.
+    # As Xvfb is meant for Posix systems.
+    if system.is_windows():
+        return
+
     # Get command to launch xvfb with -displayfd flag.
     settings_1 = settings.get(dev=True)
     settings_2 = settings.get(dev=True)

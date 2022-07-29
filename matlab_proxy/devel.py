@@ -209,8 +209,11 @@ async def cleanup_background_tasks(app):
     """
     # Delete ready file on tear down
     # NOTE MATLAB does not delete this file on shutdown.
-
-    app["matlab_ready_file"].unlink()
+    # FileNotFoundError is thrown on on Windows
+    try:
+        app["matlab_ready_file"].unlink()
+    except:
+        pass
     sys.exit(0)
 
 
@@ -249,6 +252,7 @@ def matlab(args):
 
     app.on_startup.append(start_background_tasks)
     app.on_cleanup.append(cleanup_background_tasks)
+
     web.run_app(app, port=port)
 
 

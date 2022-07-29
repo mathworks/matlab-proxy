@@ -142,7 +142,7 @@ class EmbeddedConnectorError(MatlabError):
     pass
 
 
-def log_error(logger, err):
+def log_error(logger, err: Exception):
     """Logs any error to stdout.
 
     Args:
@@ -151,4 +151,6 @@ def log_error(logger, err):
         Example: OnlineLicensingError, EntitlementError
     """
     logs_str = ("\n" + "\n".join(err.logs)) if err.logs is not None else ""
-    logger.error(err.message + logs_str)
+    logger.error(
+        err.message if err.message else "An Exception was raised:\n" + logs_str
+    )

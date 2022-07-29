@@ -1,14 +1,12 @@
 # Copyright (c) 2020-2022 The MathWorks, Inc.
 import argparse
-import asyncio
 import os
-import signal
 import socket
 import sys
 
 import matlab_proxy
-from aiohttp import web
-from matlab_proxy.util import mwi
+from matlab_proxy.util import mwi, system
+from matlab_proxy.util.event_loop import *
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 
 logger = mwi.logger.get()
@@ -66,6 +64,8 @@ def prepare_site(app, runner):
     Returns:
         [TCPSite]: A TCPSite on which the integration will start.
     """
+    from aiohttp import web
+
     port = app["settings"]["app_port"]
     # SSL_CONFIG validated and inserted in settings.py
     ssl_context = app["settings"]["ssl_context"]
@@ -100,15 +100,6 @@ def prepare_site(app, runner):
     return site
 
 
-def __get_supported_termination_signals():
-    """Returns supported set handlers for asynchronous events.
-
-    Returns:
-        List: Containing supported set handlers.
-    """
-    return [signal.SIGHUP, signal.SIGINT, signal.SIGQUIT, signal.SIGTERM]
-
-
 def add_signal_handlers(loop):
     """Adds signal handlers to event loop.
     This is necessary to shutdown the server safely when an interrupt is raised.
@@ -119,9 +110,27 @@ def add_signal_handlers(loop):
     Returns:
         loop: Asyncio event loop with signal handlers added.
     """
-    for signal in __get_supported_termination_signals():
-        logger.debug(f"Registering handler for signal: {signal} ")
-        loop.add_signal_handler(signal, lambda: loop.stop())
+
+    def catch_interrupt_signal(*args):
+        """Nested method which works as a interrupt signal handler.
+
+        Raises:
+            SystemExit: Raises SystemExit which will stop execution of loop.run_forever() in app.main()
+        """
+        logger.debug("Interrupt Signal handler called with args:\n", *args)
+        raise SystemExit
+
+    for interrupt_signal in system.get_supported_termination_signals():
+        logger.debug(f"Registering handler for signal: {interrupt_signal} ")
+
+        if system.is_posix():
+            loop.add_signal_handler(interrupt_signal, catch_interrupt_signal)
+        else:
+            # loop.add_signal_handler() is not yet supported in Windows.
+            # Using the 'signal' package instead.
+            import signal
+
+            signal.signal(interrupt_signal, catch_interrupt_signal)
 
     return loop
 
@@ -165,3 +174,43 @@ def prettify(boundary_filler=" ", text_arr=[]):
     result = upper + content + lower
 
     return result
+
+
+def get_child_processes(parent_process):
+    """Get list of child processes from a parent process.
+
+    Args:
+        parent_process (asyncio.subprocess.Process): Parent Process
+
+    Raises:
+        err: Assertion Error when either Parent process is not running
+
+    Returns:
+        list: list of child processes of type psutil.Process()
+    """
+    import psutil
+
+    # Work with psutil.Process() rather than asyncio.subprocess.Process()
+    # to get hold child processes
+    parent_process_psutil = psutil.Process(parent_process.pid)
+
+    while True:
+        try:
+            # Before checking for any child processes, ensure that the parent process is running
+            assert (
+                parent_process_psutil.is_running()
+            ), "Can't check for child processes as the parent process is no longer running."
+
+            child_processes = parent_process_psutil.children(recursive=False)
+
+            if not child_processes:
+                logger.debug("Waiting for the child processes to be created...")
+                continue
+
+        except AssertionError as err:
+            raise err
+
+        if child_processes:
+            break
+
+    return child_processes

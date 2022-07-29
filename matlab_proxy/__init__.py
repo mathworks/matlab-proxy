@@ -1,4 +1,5 @@
 # Copyright (c) 2020-2022 The MathWorks, Inc.
+from matlab_proxy.util import system
 
 
 def get_entrypoint_name():
@@ -34,8 +35,9 @@ def __get_matlab_proxy_base_ddux_value():
     Returns:
         str : DDUX value for MATLAB use.
     """
+    current_os = system.get_os().upper()
 
-    return "MATLAB_PROXY:BASE:V1"
+    return f"MATLAB_PROXY:BASE:{current_os}:V1"
 
 
 def get_mwi_ddux_value(extension_name):

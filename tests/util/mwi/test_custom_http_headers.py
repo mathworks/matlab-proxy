@@ -7,6 +7,7 @@ import time
 from json.decoder import JSONDecodeError
 
 import pytest
+from matlab_proxy.util import system
 from matlab_proxy.util.mwi import custom_http_headers
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 
@@ -148,7 +149,11 @@ def test_check_file_validity_no_read_access(non_existent_temp_json_file, capsys)
         non_existent_temp_json_file : Pytest fixture which returns a non-existent random json file.
     """
     temp_json_file_no_read_access = non_existent_temp_json_file
-    temp_json_file_no_read_access.touch(mode=stat.S_IWUSR)
+
+    # Not possible to create a file in windows without read permission
+    # So not creating the file itself to check for SystemExit exception.
+    if not system.is_windows():
+        temp_json_file_no_read_access.touch(mode=stat.S_IWUSR)
 
     with pytest.raises(SystemExit):
         custom_http_headers.__check_file_validity(temp_json_file_no_read_access)
