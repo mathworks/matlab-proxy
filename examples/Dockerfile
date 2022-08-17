@@ -32,6 +32,8 @@ RUN python3 -m pip install matlab-proxy
 # MATLAB should then become accessible on http://localhost:8888/matlab/index.html
 ENV MWI_APP_PORT=8888
 ENV MWI_BASE_URL="/matlab"
+# Uncomment the following line if you want matlab to be a accessible from other ips than localhost
+# ENV MWI_APP_HOST="0.0.0.0"
 
 USER matlab
 ENTRYPOINT ["matlab-proxy-app"]
