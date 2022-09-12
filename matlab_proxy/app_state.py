@@ -1,31 +1,31 @@
 # Copyright (c) 2020-2022 The MathWorks, Inc.
 
-import aiohttp
 import asyncio
 import errno
 import json
 import logging
 import os
-import time
 import socket
 import sys
-
+import time
 from collections import deque
 from datetime import datetime, timedelta, timezone
 
+import aiohttp
+
 from matlab_proxy import util
-from matlab_proxy.util.mwi import token_auth
-from matlab_proxy.util import mw, mwi, windows, system
+from matlab_proxy.util import mw, mwi, system, windows
 from matlab_proxy.util.mwi import environment_variables as mwi_env
+from matlab_proxy.util.mwi import token_auth
 from matlab_proxy.util.mwi.exceptions import (
     EmbeddedConnectorError,
     EntitlementError,
     InternalError,
     LicensingError,
     MatlabError,
-    XvfbError,
     MatlabInstallError,
     OnlineLicensingError,
+    XvfbError,
     log_error,
 )
 
@@ -475,13 +475,10 @@ class AppState:
                         )
                         return
 
-                # When testing in github workflows,  for windows container's, PermissionError is
+                # For windows container's (when testing in github workflows) PermissionError and in linux, OSError is
                 # thrown when trying to bind a used port from a previous test instead of the expected socket.error
                 except (OSError, PermissionError) as e:
-                    if system.is_windows():
-                        pass
-                    else:
-                        raise e
+                    pass
 
                 except socket.error as e:
                     if e.errno != errno.EADDRINUSE:
@@ -788,7 +785,7 @@ class AppState:
 
                 # The maximum amount of time in seconds the Embedded Connector can take
                 # for lauching, before the matlab-proxy server concludes that something is wrong.
-                self.embedded_connector_max_starting_duration = 15
+                self.embedded_connector_max_starting_duration = 120
 
                 # In Windows systems, errors are raised as UI windows and cannot be captured programmatically.
                 # So, check for how long the Embedded Connector is not up and then raise a generic error.

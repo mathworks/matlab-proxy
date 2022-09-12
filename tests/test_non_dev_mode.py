@@ -24,7 +24,22 @@ def matlab_port_fixture(monkeypatch):
     Args:
         monkeypatch : A built-in pytest fixture
     """
+    # For the test: test_non_dev, when run independently, works as expected.
+    # But, when all the tests are run, if port 8000 was picked
+    # by some previous test and was not released yet, then test_non_dev will fail to bind to it.
+    # To overcome this, I've temporarily patched MWI_APP_PORT to pick a random port.
+    try:
+        import socket
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(("", 0))
+        port = s.getsockname()[1]
+        s.close()
+    except Exception as e:
+        pass
+
     monkeypatch.setenv(mwi_env.get_env_name_development(), "false")
+    monkeypatch.setenv(mwi_env.get_env_name_app_port(), str(port))
 
 
 @pytest.fixture(name="build_frontend")

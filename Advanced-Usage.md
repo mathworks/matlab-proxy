@@ -18,6 +18,7 @@ The following table describes all the environment variables that you can set to 
 | **MLM_LICENSE_FILE** | string | `"1234@111.22.333.444"` | When you want to use either a license file or a network license manager to license MATLAB, specify this variable.</br> For example, specify the location of the network license manager to be `123@hostname`.|                                                                         
 | **MWI_BASE_URL** | string | `"/matlab"` | Set to control the base URL of the app. MWI_BASE_URL should start with `/` or be `empty`. |
 | **MWI_APP_PORT** | integer | `8080` | Specify the port for the HTTP server to listen on. |
+| **MWI_APP_HOST** | string | `127.0.0.1` | Specify the host interface for the HTTP server to launch on. Defaults to `0.0.0.0` on POSIX and Windows systems.<br />With the default value, the server will be accessible remotely at the fully qualified domain name of the system. |
 | **MWI_LOG_LEVEL** | string | `"CRITICAL"` | Specify the Python log level to be one of the following `NOTSET`, `DEBUG`, `INFO`, `WARN`, `ERROR`, or `CRITICAL`. For more information on Python log levels, see [Logging Levels](https://docs.python.org/3/library/logging.html#logging-levels) .<br />The default value is `INFO`. |
 | **MWI_LOG_FILE** | string | `"/tmp/logs.txt"` | Specify the full path to the file where you want debug logs from this integration to be written. |
 | **MWI_ENABLE_WEB_LOGGING** | string | `"True"` | Set this value to `"True"` to see additional web server logs. |

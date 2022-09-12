@@ -165,8 +165,9 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
             "app_port": mwi.validators.validate_app_port_is_free(
                 os.getenv(mwi_env.get_env_name_app_port())
             ),
+            # Set default to host interface to 0.0.0.0
             "host_interface": os.environ.get(
-                mwi_env.get_env_name_app_host(), "localhost"
+                mwi_env.get_env_name_app_host(), "0.0.0.0"
             ),
             "mwapikey": str(uuid.uuid4()),
             "matlab_protocol": "https",

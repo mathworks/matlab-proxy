@@ -1,7 +1,7 @@
 # Copyright 2022 The MathWorks, Inc.
 import os
-import signal
 import platform
+import signal
 
 """Contains methods and helpers which return OS specific information 
 """

@@ -3,8 +3,9 @@
 
 import glob
 import os
-import matlab_proxy.util as mwi_util
+
 import matlab_proxy.settings as mwi_settings
+import matlab_proxy.util as mwi_util
 
 
 def print_server_info():

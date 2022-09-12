@@ -8,6 +8,7 @@ import aiohttp
 import pytest
 from aiohttp import web
 from matlab_proxy import app, util
+from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi.exceptions import MatlabInstallError
 
 
@@ -540,3 +541,41 @@ async def test_set_termination_integration_delete(test_server):
         assert resp.status == 200 and resp_json["loadUrl"] == "../"
     except ProcessLookupError:
         pass
+
+
+def test_get_access_url(test_server):
+    """Should return a url with 127.0.0.1 in test mode
+
+    Args:
+        test_server (aiohttp.web.Application): Application Server
+    """
+    assert "127.0.0.1" in util.get_access_url(test_server.app)
+
+
+@pytest.fixture(name="non_test_env")
+def non_test_env_fixture(monkeypatch):
+    """Monkeypatches MWI_TEST env var to false
+
+    Args:
+        monkeypatch (_pytest.monkeypatch.MonkeyPatch): To monkeypatch env vars
+    """
+    monkeypatch.setenv(mwi_env.get_env_name_testing(), "false")
+
+
+@pytest.fixture(name="non_default_host_interface")
+def non_default_host_interface_fixture(monkeypatch):
+    """Monkeypatches MWI_TEST env var to false
+
+    Args:
+        monkeypatch (_pytest.monkeypatch.MonkeyPatch): To monkeypatch env vars
+    """
+    monkeypatch.setenv(mwi_env.get_env_name_app_host(), "0.0.0.0")
+
+
+# For pytest fixtures, order of arguments matter.
+# First set the default host interface to a non-default value
+# Then set MWI_TEST to false and then create an instance of the test_server
+# This order will set the test_server with appropriate values.
+def test_get_access_url_non_dev(non_default_host_interface, non_test_env, test_server):
+    """Test to check access url to not be 127.0.0.1 in non-dev mode"""
+    assert "127.0.0.1" not in util.get_access_url(test_server.app)

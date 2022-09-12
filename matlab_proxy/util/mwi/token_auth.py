@@ -2,12 +2,14 @@
 
 # This file contains functions required to enable token based authentication in the server.
 
-from aiohttp import web
-from aiohttp_session import setup, get_session, new_session
-from aiohttp_session.cookie_storage import EncryptedCookieStorage
-from matlab_proxy.util.mwi import environment_variables as mwi_env
 import os
 import secrets
+
+from aiohttp import web
+from aiohttp_session import get_session, new_session, setup
+from aiohttp_session.cookie_storage import EncryptedCookieStorage
+from matlab_proxy.util.mwi import environment_variables as mwi_env
+
 from . import logger as mwi_logger
 
 logger = mwi_logger.get()

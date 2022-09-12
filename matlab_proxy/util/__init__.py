@@ -12,26 +12,6 @@ from matlab_proxy.util.mwi import environment_variables as mwi_env
 logger = mwi.logger.get()
 
 
-def get_event_loop():
-    """Returns an asyncio event loop by checking the current python version and uses the appropriate
-    asyncio API
-
-    Returns:
-        asyncio.loop: asyncio event loop.
-    """
-    # get_running_loop() api is available for python >= 3.7
-    try:
-        # Try to get an existing event loop.
-        # If there's no running event loop, raise RuntimeError.
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        # If execution reached this except block, it implies that there
-        # was no running event loop. So, create one.
-        loop = asyncio.get_event_loop()
-
-    return loop
-
-
 def parse_cli_args():
     """Parses CLI arguments passed to the main() function.
 
@@ -214,3 +194,37 @@ def get_child_processes(parent_process):
             break
 
     return child_processes
+
+
+def get_access_url(app):
+    """Returns the url at which the server will be accessible at
+
+    Args:
+        app (aiohttp.web.Application): The web application from aiottp package
+
+    Returns:
+        str: complete url at which the server will be accessible.
+    """
+    base_url = app["settings"]["base_url"]
+    port = app["settings"]["app_port"]
+
+    ssl_context = app["settings"]["ssl_context"]
+    host_interface = app["settings"]["host_interface"]
+
+    access_protocol = "https" if ssl_context else "http"
+
+    # When host interface is set to 0.0.0.0, in a windows system, the server will not be accessible.
+    # Setting the value to fqdn, will allow it be remotely and locally accessible.
+
+    # NOTE: When windows container support is introduced this will need to be tweaked accordingly.
+    if host_interface == "0.0.0.0" and system.is_windows():
+        import socket
+
+        hostname = socket.gethostname()
+        fqdn = socket.getfqdn(hostname)
+
+        url = f"{access_protocol}://{fqdn}:{port}{base_url}"
+    else:
+        url = f"{access_protocol}://{host_interface}:{port}{base_url}"
+
+    return url

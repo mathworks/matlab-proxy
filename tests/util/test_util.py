@@ -1,7 +1,8 @@
 import asyncio
-import psutil
 
+import psutil
 from matlab_proxy import util
+from matlab_proxy.util import system
 
 
 def test_get_supported_termination_signals():
@@ -55,6 +56,17 @@ async def test_get_child_processes(loop):
     proc.terminate()
     await proc.wait()
 
-    # Terminate the child process (of type psutil.Process)
-    children[0].terminate()
-    children[0].wait()
+    try:
+        # Terminate the child process (of type psutil.Process)
+        children[0].terminate()
+        children[0].wait()
+
+    except psutil.NoSuchProcess as e:
+        # Only in windows, occasionally psutil.NoSuchProcess is raised.
+        if system.is_windows():
+            pass
+        else:
+            raise e
+
+    except Exception as e:
+        raise e

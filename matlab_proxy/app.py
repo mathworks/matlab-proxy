@@ -8,7 +8,6 @@ import sys
 
 import aiohttp
 from aiohttp import web
-
 from aiohttp_session import setup as aiohttp_session_setup
 from aiohttp_session.cookie_storage import EncryptedCookieStorage
 from cryptography import fernet
@@ -17,10 +16,10 @@ import matlab_proxy
 from matlab_proxy import settings, util
 from matlab_proxy.app_state import AppState
 from matlab_proxy.default_configuration import config
-from matlab_proxy.util import mwi, list_servers
+from matlab_proxy.util import list_servers, mwi
 from matlab_proxy.util.mwi import environment_variables as mwi_env
-from matlab_proxy.util.mwi.exceptions import LicensingError
 from matlab_proxy.util.mwi import token_auth
+from matlab_proxy.util.mwi.exceptions import LicensingError
 
 mimetypes.add_type("font/woff", ".woff")
 mimetypes.add_type("font/woff2", ".woff2")
@@ -589,7 +588,7 @@ def configure_and_start(app):
 
     # Update the site origin in settings.
     # The origin will be used for communicating with the Embedded connector.
-    app["settings"]["mwi_server_url"] = site.name + app["settings"]["base_url"]
+    app["settings"]["mwi_server_url"] = util.get_access_url(app)
 
     loop.run_until_complete(site.start())
 
