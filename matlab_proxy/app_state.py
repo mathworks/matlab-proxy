@@ -196,10 +196,14 @@ class AppState:
         matlab = self.processes["matlab"]
         xvfb = self.processes["xvfb"]
 
-        if system.is_posix():
+        if system.is_linux():
             if xvfb is None or xvfb.returncode is not None:
                 return "down"
 
+            if matlab is None or matlab.returncode is not None:
+                return "down"
+
+        elif system.is_mac():
             if matlab is None or matlab.returncode is not None:
                 return "down"
         else:
@@ -573,7 +577,7 @@ class AppState:
         # DDUX info for MATLAB
         matlab_env["MW_CONTEXT_TAGS"] = self.settings.get("mw_context_tags")
 
-        if system.is_posix():
+        if system.is_linux():
             # Adding DISPLAY key which is only available after starting Xvfb successfully.
             matlab_env["DISPLAY"] = self.settings["matlab_display"]
 
@@ -710,7 +714,7 @@ class AppState:
         self.logs["matlab"].clear()
 
         # Start Xvfb process if in a posix system
-        if system.is_posix():
+        if system.is_linux():
             xvfb = await self.__start_xvfb_process()
 
             # xvfb variable would be None if creation of the process failed.

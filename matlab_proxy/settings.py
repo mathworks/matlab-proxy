@@ -152,6 +152,7 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
             "matlab_version": get_matlab_version(matlab_path),
             "matlab_cmd": [
                 "matlab",
+                "-webui",
                 "-nosplash",
                 "-nodesktop",
                 "-softwareopengl",

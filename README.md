@@ -25,8 +25,6 @@ The MATLAB Proxy is under active development. For support or to report issues, s
 - [Feedback](#feedback)
 
 ## Requirements
-* Linux® or a Windows® Operating System
-
 * MATLAB® R2020b or later is installed and on the system PATH.
   ```bash
   # Confirm MATLAB is on the PATH
@@ -51,6 +49,12 @@ The MATLAB Proxy is under active development. For support or to report issues, s
   ```
 * Python versions: **3.7** | **3.8** | **3.9**  | **3.10**
 * [Browser Requirements](https://www.mathworks.com/support/requirements/browser-requirements.html)
+
+* Supported Operating Systems:
+    * Linux®
+    * Windows® Operating System ( starting v0.4.0 of matlab-proxy )
+    * MacOS (starting v0.5.0 of matlab-proxy )    
+See [Platform Support](#platform-support) for more information 
 
 ## Installation
 
@@ -138,20 +142,25 @@ This package is fully supported for the Linux Operating System.
 
 ### Windows
 
-Windows® Operating System support was introduced in package version `v0.4.0`. If you encounter any errors, see the [Feedback](#feedback) section to report them.
-
+Windows® Operating System support was introduced in package version `v0.4.0`.
 Install the version >=0.4.0 to use the package on Windows.
 ```bash
 # To upgrade an existing installation of matlab-proxy package:
 $ pip install --upgrade matlab-proxy>=0.4.0
-
-# Or to make a new installation of the latest version:
-$ pip install matlab-proxy 
 ```
 
 ### MacOS
 
-This package is not supported for the Apple® Mac Operating System. 
+MacOS support was introduced in package version `v0.5.0`. 
+It works best for MATLAB versions newer than R2022b.
+Note: Figures *also* open in a separate windows on versions of MATLAB older than R2022b.
+
+Install the version >=0.5.0 to use the package on MacOS.
+
+```bash
+# To upgrade an existing installation of matlab-proxy package:
+$ pip install --upgrade matlab-proxy>=0.5.0
+```
 
 ## Limitations
 This package supports the same subset of MATLAB features and commands as MATLAB® Online, except there is no support for Simulink® Online.
