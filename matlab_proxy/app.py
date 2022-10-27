@@ -375,8 +375,11 @@ async def matlab_view(req):
 
     # WebSocket
     if (
-        reqH.get("connection") == "Upgrade"
-        and reqH.get("upgrade") == "websocket"
+        reqH.get("connection")
+        # Fixes issue #9 on github. 
+        and reqH.get("connection").lower() == "upgrade"
+        and reqH.get("upgrade")
+        and reqH.get("upgrade").lower() == "websocket"
         and req.method == "GET"
     ):
         ws_server = web.WebSocketResponse()
@@ -394,6 +397,19 @@ async def matlab_view(req):
                     async for msg in ws_from:
                         mt = msg.type
                         md = msg.data
+                        
+                        # When a websocket is closed by the MATLAB JSD, it sends out a few http requests to the Embedded Connector about the events 
+                        # that had occured (figureWindowClosed etc.)
+                        # The Embedded Connector responds by sending a message of type 'Error' with close code as Abnormal closure.
+                        # When this happens, matlab-proxy can safely exit out of the loop 
+                        # and close the websocket connection it has with the Embedded Connector (ws_client)
+                        if (
+                            mt == aiohttp.WSMsgType.ERROR
+                            and ws_from.close_code
+                            == aiohttp.WSCloseCode.ABNORMAL_CLOSURE
+                        ):
+                            break
+
                         if mt == aiohttp.WSMsgType.TEXT:
                             await ws_to.send_str(md)
                         elif mt == aiohttp.WSMsgType.BINARY:
