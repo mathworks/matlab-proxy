@@ -35,9 +35,7 @@ def __get_matlab_proxy_base_ddux_value():
     Returns:
         str : DDUX value for MATLAB use.
     """
-    current_os = system.get_os().upper()
-
-    return f"MATLAB_PROXY:BASE:{current_os}:V1"
+    return f"MATLAB_PROXY:BASE:V1"
 
 
 def get_mwi_ddux_value(extension_name):
