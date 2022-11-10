@@ -1,8 +1,5 @@
 % Copyright (c) 2020-2022 The MathWorks, Inc.
 
-% Ensures figures are docked
-set(0,'DefaultFigureWindowStyle','docked')
-
 % Configure logged in user if possible
 if ~isempty(getenv('MW_LOGIN_USER_ID'))
     user_id = getenv('MW_LOGIN_USER_ID');
