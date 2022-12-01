@@ -510,6 +510,10 @@ def test_range_matlab_connector_ports():
     assert first_port + 1 == second_port
 
 
+@pytest.mark.skipif(
+    system.is_windows() or system.is_mac(),
+    reason="xvfb is not meant for windows and mac machines",
+)
 async def test_create_xvfb_process(loop):
     """Test to check if more than 1 xvfb process can be created with -displayfd flag
 

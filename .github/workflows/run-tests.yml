@@ -15,14 +15,13 @@ on:
 
 jobs:
   node_tests:
-    # If continue-on-error is set to true then all the queued jobs/steps
-    # are executed regardless of failure
-    # However, the workflow is always marked as passed even if some job
-    # fails inside
-    continue-on-error: ${{ inputs.continue-on-error }}
     strategy:
+      # fail-fast=false runs all the jobs in strategy matrix
+      # irrespective of failures in a particular job, and marks
+      # the entire job as failed even if one job has failed
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -51,10 +50,10 @@ jobs:
     continue-on-error: ${{ inputs.continue-on-error }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ['3.7', '3.8', '3.9', '3.10']
         exclude:
-        - os: windows-latest
+        - os: [windows-latest]
           # Python 3.7 in Windows does not run successfully
           python-version: '3.7'
     runs-on: ${{ matrix.os }}

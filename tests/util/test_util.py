@@ -1,4 +1,7 @@
+# Copyright (c) 2020-2022 The MathWorks, Inc.
+
 import asyncio
+import os
 
 import psutil
 from matlab_proxy import util
@@ -45,7 +48,12 @@ def test_prettify():
 async def test_get_child_processes(loop):
     """Tests if child processes are returned"""
 
-    cmd = ["python"]
+    # Python process exits before validating get_child_processes
+    # in Mac machine, so an asynchronous infinite loop is launched as a
+    # to keep it always running
+    process_no = 1
+    inf_path = os.path.join(os.path.dirname(__file__), "inf_loop.py")
+    cmd = [f"python {inf_path} {process_no}"]
     proc = await asyncio.create_subprocess_shell(*cmd)
 
     children = util.get_child_processes(proc)
