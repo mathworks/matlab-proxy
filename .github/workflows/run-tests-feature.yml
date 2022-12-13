@@ -17,13 +17,7 @@ jobs:
   # so run number needs to be hardcoded
   call-run-tests-r000:
     uses: ./.github/workflows/run-tests.yml
-    with:
-      continue-on-error: true
   call-run-tests-r001:
     uses: ./.github/workflows/run-tests.yml
-    with:
-      continue-on-error: true
   call-run-tests-r002:
     uses: ./.github/workflows/run-tests.yml
-    with:
-      continue-on-error: true

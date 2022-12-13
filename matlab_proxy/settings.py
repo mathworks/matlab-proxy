@@ -143,6 +143,18 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
 
         mwi_auth_token = token_auth.generate_mwi_auth_token()
 
+        # MATLAB Proxy gives precedence to the licensing information conveyed
+        # by the user. If MLM_LICENSE_FILE is set, it should be prioritised over
+        # other ways of licensing. But existence of license_info.xml in matlab/licenses
+        # folder may cause hinderance in this workflow. So specifying -licmode as 'file'
+        # overrides license_info.xml and enforces MLM_LICENSE_FILE to be the topmost priority
+
+        # NLM Connection String provided by MLM_LICENSE_FILE environment variable
+        nlm_conn_str = mwi.validators.validate_mlm_license_file(
+            os.environ.get(mwi_env.get_env_name_network_license_manager())
+        )
+        matlab_lic_mode = ["-licmode", "file"] if nlm_conn_str else ""
+
         # All config related to matlab-proxy will be saved to user's home folder.
         # This will allow for other user's to launch the integration from the same system
         # and not have their config's overwritten.
@@ -155,6 +167,7 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
                 "-nosplash",
                 "-nodesktop",
                 "-softwareopengl",
+                *matlab_lic_mode,
                 "-r",
                 f"try; run('{matlab_startup_file}'); catch ME; disp(ME.message); end;",
             ],
@@ -171,9 +184,7 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
             ),
             "mwapikey": str(uuid.uuid4()),
             "matlab_protocol": "https",
-            "nlm_conn_str": mwi.validators.validate_mlm_license_file(
-                os.environ.get(mwi_env.get_env_name_network_license_manager())
-            ),
+            "nlm_conn_str": nlm_conn_str,
             "matlab_config_file": mwi_config_folder / "proxy_app_config.json",
             "ws_env": ws_env,
             "mwa_api_endpoint": f"https://login{ws_env_suffix}.mathworks.com/authenticationws/service/v4",

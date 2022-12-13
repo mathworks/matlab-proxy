@@ -7,11 +7,6 @@ on:
   # Reusable workflow
   # Trigger on workflow call
   workflow_call:
-    inputs:
-        continue-on-error:
-          required: false
-          default: false
-          type: boolean
 
 jobs:
   node_tests:
@@ -47,13 +42,16 @@ jobs:
         run: npm test
 
   python_tests:
-    continue-on-error: ${{ inputs.continue-on-error }}
     strategy:
+      # fail-fast=false runs all the jobs in strategy matrix
+      # irrespective of failures in a particular job, and marks
+      # the entire job as failed even if one job has failed
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ['3.7', '3.8', '3.9', '3.10']
         exclude:
-        - os: [windows-latest]
+        - os: windows-latest
           # Python 3.7 in Windows does not run successfully
           python-version: '3.7'
     runs-on: ${{ matrix.os }}

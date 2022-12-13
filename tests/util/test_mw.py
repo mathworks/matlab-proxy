@@ -511,8 +511,8 @@ def test_range_matlab_connector_ports():
 
 
 @pytest.mark.skipif(
-    system.is_windows() or system.is_mac(),
-    reason="xvfb is not meant for windows and mac machines",
+    not system.is_linux(),
+    reason="Xvfb is only required on linux based operating systems",
 )
 async def test_create_xvfb_process(loop):
     """Test to check if more than 1 xvfb process can be created with -displayfd flag
@@ -520,11 +520,6 @@ async def test_create_xvfb_process(loop):
     Creates 2 xvfb processes with '-displayfd' flag and  checks if the processes are
     running on unique display ports
     """
-
-    # No need to test Xvfb process creation on a Windows system.
-    # As Xvfb is meant for Posix systems.
-    if system.is_windows():
-        return
 
     # Get command to launch xvfb with -displayfd flag.
     settings_1 = settings.get(dev=True)
