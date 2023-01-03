@@ -15,8 +15,9 @@ import os
 import socket
 import sys
 
-import matlab_proxy
 import pkg_resources
+
+import matlab_proxy
 
 from . import environment_variables as mwi_env
 from . import logger as mwi_logger
@@ -24,7 +25,7 @@ from . import logger as mwi_logger
 logger = mwi_logger.get()
 
 
-def validate_mlm_license_file(nlm_conn_str):
+def validate_mlm_license_file(nlm_connections_str):
     """Validates and returns input if it passes validation.
     Throws exception when validation fails.
     The connection string should be in the form of port@hostname
@@ -39,44 +40,60 @@ def validate_mlm_license_file(nlm_conn_str):
     Returns:
         String: Returns the same argument passed to this function if its valid.
     """
+
+    """
+     nlm_connections_str can either be a valid path to a file or a
+     string with comma seperated values, each of the form port@hostname
+    
+    Some valid nlm_connections_str values are:
+    1) port@hostname
+    2) port@hostname,
+    3) port1@hostname1,port2@hostname2
+    4) port1@hostname1,port2@hostname2,
+    5) port1@hostname1,port2@hostname2,port3@hostname3,
+    """
     import re
 
     from .exceptions import NetworkLicensingError
 
-    if nlm_conn_str is None:
+    if nlm_connections_str is None:
         return None
-
-    # TODO: The JS validation of this setting does not allow file path locations
-    # The JS validation occurs before reaching the set_licensing_info endpoint.
 
     # Regular expression to match port@hostname,
     # where port is any number and hostname is alphanumeric
     # regex = Start of Line, Any number of 0-9 digits , @, any number of nonwhite space characters with "- _ ." allowed
     # "^[0-9]+[@](\w|\_|\-|\.)+$"
-    # Server triad is of the form : port@host1,port@host2,port@host3
-    regex = "(^[0-9]+[@](\w|\_|\-|\.)+$)|(^[0-9]+[@](\w|\_|\-|\.)+),([0-9]+[@](\w|\_|\-|\.)+),([0-9]+[@](\w|\_|\-|\.)+$)"
-    if not re.search(regex, nlm_conn_str):
-        logger.debug("NLM info is not in the form of port@hostname")
-        if not os.path.isfile(nlm_conn_str):
-            logger.debug("NLM info is not a valid path to a license file")
-            error_message = (
-                f"MLM_LICENSE_FILE validation failed for {nlm_conn_str}. "
-                f"If set, the MLM_LICENSE_FILE environment variable must be a string which is either of the form port@hostname"
-                f" OR path to a valid license file."
-            )
-            logger.error(error_message)
-            raise NetworkLicensingError(error_message)
-        else:
-            logger.info(
-                f"MLM_LICENSE_FILE with value: {nlm_conn_str} is a path to a file. MATLAB will attempt to use it."
-            )
-    else:
-        logger.info(
-            f"MLM_LICENSE_FILE with value: {nlm_conn_str} is a license server, MATLAB will attempt to connect to it."
-        )
+    # Server triad is of the form : port@host1 or port@host1,port@host2,port@host3
+    nlm_connection_str_regex = "(^[0-9]+[@](\w|\_|\-|\.)+$)"
+    error_message = (
+        f"MLM_LICENSE_FILE validation failed for {nlm_connections_str}. "
+        f"If set, the MLM_LICENSE_FILE environment variable must contain server names (each of the form port@hostname) separated by ':' on unix or ';' on windows(server triads however must be comma seperated)"
+        f" OR path to a valid license file."
+    )
 
-    # Validation passed
-    return nlm_conn_str
+    nlm_connection_strs = re.split(":|;|,", nlm_connections_str)
+
+    logger.debug(
+        "Validating individual parts of the environment variable MLM_LICENSE_FILE"
+    )
+    for nlm_connection_str in nlm_connection_strs:
+        # Individual parts of the MLM_LICENSE_FILE can either be a valid path to a license file or a server name.
+
+        if os.path.isfile(nlm_connection_str):
+            logger.info(
+                f"{nlm_connections_str} is a path to a file. MATLAB will attempt to use it."
+            )
+
+        else:
+            match = re.search(nlm_connection_str_regex, nlm_connection_str)
+
+            if match:
+                logger.debug(f"Successfully validated {nlm_connection_str}")
+            else:
+                logger.error("NLM_info is not of the form port@hostname")
+                raise NetworkLicensingError(error_message)
+
+    return nlm_connections_str
 
 
 def validate_app_port_is_free(port):

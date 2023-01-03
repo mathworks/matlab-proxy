@@ -15,36 +15,93 @@ from matlab_proxy.util.mwi import validators
 from matlab_proxy.util.mwi.exceptions import NetworkLicensingError
 
 
-def test_validate_mlm_license_file_for_invalid_string(monkeypatch):
+@pytest.mark.parametrize(
+    "MLM_LICENSE_FILE",
+    [
+        ("/path/to/a/non-existent/file"),
+        ("1234"),
+        ("hostname"),
+        ("1234hostname"),
+        (""),
+    ],
+    ids=[
+        "Invalid path to a license file",
+        "NLM string with just port number",
+        "NLM string with just hostname",
+        "NLM string with just port number and hostname",
+        "empty value",
+    ],
+)
+def test_validate_mlm_license_file_invalid_value(MLM_LICENSE_FILE, monkeypatch):
     """Check if validator raises expected exception"""
-    # Delete the environment variables if they do exist
+
     env_name = mwi_env.get_env_name_network_license_manager()
-    invalid_string = "/Invalid/String/"
-    monkeypatch.setenv(env_name, invalid_string)
+
+    monkeypatch.setenv(env_name, MLM_LICENSE_FILE)
     nlm_conn_str = os.getenv(env_name)
+
     with pytest.raises(NetworkLicensingError) as e_info:
-        conn_str = validators.validate_mlm_license_file(nlm_conn_str)
-    assert invalid_string in str(e_info.value)
+        validators.validate_mlm_license_file(nlm_conn_str)
+    assert MLM_LICENSE_FILE in str(e_info.value)
 
 
-def test_validate_mlm_license_file_for_valid_server_syntax(monkeypatch):
+@pytest.fixture(name="temporary_license_file")
+def temporary_license_file_fixture(tmp_path):
+    """Pytest fixture which returns a valid path to temporary license file."""
+    import time
+
+    temp_license_file_path = tmp_path / f'{str(time.time()).replace(".", "")}.lic'
+    temp_license_file_path.touch()
+
+    return temp_license_file_path
+
+
+def test_validate_mlm_license_file_valid_license_file_path(
+    temporary_license_file, monkeypatch
+):
+    """Check if a valid license path has been supplied to MLM_LICENSE_FILE env var"""
+    env_name = mwi_env.get_env_name_network_license_manager()
+    monkeypatch.setenv(env_name, str(temporary_license_file))
+
+    validated_file_path = validators.validate_mlm_license_file(os.getenv(env_name))
+    assert str(temporary_license_file) == validated_file_path
+
+
+@pytest.mark.parametrize(
+    "MLM_LICENSE_FILE",
+    [
+        ("1234@1.2_any-alphanumeric"),
+        ("1234@1.2_any-alphanumeric:1234@1.2_any-alphanumeric"),
+        (
+            "1234@1.2_any-alphanumeric:1234@1.2_any-alphanumeric;1234@1.2_any-alphanumeric"
+        ),
+        "1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric",
+        (
+            "1234@1.2_any-alphanumeric:1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric"
+        ),
+        (
+            "1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric:1234@1.2_any-alphanumeric"
+        ),
+        (
+            "1234@1.2_any-alphanumeric:1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric:1234@1.2_any-alphanumeric"
+        ),
+    ],
+    ids=[
+        "1 NLM server",
+        "2 NLM servers",
+        "3 NLM servers",
+        "Just a server triad",
+        "1 NLM server prefixed to a server triad",
+        "1 NLM server suffixed to a server triad",
+        "1 NLM server prefixed and another suffixed to a server triad",
+    ],
+)
+def test_validate_mlm_license_file_for_valid_nlm_string(MLM_LICENSE_FILE, monkeypatch):
     """Check if port@hostname passes validation"""
     env_name = mwi_env.get_env_name_network_license_manager()
-    license_manager_address = "1234@1.2_any-alphanumeric"
-    monkeypatch.setenv(env_name, license_manager_address)
+    monkeypatch.setenv(env_name, MLM_LICENSE_FILE)
     conn_str = validators.validate_mlm_license_file(os.getenv(env_name))
-    assert conn_str == license_manager_address
-
-
-def test_validate_mlm_license_file_for_valid_server_triad_syntax(monkeypatch):
-    """Check if port@hostname passes validation"""
-    env_name = mwi_env.get_env_name_network_license_manager()
-    license_manager_address = (
-        "1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric"
-    )
-    monkeypatch.setenv(env_name, license_manager_address)
-    conn_str = validators.validate_mlm_license_file(os.getenv(env_name))
-    assert conn_str == license_manager_address
+    assert conn_str == MLM_LICENSE_FILE
 
 
 def test_validate_mlm_license_file_None():

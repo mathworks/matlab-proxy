@@ -13,11 +13,30 @@ import {
 // IS:
 // ^[0-9]+[@](\w|\_|\-|\.)+$
 // Server triad is of the form : port@host1,port@host2,port@host3
-const connStrRegex = /^[\d]+@[\w|\-|_|.]+$|^[\d]+@[\w|\-|_|.]+,[\d]+@[\w|\-|_|.]+,[\d]+@[\w|\-|_|.]+$/
+const connStrRegex = /^[0-9]+[@](\w|\_|\-|\.)+/
 
-function validateInput(str) {
-    return connStrRegex.test(str);
-}
+function validateInput(nlm_connections_str) {
+    /*
+    nlm_connections_str must contain server names (each of the form port@hostname) separated by \':\' on unix or \';\' on windows(server triads however must be comma seperated)    
+    
+    Some valid nlm_connections_str values are:
+    1) port@hostname  
+    3) port1@hostname1:port2@hostname2
+    4) port1@hostname1:port2@hostname2:port3@hostname3
+    5) port1@hostname1:port2@hostname2,port3@hostname3,port4@hostname4:port5@hostname5
+    */
+
+    let nlm_connection_strs = nlm_connections_str.split(/:|;|,/)
+
+    // All strings comply with port@hostname format
+    for (let nlm_connection_str of nlm_connection_strs) {   
+        if (!connStrRegex.test(nlm_connection_str)){
+            return false
+        } 
+    }        
+    return true
+}    
+
 
 function NLM() {
     const dispatch = useDispatch();
@@ -51,7 +70,7 @@ function NLM() {
                     <span className="glyphicon form-control-feedback glyphicon-remove"></span>
                     <span className="glyphicon form-control-feedback glyphicon-ok"></span>
                 </div>
-                <input type="submit" value="Submit" className="btn btn_color_blue" disabled={!valid} />
+                <input type="submit" id="submit" value="Submit" className="btn btn_color_blue" disabled={!valid} />
             </form>
         </div>
     );

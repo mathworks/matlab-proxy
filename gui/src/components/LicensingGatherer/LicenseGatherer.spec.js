@@ -3,7 +3,6 @@
 import React from 'react';
 import LicenseGatherer from './index';
 import { render, fireEvent } from '../../test/utils/react-test';
-import fetchMock from 'fetch-mock';
 
 describe('LicenseGatherer component', () => {
 
@@ -98,5 +97,36 @@ describe('LicenseGatherer component', () => {
     // Check if nlm iframe is rendered.
     const nlmTabContent = container.querySelector('#NLM');
     expect(nlmTabContent).toBeInTheDocument();
-  });
+  }); 
+
+
+  test.each([
+    ['1234', true], ['hostname', true], ['1234hostname', true], ['1234,', true], ['hostname,', true], 
+    ['1234@hostname', false], ['1234@hostname,4567@hostname', false], ['1234@hostname:4567@hostname', false], 
+    ['1234@hostname,4567@hostname,456@hostname', false], ['1234@hostname,4567@hostname,456@hostname:789@hostname', false],
+    ['789@hostname:1234@hostname,4567@hostname,456@hostname', false], ['789@hostname:1234@hostname,4567@hostname,456@hostname:789@hostname', false],
+  ])(
+      'Test to check for NLM connection string: %s if the \'disabled\' property of the Submit button is set to %s',
+      (NLMConnStr, disabledValue) => {
+
+      const { container } = render(<LicenseGatherer />, { initialState: initialState });
+
+      const nlmTab = container.querySelector('#nlm-tab');
+      const input = container.querySelector('#nlm-connection-string')
+      const submitButton = container.querySelector('#submit')
+
+      expect(nlmTab).toBeInTheDocument();
+
+      // Click on nlm Tab
+      fireEvent.click(nlmTab);
+
+      // Check if nlm iframe is rendered.
+      const nlmTabContent = container.querySelector('#NLM');
+      expect(nlmTabContent).toBeInTheDocument();
+
+      fireEvent.change(input, {target: {value: NLMConnStr}})    
+      // Check if Submit button is disabled for an invalid nlm connection string
+      expect(submitButton.disabled).toBe(disabledValue)
+    }
+  );
 });
