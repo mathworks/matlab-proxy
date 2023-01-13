@@ -63,3 +63,12 @@ def get_supported_termination_signals():
         if is_posix()
         else [signal.SIGINT, signal.SIGTERM]
     )
+
+
+def get_mlm_license_file_seperator():
+    """Returns OS specific seperator for MLM_LICENSE_FILE environment variable
+
+    Returns:
+        str: OS specific seperator for MLM_LICENSE_FILE
+    """
+    return ":" if is_posix() else ";"

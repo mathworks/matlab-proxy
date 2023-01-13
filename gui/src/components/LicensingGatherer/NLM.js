@@ -13,6 +13,8 @@ import {
 // IS:
 // ^[0-9]+[@](\w|\_|\-|\.)+$
 // Server triad is of the form : port@host1,port@host2,port@host3
+
+// eslint-disable-next-line
 const connStrRegex = /^[0-9]+[@](\w|\_|\-|\.)+/
 
 function validateInput(nlm_connections_str) {

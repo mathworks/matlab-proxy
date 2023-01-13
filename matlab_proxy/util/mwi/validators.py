@@ -20,6 +20,7 @@ import pkg_resources
 import matlab_proxy
 
 from . import environment_variables as mwi_env
+from matlab_proxy.util import system
 from . import logger as mwi_logger
 
 logger = mwi_logger.get()
@@ -71,7 +72,8 @@ def validate_mlm_license_file(nlm_connections_str):
         f" OR path to a valid license file."
     )
 
-    nlm_connection_strs = re.split(":|;|,", nlm_connections_str)
+    seperator = system.get_mlm_license_file_seperator()
+    nlm_connection_strs = re.split(f"{seperator}|,", nlm_connections_str)
 
     logger.debug(
         "Validating individual parts of the environment variable MLM_LICENSE_FILE"
@@ -90,7 +92,10 @@ def validate_mlm_license_file(nlm_connections_str):
             if match:
                 logger.debug(f"Successfully validated {nlm_connection_str}")
             else:
-                logger.error("NLM_info is not of the form port@hostname")
+                logger.error(f"Failed to validate:{nlm_connection_str}")
+                logger.error(
+                    "NLM_info is not of the form port@hostname or a valid path to a file"
+                )
                 raise NetworkLicensingError(error_message)
 
     return nlm_connections_str

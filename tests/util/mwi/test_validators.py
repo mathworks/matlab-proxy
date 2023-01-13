@@ -70,20 +70,36 @@ def test_validate_mlm_license_file_valid_license_file_path(
 @pytest.mark.parametrize(
     "MLM_LICENSE_FILE",
     [
-        ("1234@1.2_any-alphanumeric"),
-        ("1234@1.2_any-alphanumeric:1234@1.2_any-alphanumeric"),
+        (["1234@1.2_any-alphanumeric"]),
+        (["1234@1.2_any-alphanumeric", "1234@1.2_any-alphanumeric"]),
         (
-            "1234@1.2_any-alphanumeric:1234@1.2_any-alphanumeric;1234@1.2_any-alphanumeric"
+            [
+                "1234@1.2_any-alphanumeric",
+                "1234@1.2_any-alphanumeric",
+                "1234@1.2_any-alphanumeric",
+            ]
         ),
-        "1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric",
+        [
+            "1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric"
+        ],
         (
-            "1234@1.2_any-alphanumeric:1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric"
+            [
+                "1234@1.2_any-alphanumeric",
+                "1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric",
+            ]
         ),
         (
-            "1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric:1234@1.2_any-alphanumeric"
+            [
+                "1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric",
+                "1234@1.2_any-alphanumeric",
+            ]
         ),
         (
-            "1234@1.2_any-alphanumeric:1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric:1234@1.2_any-alphanumeric"
+            [
+                "1234@1.2_any-alphanumeric",
+                "1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric,1234@1.2_any-alphanumeric",
+                "1234@1.2_any-alphanumeric",
+            ]
         ),
     ],
     ids=[
@@ -98,6 +114,9 @@ def test_validate_mlm_license_file_valid_license_file_path(
 )
 def test_validate_mlm_license_file_for_valid_nlm_string(MLM_LICENSE_FILE, monkeypatch):
     """Check if port@hostname passes validation"""
+
+    seperator = system.get_mlm_license_file_seperator()
+    MLM_LICENSE_FILE = seperator.join(MLM_LICENSE_FILE)
     env_name = mwi_env.get_env_name_network_license_manager()
     monkeypatch.setenv(env_name, MLM_LICENSE_FILE)
     conn_str = validators.validate_mlm_license_file(os.getenv(env_name))
