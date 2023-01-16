@@ -6,12 +6,12 @@ runs:
   using: "composite"
   steps:
     - name: Set up Python 3.8
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: '3.8'
 
     - name: Use Node.js 13.x
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v3
       with:
         node-version: 13.x
 

@@ -25,18 +25,18 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - name: Use Node.js 13.x
-        uses: actions/setup-node@v2
+      - name: Use Node.js 16.x
+        uses: actions/setup-node@v3
         with:
-          node-version: 13.x
+          node-version: 16.x
 
       - name: Install Node dependencies
         run: npm install
 
       - name: Build Project
-        run: npm build --if-present
+        run: npm run build --if-present
 
       - name: Run Node tests
         run: npm test
@@ -58,10 +58,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
