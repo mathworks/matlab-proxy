@@ -69,12 +69,8 @@ async def test_get_child_processes(loop):
         children[0].terminate()
         children[0].wait()
 
-    except psutil.NoSuchProcess as e:
-        # Only in windows, occasionally psutil.NoSuchProcess is raised.
-        if system.is_windows():
-            pass
-        else:
-            raise e
-
-    except Exception as e:
-        raise e
+    except psutil.NoSuchProcess:
+        # occasionally psutil.NoSuchProcess is raised while terminating the child process
+        # when the parent process is already terminated. Since all the processes launched
+        # by the test are already terminated, so we may pass the test even with this error
+        pass
