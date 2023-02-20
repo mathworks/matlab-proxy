@@ -503,12 +503,15 @@ class AppState:
         self.mwi_server_session_files["mwi_server_info_file"] = mwi_server_info_file
         logger.debug(f"Server info stored into: {mwi_server_info_file}")
 
+        # By default mwi_server_url usually points to 0.0.0.0 as the hostname, but this does not work well
+        # on some browsers. Specifically on Safari (MacOS)
         logger.info(
             util.prettify(
                 boundary_filler="=",
                 text_arr=[
                     f"MATLAB can be accessed at:",
-                    self.settings["mwi_server_url"] + mwi_auth_token_str,
+                    self.settings["mwi_server_url"].replace("0.0.0.0", "localhost")
+                    + mwi_auth_token_str,
                 ],
             )
         )
