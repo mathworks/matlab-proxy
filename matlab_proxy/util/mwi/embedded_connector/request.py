@@ -43,7 +43,6 @@ async def send_request(url: str, data: dict, method: str, headers: dict = None) 
                 method=method, url=url, data=data, headers=None, ssl=False
             ) as resp:
                 if resp.reason != "OK":
-
                     # Converting to dict and formatting for printing
                     data = json.loads(data)
 

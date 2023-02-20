@@ -12,7 +12,6 @@ from matlab_proxy.default_configuration import config
 
 class InstallNpm(install):
     def run(self):
-
         # Ensure npm is present
         npm_path = which("npm")
         if not npm_path:
@@ -43,7 +42,7 @@ class InstallNpm(install):
 
         # In order to be accessible in the package, turn the built gui into modules
         (Path(target_dir) / "__init__.py").touch(exist_ok=True)
-        for (path, directories, filenames) in os.walk(target_dir):
+        for path, directories, filenames in os.walk(target_dir):
             for directory in directories:
                 (Path(path) / directory / "__init__.py").touch(exist_ok=True)
 

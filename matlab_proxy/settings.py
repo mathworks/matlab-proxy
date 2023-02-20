@@ -111,7 +111,6 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
         # If running tests using Pytest, it will set environment variable TEST to true before running tests.
         # Will make test env specific changes before returning the settings.
         if mwi_env.is_testing_mode_enabled():
-
             # Set ready_delay value to 0 for faster fake MATLAB startup.
             ready_delay = ["--ready-delay", "0"]
             matlab_cmd = settings["matlab_cmd"]

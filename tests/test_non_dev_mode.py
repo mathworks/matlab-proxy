@@ -60,7 +60,6 @@ def build_frontend_fixture():
         pass
 
     finally:
-
         # Create static files
         os.mkdir(static_files_dir)
         with open(Path(static_files_dir) / "index.html", "w") as f:
@@ -100,7 +99,7 @@ def build_frontend_fixture():
 
         (Path(static_files_dir) / "__init__.py").touch(exist_ok=True)
 
-        for (path, directories, filenames) in os.walk(static_files_dir):
+        for path, directories, filenames in os.walk(static_files_dir):
             for directory in directories:
                 (Path(path) / directory / "__init__.py").touch(exist_ok=True)
 

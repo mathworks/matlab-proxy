@@ -256,7 +256,6 @@ class AppState:
         """
 
         try:
-
             token_data = await mw.fetch_expand_token(
                 self.settings["mwa_api_endpoint"], identity_token, source_id
             )
@@ -415,7 +414,6 @@ class AppState:
         ):
             return 31515
         else:
-
             # TODO If MATLAB Connector is enhanced to allow any port, then the
             # following can be used to get an unused port instead of the for loop and
             # try-except.

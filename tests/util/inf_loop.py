@@ -13,6 +13,7 @@ process_no = int(sys.argv[1])
 
 loop = asyncio.get_event_loop()
 
+
 # Runs infinite loop asynchronously
 async def inf_loop(process_no):
     process_no += 1

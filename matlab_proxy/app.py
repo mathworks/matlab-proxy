@@ -215,7 +215,6 @@ async def set_licensing_info(req):
 
     # Start MATLAB if licensing is complete
     if state.is_licensed() is True and not isinstance(state.error, LicensingError):
-
         # Start MATLAB
         await state.start_matlab(restart_matlab=True)
 
@@ -323,7 +322,7 @@ def make_static_route_table(app):
 
     table = {}
 
-    for (mod, parent) in [
+    for mod, parent in [
         (gui.__name__, ""),
         (gui.static.__name__, "/static"),
         (gui.static.css.__name__, "/static/css"),
@@ -333,7 +332,6 @@ def make_static_route_table(app):
         for name in resource_listdir(mod, ""):
             if not resource_isdir(mod, name):
                 if name != "__init__.py":
-
                     # Special case for manifest.json
                     if "manifest.json" in name:
                         content_type = "application/manifest+json"
@@ -387,7 +385,6 @@ async def matlab_view(req):
         async with aiohttp.ClientSession(
             cookies=req.cookies, connector=aiohttp.TCPConnector(verify_ssl=False)
         ) as client_session:
-
             async with client_session.ws_connect(
                 matlab_base_url + req.path_qs,
             ) as ws_client:
@@ -448,7 +445,6 @@ async def matlab_view(req):
                     allow_redirects=False,
                     data=req_body,
                 ) as res:
-
                     headers = res.headers.copy()
                     body = await res.read()
                     headers.update(req.app["settings"]["mwi_custom_http_headers"])
