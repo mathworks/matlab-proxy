@@ -29,6 +29,11 @@ describe("OverlayTrigger Component", () => {
       },
       loadUrl: null,
       error: null,
+      authInfo: {
+        authEnabled: false,
+        authStatus: false,
+        authToken: null,
+      },
     };
 
     const mockIntersectionObserver = jest.fn();

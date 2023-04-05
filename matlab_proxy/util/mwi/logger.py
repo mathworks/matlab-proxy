@@ -7,6 +7,8 @@ import os
 
 from . import environment_variables as mwi_env
 
+logging.getLogger("aiohttp_session").setLevel(logging.ERROR)
+
 
 def get(init=False):
     """Get the logger used by this application.

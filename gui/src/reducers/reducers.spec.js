@@ -30,6 +30,11 @@ describe('reducers', () => {
           type: 'MHLM',
         },
       },
+      authInfo: {
+        authEnabled: false,
+        authStatus: false,
+        authToken: null,
+      }
     };
 
     receiveActions.push(
@@ -96,6 +101,79 @@ describe('reducers', () => {
 
       expect(reducers.overlayVisibility(undefined, action)).toBe(false);
       expect(reducers.overlayVisibility(true, action)).toBe(true);
+    });
+  });
+
+  describe('authEnabled', () => {
+    it('should return whether token authenticaton is enabled', () => {
+     
+       // default case
+       action = _.cloneDeep(genericAction);
+       expect(reducers.authEnabled(true, action)).toBe(true);
+       expect(reducers.authEnabled(false, action)).toBe(false);
+      
+      // expect authEnabled to be false
+      action = _.cloneDeep(genericAction);
+      action.type = actions.RECEIVE_ENV_CONFIG;
+      action['config'] = {
+        "authEnabled" : false
+      }
+      expect(reducers.authEnabled(undefined, action)).toBe(false);
+
+      // expect authEnabled to be true      
+      action = _.cloneDeep(genericAction);
+      action['config'] = {
+        "authEnabled" : true
+      }
+      action.type = actions.RECEIVE_ENV_CONFIG;
+      expect(reducers.authEnabled(undefined, action)).toBe(true);
+    });
+  });
+
+  describe('authStatus', () => {
+    it('should return whether the user/client is authorised', () =>{
+      
+      // expect authStatus to be false
+      action = _.cloneDeep(genericAction);
+      action.type = actions.SET_AUTH_STATUS;
+      action.authInfo.authEnabled = true;
+      action.config = true
+      expect(reducers.authStatus(undefined, action)).toBe(false);
+
+      // expect authStatus to be true
+      action = _.cloneDeep(genericAction);
+      action.type = actions.SET_AUTH_STATUS;
+      action.authInfo.authStatus = true;
+      
+      expect(reducers.authStatus(undefined, action)).toBe(true);
+
+      // default case
+      action = _.cloneDeep(genericAction);
+      expect(reducers.authStatus(true, action)).toBe(true);
+      expect(reducers.authStatus(false, action)).toBe(false);
+      
+    });
+  });
+
+  describe('authToken', () => {
+    it('should return the value of the auth token', () =>{
+      
+      // expect authToken to be null
+      action = _.cloneDeep(genericAction);
+      action.type = actions.SET_AUTH_TOKEN;
+      expect(reducers.authToken(undefined, action)).toBeNull();
+
+      // expect authToken to be a string
+      action = _.cloneDeep(genericAction);
+      action.type = actions.SET_AUTH_TOKEN;
+      action.authInfo.authToken = 'string';
+      expect(reducers.authToken(undefined, action)).toBe('string');
+
+      // default case
+      action = _.cloneDeep(genericAction);
+      expect(reducers.authToken(null, action)).toBeNull();
+      expect(reducers.authToken('string', action)).toBe('string');
+      
     });
   });
 

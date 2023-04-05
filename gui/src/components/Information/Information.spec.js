@@ -30,6 +30,11 @@ describe('Information Component', () => {
       },
       loadUrl: null,
       error: null,
+      authInfo: {
+        authEnabled: false,
+        authStatus: false,
+        authToken: null,
+      },
     };
 
     const mockIntersectionObserver = jest.fn();
@@ -132,6 +137,8 @@ describe('Information Component', () => {
     // Hide the tutorial and make the overlay visible.
     initialState.tutorialHidden = true;
     initialState.overlayVisibility = true;
+    initialState.authInfo.authEnabled = true;
+    initialState.authInfo.authStatus = true;
 
     //Rendering the App component with the above changes to the initial
     // state should render the Information Component.
@@ -158,11 +165,13 @@ describe('Information Component', () => {
 
 
   it('should call the closeHandler callback when the modal is clicked', () => {
+    initialState.authInfo.authEnabled = true;
+    initialState.authInfo.authStatus = true;
     const { getByRole } = render(
       <Information closeHandler={closeHandler} children={children} />,
       { initialState: initialState }
     );
-
+    
     const modal = getByRole('dialog');
     fireEvent.click(modal);
 

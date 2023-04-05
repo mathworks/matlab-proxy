@@ -1,15 +1,19 @@
 // Copyright (c) 2020-2022 The MathWorks, Inc.
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import PropTypes from 'prop-types';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import Linkify from 'react-linkify';
 import {
     selectLicensingInfo,
     selectError,
     selectOverlayHidable,
-    selectInformationDetails
+    selectInformationDetails,
+    selectAuthEnabled,
+    selectIsAuthenticated,
+    selectAuthToken
 } from '../../selectors';
+import { updateAuthStatus } from '../../actionCreators';
 import './Information.css';
 
 function Information({
@@ -19,6 +23,14 @@ function Information({
     const licensingInfo = useSelector(selectLicensingInfo);
     const error = useSelector(selectError);
     const overlayHidable = useSelector(selectOverlayHidable);
+
+    const [token, setToken] = useState('');
+    const [showToken, setShowToken] = useState(false);
+    const authEnabled = useSelector(selectAuthEnabled);
+    const isAuthenticated = useSelector(selectIsAuthenticated);
+    const authToken = useSelector(selectAuthToken);
+    const dispatch = useDispatch();
+    const tokenInput = useRef();
 
     const [errorLogsExpanded, setErrorLogsExpanded] = useState(false);
     const errorLogsExpandedToggle = () => {
@@ -79,17 +91,34 @@ function Information({
         }
     };
 
+    const viewToken = () => { 
+        setShowToken(true);
+    }
+
+    const toggleVisibility = () => {
+        tokenInput.current.type = tokenInput.current.type === 'text' ? 'password' : 'text';
+    }
+
+    const authenticate = async (token) => {
+        // Update redux state with the token after validation from the backend
+        dispatch(updateAuthStatus(token.trim()));
+
+        // Reset local state variable. 
+        setToken('');
+    }
+
     return (
         <div className="modal show"
             id="information"
             onClick={overlayHidable ? onCloseClick : null}
             tabIndex="-1"
             role="dialog"
-            aria-labelledby="information-dialog-title">
+            aria-labelledby="information-dialog-title"
+            aria-describedby="information-dialog">
             <div className="modal-dialog modal-dialog-centered" role="document">
                 <div className={`modal-content alert alert-${details.alert}`}>
                     <div className="modal-header">
-                        {
+                        { 
                             overlayHidable && (
                                 <button
                                     type="button"
@@ -105,23 +134,58 @@ function Information({
                         <h4 className="modal-title alert_heading" id="information-dialog-title">Status Information</h4>
                     </div >
                     <div className="modal-body">
-                        <table className="details">
-                            <tbody>
-                                <tr>
-                                    <td>MATLAB Status:</td>
-                                    <td>
+                        <div className="details">
+                                <div className='flex-container main-flex'>
+                                    <div className='flex-item-1'>MATLAB Status:</div>
+                                    <div className='flex-item-2'>
                                         <span id="spinner"
                                             className={details.spinner ? 'show' : 'hidden'}
                                         ></span>
                                         {details.label}
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Licensing:</td>
-                                    <td>{info.label}</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                                    </div>
+                                </div>
+                                <div className='flex-container'>
+                                    <div className='flex-item-1'>Licensing:</div>
+                                    <div className='flex-item-2'>{info.label}</div>
+                                </div>
+
+                                <div className='flex-container'>      
+                                    {authEnabled &&
+                                    <>  
+                                    <div onClick={()=>{ if(showToken) setShowToken(false)}} 
+                                        className={`${showToken ? 'passive-link': ''} flex-item-1`} 
+                                        ><span id={`${showToken ? 'offset' : '' }`}>{isAuthenticated ? showToken ? '(Hide Token)' : 'Authenticated!' : 'Please Authenticate' }</span>
+                                            {(isAuthenticated && !showToken) && <span id='icon-small' className={'alert_icon icon-alert-success flex-item-1'} />}
+                                        </div>
+                                        <>
+                                        {isAuthenticated ? 
+                                        <>
+                                            <div className='flex-item-2'>
+                                                <span onClick={viewToken} 
+                                                className={`${!showToken ? 'passive-link': ''} flex-item-1`} > {showToken ? `${authToken}` : '(View token)'}</span>
+                                            </div>
+                                        </>
+                                        :
+                                        <div className="flex-item-2">
+                                            <form id="token-form" onSubmit={(e) => e.preventDefault()} className='flex-container'>
+                                            <input
+                                            
+                                            ref={tokenInput} 
+                                            onBlur={toggleVisibility}
+                                            onFocus={toggleVisibility}
+                                            className='flex-item-2'
+                                            id='token' name='token' placeholder='Please enter auth token' type='password' value={token} onChange={(e)=> setToken(e.target.value)}/>
+
+                                            <button onClick={()=>authenticate(token)} className="btn btn_color_blue token-btn"
+                                            >Submit</button>
+                                        </form>
+                                        </div>
+                                        }
+                                        </>
+                                    </>
+                                    }
+                                </div>
+                        </div>
                         {errorMessageNode}
                         {errorLogsNode}
                     </div>

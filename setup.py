@@ -16,7 +16,7 @@ class InstallNpm(install):
         npm_path = which("npm")
         if not npm_path:
             raise Exception(
-                "npm must be installed and on the path during package install!"
+                "npm must be installered and on the path during package install!"
             )
 
         npm_install = [npm_path, "install"]
@@ -65,7 +65,7 @@ long_description = (HERE / "README.md").read_text()
 
 setuptools.setup(
     name="matlab-proxy",
-    version="0.5.8",
+    version="0.5.9",
     url=config["doc_url"],
     author="The MathWorks, Inc.",
     author_email="cloud@mathworks.com",
@@ -94,9 +94,7 @@ setuptools.setup(
     python_requires="~=3.7",
     install_requires=INSTALL_REQUIRES,
     tests_require=TESTS_REQUIRES,
-    extras_require={
-        "dev": ["aiohttp-devtools", "black", "ruamel.yaml"] + TESTS_REQUIRES
-    },
+    extras_require={"dev": ["aiohttp-devtools", "black"] + TESTS_REQUIRES},
     # The entrypoint will be used by multiple packages that have this package as an installation
     # dependency. These packages can use the same API, get_entrypoint_name(), to make their configs discoverable
     entry_points={

@@ -1,7 +1,7 @@
 // Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import React from 'react';
-import { render, fireEvent, within } from '../../test/utils/react-test';
+import { render, fireEvent } from '../../test/utils/react-test';
 import App from './index';
 import OverlayTrigger from '../OverlayTrigger';
 
@@ -24,6 +24,11 @@ describe('App Component', () => {
       },
       loadUrl: null,
       error: null,
+      authInfo: {
+        authEnabled: false,
+        authStatus: false,
+        authToken: null,
+      },
     };
     const mockIntersectionObserver = jest.fn();
     mockIntersectionObserver.mockReturnValue({
@@ -47,6 +52,8 @@ describe('App Component', () => {
 
     // Hide the tutorial before rendering the component.
     initialState.tutorialHidden = true;
+    initialState.authInfo.authEnabled = true;
+    initialState.authInfo.authStatus = true;
 
     const { getByTestId } = render(<App />, {
       initialState: initialState,
@@ -60,27 +67,64 @@ describe('App Component', () => {
     expect(overlayTriggerComponent).toBeInTheDocument();
   });
 
-  it('should render LicensingGatherer component within the App component when no licensing is provided', () => {
+  it('should render LicensingGatherer component within the App component when no licensing is provided and user is authenticated', () => {
 
     //Set lincensingInfo to empty object.
-    initialState.serverStatus.licensingInfo = {};
     initialState.overlayVisibility = true;
-
-    const { getByRole } = render(<App />, {
-      initialState: initialState,
-    });
+    initialState.serverStatus.licensingInfo = {};
+    initialState.authInfo.authEnabled = true;
+    initialState.authInfo.authStatus = true;
+    
+    const { getByRole } = render(<App />, { initialState: initialState });
 
     const licensingGathererComponent = getByRole(
-      'document'
-    );
+      'dialog', {description: "licensing-dialog"});
+
     expect(licensingGathererComponent).toBeInTheDocument();
   });
 
-  it('should render Information Component within App Component after licensing is provided', () => {
+  it('should render LicensingGatherer component within the App component when no licensing is provided and authentication is disabled', () => {
+
+    //Set lincensingInfo to empty object.
+    initialState.overlayVisibility = true;
+    initialState.serverStatus.licensingInfo = {};
+    initialState.authInfo.authEnabled = false;
+    
+    const { getByRole } = render(<App />, { initialState: initialState });
+
+    const licensingGathererComponent = getByRole(
+      'dialog', { description: "licensing-dialog" });
+  
+    expect(licensingGathererComponent).toBeInTheDocument();
+  });
+
+  it('should render Information Component within App Component after licensing is provided and user is authenticated', () => {
 
     // Hide the tutorial and make the overlay visible.
     initialState.tutorialHidden = true;
     initialState.overlayVisibility = true;
+
+    initialState.authInfo.authEnabled = true;
+    initialState.authInfo.authStatus = true;
+
+    //Rendering the App component with the above changes to the initial
+    // state should render the Information Component.
+    const { getByRole } = render(<App />, {
+      initialState: initialState,
+    });
+    const informationComponent = getByRole(
+      'dialog', { description: "information-dialog" });
+
+    expect(informationComponent).toBeInTheDocument();
+  });
+
+  it('should render Information Component within App Component after licensing is provided and auth is not enabled', () => {
+
+    // Hide the tutorial and make the overlay visible.
+    initialState.tutorialHidden = true;
+    initialState.overlayVisibility = true;
+
+    initialState.authInfo.authEnabled = false;
 
     //Rendering the App component with the above changes to the initial
     // state should render the Information Component.
@@ -88,7 +132,9 @@ describe('App Component', () => {
       initialState: initialState,
     });
 
-    const informationComponent = getByRole('document');
+    const informationComponent = getByRole(
+      'dialog', { description: "information-dialog" });
+      
     expect(informationComponent).toBeInTheDocument();
   });
 
@@ -183,13 +229,8 @@ describe('App Component', () => {
   });
 
   it('should set the window location from state', () => {
-    initialState.loadUrl = 'http://localhost.com:5555';
-    const hrefMock = jest.fn();
-    delete window.location;
-
-    window.location = { href: hrefMock }
-    const { debug } = render(<App />, { initialState: initialState });
-
+    initialState.loadUrl =  'http://localhost.com:5555/matlab';
+    render(<App />, { initialState: initialState });
     expect(window.location.href).toMatch('localhost');
   });
 });

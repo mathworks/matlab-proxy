@@ -18,6 +18,10 @@ describe.each([
   [actionCreators.setOverlayVisibility, [false], { type: actions.SET_OVERLAY_VISIBILITY, visibility: false }],
   [actionCreators.setTriggerPosition, [12, 12], { type: actions.SET_TRIGGER_POSITION, x: 12, y: 12 }],
   [actionCreators.setTriggerPosition, [52, 112], { type: actions.SET_TRIGGER_POSITION, x: 52, y: 112 }],
+  [actionCreators.setAuthStatus, [true], {type: actions.SET_AUTH_STATUS, authInfo: true}],
+  [actionCreators.setAuthStatus, [false], {type: actions.SET_AUTH_STATUS, authInfo: false}],
+  [actionCreators.setAuthToken, ['string'], {type: actions.SET_AUTH_TOKEN, authInfo: 'string'}],
+  [actionCreators.setAuthToken, [null], {type: actions.SET_AUTH_TOKEN, authInfo: null}]
 ])('Test Set actionCreators', (method, input, expectedAction) => {
   test(`check if an action of type  ${expectedAction.type} is returned when method actionCreator.${method.name}() is called`, () => {
     expect(method(...input)).toEqual(expectedAction);
@@ -70,6 +74,11 @@ describe('Test Sync actionCreators', () => {
           connectionString: 'abc@nlm',
         }
       },
+      authInfo: {
+        authEnabled: false,
+        authStatus: false,
+        authToken: null,
+      }
     });
 
     const status = {
@@ -185,12 +194,55 @@ describe('Test Async actionCreators', () => {
         hasFetched: false,
         fetchFailCount: 0,
       },
+      authInfo: {
+        authEnabled: false,
+        authStatus: false,
+        authToken: null,
+      },
     });
   });
 
   afterEach(() => {
     fetchMock.restore();
   });
+
+  it('dispatches SET_AUTH_STATUS when fetching auth info and not authorised', () => {
+    let token = 'token'
+    fetchMock.once('/authenticate_request', {
+      body: {
+        authStatus: false,
+        error: {
+          message: "Token invalid. Please enter a valid token to authenticate",
+          type: "invalidToken",
+          logs: null,
+        }
+      }
+    });
+    const expectedActions = [actions.SET_AUTH_STATUS, actions.SET_AUTH_TOKEN];
+
+    return store.dispatch(actionCreators.updateAuthStatus(token)).then(() => {
+      const received = store.getActions();
+      expect(received.map((a) => a.type)).toEqual(expectedActions);
+    });
+  });
+
+  it('dispatches SET_AUTH_STATUS, when fetching auth info and authorised', () => {
+    let token = 'token'
+    fetchMock.once('/authenticate_request', {
+      body: {
+        authStatus: true,
+        error: null
+      }
+    });
+    const expectedActions = [actions.SET_AUTH_STATUS, actions.SET_AUTH_TOKEN];
+
+    return store.dispatch(actionCreators.updateAuthStatus(token)).then(() => {
+      const received = store.getActions();
+      expect(received.map((a) => a.type)).toEqual(expectedActions);
+    });
+  });
+
+
 
   it('dispatches REQUEST_SERVER_STATUS, RECEIVE_SERVER_STATUS when fetching status', () => {
     fetchMock.getOnce('/get_status', {

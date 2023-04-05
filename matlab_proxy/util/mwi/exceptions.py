@@ -142,6 +142,19 @@ class EmbeddedConnectorError(MatlabError):
     pass
 
 
+class InvalidTokenError(AppError):
+    """A Class which inherits the AppError class.
+
+    This class represents token authentication errors.
+
+    Args:
+        AppError (Class): Parent Class containing attributes to store
+        messages, logs and stacktrace.
+    """
+
+    pass
+
+
 def log_error(logger, err: Exception):
     """Logs any error to stdout.
 

@@ -1,6 +1,6 @@
 // Copyright (c) 2020-2022 The MathWorks, Inc.
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useInterval } from 'react-use';
 import './App.css';
@@ -23,12 +23,16 @@ import {
     selectLoadUrl,
     selectIsConnectionError,
     selectHasFetchedEnvConfig,
+    selectAuthEnabled,
+    selectIsAuthenticated,
 } from '../../selectors';
 import {
     setOverlayVisibility,
     fetchServerStatus,
     fetchEnvConfig,
+    updateAuthStatus,
 } from '../../actionCreators';
+import blurredBackground from './MATLAB-env-blur.png';
 
 function App() {
     const dispatch = useDispatch();
@@ -42,7 +46,14 @@ function App() {
     const error = useSelector(selectError);
     const loadUrl = useSelector(selectLoadUrl);
     const isConnectionError = useSelector(selectIsConnectionError);
+    const isAuthenticated = useSelector(selectIsAuthenticated)
+    const authEnabled = useSelector(selectAuthEnabled);
 
+    const baseUrl = useMemo(() => {
+        const url = document.URL        
+        return url.split(window.location.origin)[1].split('index.html')[0]
+    }, [])
+    
     const toggleOverlayVisible = useCallback(
         () => dispatch(setOverlayVisibility(!overlayVisible)),
         [overlayVisible, dispatch]
@@ -113,28 +124,47 @@ function App() {
     // Periodic fetch server status
     useInterval(() => {
         dispatch(fetchServerStatus());
-    }, fetchStatusPeriod);
+    },  fetchStatusPeriod);
 
     // Load URL
-    useEffect(() => {
+    useEffect(() => {      
         if (loadUrl !== null) {
             window.location.href = loadUrl;
         }
     }, [loadUrl]);
 
+    useEffect(() => {
+        const url = document.URL;
+      
+        if(url.includes("?mwi_auth_token=")){            
+            var token = url.split("?mwi_auth_token=")[1];      
+
+            if(token){
+                dispatch(updateAuthStatus(token))                
+            }
+            window.history.replaceState(null, '', `${baseUrl}index.html`);
+        } 
+    }
+    , [dispatch, baseUrl]);
+    
     // Display one of:
     // * Confirmation
     // * Help
     // * Error
     // * License gatherer
-    // * Status
-    let overlayContent;
+    // * Status Information
+    let overlayContent;   
+
     if (dialog) {
         // TODO Inline confirmation component build
         overlayContent = dialog;
-    } else if (hasFetchedServerStatus && (!licensingProvided)) {
-        overlayContent = <LicensingGatherer />;
-    } else if (licensingProvided && !dialog) {
+    }    
+    // Give precendence to token auth over licensing info ie. once after token auth is done, show licensing if not provided.
+    else if((!licensingProvided) && hasFetchedServerStatus && (!authEnabled || isAuthenticated)) {    
+        overlayContent = <LicensingGatherer role="licensing" aria-describedby="license-window" />;
+    } 
+    // in all other cases, we will either ask for the token, 
+    else if (!dialog) {
         overlayContent = (
             <Information closeHandler={toggleOverlayVisible}>
                 <Controls callback={args => setDialogModel(args)} />
@@ -156,9 +186,12 @@ function App() {
         ? 'http://localhost:31515/index-jsd-cr.html'
         : './index-jsd-cr.html';
 
-    const matlabJsd = matlabUp ? (
-        <MatlabJsd url={matlabUrl} />
-    ) : null;
+    let matlabJsd = null;
+    if(matlabUp){
+        matlabJsd = (!authEnabled || isAuthenticated) 
+        ? ( <MatlabJsd url={matlabUrl} /> ) 
+        : <img style={{objectFit: 'fill'}}src={blurredBackground} alt='Blurred MATLAB environment'/> 
+    }
 
     const overlayTrigger = overlayVisible ? null : <OverlayTrigger />;
 

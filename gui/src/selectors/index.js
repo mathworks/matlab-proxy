@@ -10,9 +10,12 @@ export const selectWsEnv = state => state.serverStatus.wsEnv;
 export const selectSubmittingServerStatus = state => state.serverStatus.isSubmitting;
 export const selectHasFetchedServerStatus = state => state.serverStatus.hasFetched;
 export const selectLicensingInfo = state => state.serverStatus.licensingInfo;
-export const selectLoadUrl = state => state.loadUrl;
 export const selectServerStatusFetchFailCount = state => state.serverStatus.fetchFailCount;
+export const selectLoadUrl = state => state.loadUrl;
 export const selectError = state => state.error;
+export const selectAuthEnabled = state => state.authInfo.authEnabled;
+export const selectAuthToken = state => state.authInfo.authToken;
+export const selectIsAuthenticated = state => state.authInfo.authStatus === true;
 
 export const selectTriggerPosition = createSelector(
     state => state.triggerPosition,
@@ -57,15 +60,19 @@ export const selectMatlabStopping = createSelector(
 export const selectOverlayHidable = createSelector(
     selectMatlabStatus,
     selectIsError,
-    (matlabStatus, isError) => (matlabStatus === 'up' && !isError)
+    selectAuthEnabled,
+    selectIsAuthenticated,
+    (matlabStatus, isError, authRequired, isAuthenticated) => ((matlabStatus === 'up') && !isError && (!authRequired || isAuthenticated))
 );
 
 export const selectOverlayVisibility = createSelector(
     state => state.overlayVisibility,
     selectMatlabUp,
     selectIsError,
-    (visibility, matlabUp, isError) => (
-        !matlabUp || visibility || isError
+    selectAuthEnabled,
+    selectIsAuthenticated,
+    (visibility, matlabUp, isError, authRequired, isAuthenticated) => (
+        (authRequired && !isAuthenticated) || !matlabUp || visibility || isError
     )
 );
 
@@ -118,12 +125,26 @@ export const selectOverlayVisible = createSelector(
     (visibility, isError) => (visibility || isError)
 );
 
+export const selectIsInvalidTokenError = createSelector(
+    selectAuthEnabled,
+    selectIsAuthenticated,
+    selectIsError,
+    selectError,     
+    (authEnabled, isAuthenticated, isError, error) => {        
+        if ((authEnabled && !isAuthenticated) &&  isError && error.type === "InvalidTokenError"){
+            return true
+        }
+        return false
+    }
+)
+
 export const selectInformationDetails = createSelector(
     selectMatlabStatus,
     selectIsError,
     selectError,
-    (matlabStatus, isError, error) => {
-
+    selectAuthEnabled,  
+    selectIsInvalidTokenError,
+    (matlabStatus, isError, error, authEnabled, isInvalidTokenError) => {
         // Check for any errors on the front-end 
         // to see if HTTP Requests are timing out.       
         if (isError && error.statusCode === 408) {
@@ -132,8 +153,15 @@ export const selectInformationDetails = createSelector(
                 alert: 'warning',
                 label: 'Unknown',
             }
-        }
+        }        
 
+        if(isError && authEnabled && isInvalidTokenError) {
+            return {
+                icon: 'warning',
+                alert: 'warning',
+                label: 'Invalid Token supplied',
+            }
+        }
 
         // Check status of MATLAB for errors
         switch (matlabStatus) {

@@ -24,6 +24,11 @@ describe('Help Component', () => {
       },
       loadUrl: null,
       error: null,
+      authInfo: {
+        authEnabled: false,
+        authStatus: false,
+        authToken: null,
+      },
     };
   });
   afterEach(() => {

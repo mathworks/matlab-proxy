@@ -25,12 +25,18 @@ describe('selectors', () => {
       },
       fetchFailCount: 2,
     },
+    authInfo: {
+      authEnabled: false,
+      authStatus: false,
+      authToken: null,
+    },
   };
 
   const { tutorialHidden,
     serverStatus,
     loadUrl,
-    error
+    error,
+    authInfo,
   } = state;
 
   const { matlabVersion,
@@ -42,6 +48,10 @@ describe('selectors', () => {
     fetchAbortController,
   } = state.serverStatus;
 
+  const { authEnabled,
+    authStatus,
+    authToken,
+  } = authInfo;
 
   const {
     selectTutorialHidden,
@@ -54,6 +64,9 @@ describe('selectors', () => {
     selectHasFetchedServerStatus,
     selectLicensingInfo,
     selectServerStatusFetchFailCount,
+    selectAuthEnabled,
+    selectIsAuthenticated,
+    selectAuthToken,
     selectTriggerPosition,
     selectIsError,
     selectIsConnectionError,
@@ -71,12 +84,6 @@ describe('selectors', () => {
     selectInformationDetails,
   } = selectors;
 
-  // beforeAll(() => {
-  //   // modifiedState = JSON.parse(JSON.stringify(state));
-  //   // modifiedState.triggerPosition = null;
-  // });
-
-
   describe.each([
     [selectTutorialHidden, tutorialHidden],
     [selectServerStatus, serverStatus],
@@ -88,6 +95,9 @@ describe('selectors', () => {
     [selectHasFetchedServerStatus, hasFetched],
     [selectLicensingInfo, licensingInfo],
     [selectServerStatusFetchFailCount, fetchFailCount],
+    [selectAuthEnabled, authEnabled],
+    [selectIsAuthenticated, authStatus],
+    [selectAuthToken, authToken],
     [getFetchAbortController, fetchAbortController]
   ])
     ('Test simple selectors',
@@ -190,11 +200,18 @@ describe('selectors', () => {
       expect(selectors.selectMatlabStopping(modifiedState)).toBe(false);
     });
 
-    test('selectOverlayHidable should return true when matlab is up and there is no error ', () => {
-      expect(selectOverlayHidable(state)).toBe(true);
+    test('selectOverlayHidable should return true when matlab is up and there is no error and user is authenticated or auth is not enabled', () => {
+      modifiedState = _.cloneDeep(state);
+      modifiedState.authInfo.authEnabled = true;
+      modifiedState.authInfo.authStatus =  true;
+      expect(selectOverlayHidable(modifiedState)).toBe(true);
+
+      modifiedState = _.cloneDeep(state);
+      modifiedState.authInfo.authEnabled = false;
+      expect(selectOverlayHidable(modifiedState)).toBe(true);
     });
 
-    test('selectOverlayHidable should return false when matlab is not up or there is an error ', () => {
+    test('selectOverlayHidable should return false when matlab is not up or there is an error or the user is not authenticated', () => {
       modifiedState = _.cloneDeep(state);
       modifiedState.serverStatus.matlabStatus = 'down';
       expect(selectOverlayHidable(modifiedState)).toBe(false);
@@ -202,10 +219,15 @@ describe('selectors', () => {
       modifiedState = _.cloneDeep(state);
       modifiedState.error = {};
       expect(selectOverlayHidable(modifiedState)).toBe(false);
+
+      modifiedState = _.cloneDeep(state);
+      modifiedState.authInfo.authEnabled = true;
+      modifiedState.authInfo.authStatus =  false;
+      expect(selectOverlayHidable(modifiedState)).toBe(false);
     });
 
 
-    test('selectOverlayVisibility should return true when matlab is not up or visibility is true or there is an error ', () => {
+    test('selectOverlayVisibility should return true when matlab is not up or visibility is true or there is an error or the user is not authenticated', () => {
       //Should return true based on state.overlayVisibility
       expect(selectOverlayVisibility(state)).toBe(true);
 
@@ -221,12 +243,24 @@ describe('selectors', () => {
       modifiedState.overlayVisibility = false;
       modifiedState.error = {};
       expect(selectOverlayVisibility(modifiedState)).toBe(true);
+
+      modifiedState = _.cloneDeep(state);
+      modifiedState.overlayVisibility = false;
+      modifiedState.authInfo.authEnabled = true;
+      modifiedState.authInfo.authStatus =  false;
+      expect(selectOverlayVisibility(modifiedState)).toBe(true);
     });
 
-    test('selectOverlayVisibility should return false when matlab is up and visibility is false and there is no error ', () => {
+    test('selectOverlayVisibility should return false when matlab is up and visibility is false and there is no error and user is authenticated if auth is enabled', () => {
       //Should return false matlab is up and overlayVisibility is false and there is an error
       modifiedState = _.cloneDeep(state);
       modifiedState.overlayVisibility = false;
+      expect(selectOverlayVisibility(modifiedState)).toBe(false);
+
+      modifiedState = _.cloneDeep(state);
+      modifiedState.overlayVisibility = false;
+      modifiedState.authInfo.authEnabled = true;
+      modifiedState.authInfo.authStatus =  true;
       expect(selectOverlayVisibility(modifiedState)).toBe(false);
     });
 
@@ -331,9 +365,11 @@ describe('selectors', () => {
 
     test('For MatlabStatus down and with an error, selectInformationDetails should return object with icon error', () => {
       modifiedState = _.cloneDeep(state);
+      // we are triggering the auth error by setting error to empty object here
       modifiedState.error = {};
       modifiedState.serverStatus.matlabStatus = 'down';
-
+      modifiedState.authInfo.authEnabled = true;
+      modifiedState.authInfo.authStatus = true;
       expect(selectInformationDetails(modifiedState).icon.toLowerCase()).toContain('error');
     })
 

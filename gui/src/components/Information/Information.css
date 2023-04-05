@@ -82,6 +82,21 @@
     float: left;
 }
 
+#icon-small {
+    margin-left: 3px;
+    float: none;
+    color: green;
+}
+
+#token{
+    width: 15ch;
+    margin-right: 1rem;
+}
+
+#token-form{
+    margin-top: 1rem;
+}
+
 @keyframes spin {
     0% {
         transform: rotate(0deg);
@@ -110,4 +125,35 @@
     .modal-dialog {
         width: 700px;
     }
+}
+
+.passive-link {
+    color: #888;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.flex-container {
+    display: flex;
+    margin-bottom: 1rem;
+    align-items: center;
+}   
+
+.flex-item-1 {
+    flex-basis: 30%;
+    padding: 0.2rem;
+    align-items: center;
+}
+
+.flex-item-2 {
+    flex-basis: 70%;
+    padding: 0.2rem;
+    align-items: center;
+}
+
+.token-btn{
+    height: 2em;
+    padding-top: 5px;
+    padding-bottom: 0.3em;
+    max-width: 10ch;
 }

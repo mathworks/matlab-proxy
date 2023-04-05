@@ -72,9 +72,9 @@ This token can be provided to the server in 2 ways:
     ```
     Once provided, this information is cached in the browser and will be used in subsequent interactions
 
-2. Through the password field on the page that is presented when the user is not already logged in.
-    <p align="left">
-      <img width="600" src="./img/token_authentication_page.png">
+2. Through the auth token input field in the Status Information dialogue box that is presented when the user is not already logged in.
+    <p align="center">
+      <img width="800" src="./img/token_authentication_page.png">
     </p>
 
 **NOTE** : Its highly recommended to use this feature along with SSL enabled as shown [here](#use-token-authentication-with-ssl-enabled).
@@ -182,20 +182,16 @@ $ ssh test-user@usermachine
 For servers for which `Token-Based Authentication` were enabled, the URLs above will include their tokens.
 You can use them to gain access to your server as described in the [Introduction](#introduction).
 
-#### **Recover token from a previously authenticated browser session**
+#### **Retrieve token from a previously authenticated browser session**
 
-1. Navigate to a browser window in which you had previously used the server.
-    ```bash
-    # Lets assume this was the server:
-    http://127.0.0.1:36537/test
-    ```
-1. Edit the URL to access the endpoint `mwi_auth_token`
-    ```html
-    http://127.0.0.1:36537/test/get_mwi_auth_token
-    ```
-    This should take you to a screen which prints the `mwi_auth_token` for that server, as shown below:
-    <p align="left">
-      <img width="600" src="./img/recover_mwi_auth_token.png">
+1. Click on the `View Token` link to see the token
+    <p align="center">
+      <img width="600" src="./img/retrieve_token.png">
+    </p>
+
+2. Click on the `Hide Token` link to hide the token 
+    <p align="center">
+      <img width="600" src="./img/retrieved_token.png">
     </p>
 
 ## Security Best Practices

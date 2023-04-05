@@ -53,7 +53,7 @@ async def start_matlab(matlab_cmd, matlab_env):
     # In testing mode, the devel.py file is run, which is the fake MATLAB server.
     # So, there is no need to check for an intermediate process when testing and can return
     # the same process as a psutil.Process() object.
-    if mwi_env.is_testing_mode_enabled():
+    if mwi_env.is_testing_mode_enabled() or mwi_env.is_development_mode_enabled():
         import psutil
 
         proc = psutil.Process(intermediate_proc.pid)

@@ -1,33 +1,6 @@
 <!-- Copyright (c) 2020-2022 The MathWorks, Inc. -->
 <!DOCTYPE html>
 <html lang="en">
-<script>
-  function isServerAuthenticated() {
-    // Check whether server is authorized
-    var url_string = document.URL
-    var base_url = url_string.split("index.html")[0]
-    var url = new URL(url_string);
-    var token = url.searchParams.get("mwi_auth_token");
-    var auth_endpoint = base_url + "authenticate_request"
-    if (token) {
-      auth_endpoint += "?mwi_auth_token=" + token
-    }
-    console.log("auth_endpoint: " + auth_endpoint);
-    fetch(auth_endpoint)
-      .then(function (response) {
-        if (response.ok) {
-          console.log('This page is authorized!')
-          return;
-        } else {
-          console.log('This page is NOT authorized!')
-          console.log("Redirecting to :" + base_url)
-          window.location.replace(base_url)
-        }
-      }).catch(function (error) {
-        console.log(error);
-      });
-  }
-</script>
 
 <head>
   <meta charset="utf-8" />
@@ -39,7 +12,7 @@
   <title>MATLAB</title>
 </head>
 
-<body onload="isServerAuthenticated()">
+<body>
   <noscript>You need to enable JavaScript to run this app.</noscript>
   <div id="root"></div>
 </body>

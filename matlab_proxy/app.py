@@ -19,7 +19,7 @@ from matlab_proxy.default_configuration import config
 from matlab_proxy.util import list_servers, mwi
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import token_auth
-from matlab_proxy.util.mwi.exceptions import LicensingError
+from matlab_proxy.util.mwi.exceptions import LicensingError, InvalidTokenError
 
 mimetypes.add_type("font/woff", ".woff")
 mimetypes.add_type("font/woff2", ".woff2")
@@ -118,7 +118,17 @@ async def get_env_config(req):
     Returns:
         JSONResponse: contains a Dict representing environment specific configuration serialized to JSON
     """
-    config = req.app["state"].settings["env_config"]
+    state = req.app["state"]
+    config = state.settings["env_config"]
+    config["authEnabled"] = state.settings["mwi_is_token_auth_enabled"]
+
+    # In a previously authenticated session, if the url is accessed without the token(using session cookie), send the token as well.
+    config["authStatus"], config["authToken"] = (
+        (True, state.settings["mwi_auth_token"])
+        if await token_auth.authenticate_request(req)
+        else (False, None)
+    )
+
     return web.json_response(config)
 
 
@@ -138,15 +148,34 @@ async def authenticate_request(req):
     """API Endpoint to authenticate request to access server
 
     Returns:
-        Response with status = 200 if request is authentic else return status = 401
+        JSONResponse: JSONResponse object containing information about authentication status and error if any.
     """
+    state = req.app["state"]
     if await token_auth.authenticate_request(req):
         logger.debug("!!!!!! REQUEST IS AUTHORIZED !!!!")
-        return web.Response(status=200)
+        authStatus = True
+        error = None
     else:
-        # Return HTTPUnauthorized
         logger.debug("!!!!!! REQUEST IS NOT AUTHORIZED !!!!")
-        return web.Response(status=401)
+        authStatus = False
+        error = marshal_error(
+            InvalidTokenError(
+                "Token invalid. Please enter a valid token to authenticate"
+            )
+        )
+
+    # If there is an error, state.error is not updated because the client may have set the
+    # token incorrectly which is not an error raised on the backend.
+
+    token = await req.text() if not error else ""
+
+    return web.json_response(
+        {
+            "authStatus": authStatus,
+            "authToken": token,
+            "error": error,
+        }
+    )
 
 
 async def start_matlab(req):
@@ -270,7 +299,6 @@ async def termination_integration_delete(req):
         sys.exit(0)
 
 
-@token_auth.decorator_authenticate_access
 async def root_redirect(request):
     """API Endpoint to return the root index.html file.
 
@@ -281,7 +309,10 @@ async def root_redirect(request):
         HTTPResponse: HTTPResponse Object containing the index.html file.
     """
     base_url = request.app["settings"]["base_url"]
-    return aiohttp.web.HTTPFound(f"{base_url}/index.html")
+    query_params = f"?{request.query_string}" if request.query_string else ""
+    response_url = f"{base_url}/index.html{query_params}"
+
+    return aiohttp.web.HTTPFound(response_url)
 
 
 async def static_get(req):
@@ -553,27 +584,6 @@ async def cleanup_background_tasks(app):
                 pass
 
 
-@token_auth.decorator_authenticate_access
-async def get_mwi_auth_token(request):
-    """Endpoint to print the MWI token."""
-    logger.info("!!!!!! Inside get_mwi_auth_token !!!!!")
-    app_settings = request.app["settings"]
-    is_mwi_token_auth_enabled = app_settings["mwi_is_mwi_token_auth_enabled"]
-    base_url = app_settings["base_url"]
-    mwi_auth_token = app_settings["mwi_auth_token"]
-    if is_mwi_token_auth_enabled:
-        logger.info("get_mwi_auth_token: Responding with token information!!")
-        return aiohttp.web.HTTPFound(
-            f"{base_url}/token.html?mwi_auth_token={mwi_auth_token}"
-        )
-    else:
-        logger.info("get_mwi_auth_token: Token Auth mode not enabled")
-        return aiohttp.web.Response(
-            content_type="text/html",
-            body=f"Token-Based Authentication is not enabled!",
-        )
-
-
 def configure_and_start(app):
     """Configure the site for the app and update app with appropriate values
 
@@ -644,7 +654,7 @@ def create_app(config_name=matlab_proxy.get_default_config_name()):
     base_url = app["settings"]["base_url"]
     app.router.add_route("GET", f"{base_url}/get_status", get_status)
     app.router.add_route(
-        "GET", f"{base_url}/authenticate_request", authenticate_request
+        "POST", f"{base_url}/authenticate_request", authenticate_request
     )
     app.router.add_route("GET", f"{base_url}/get_env_config", get_env_config)
     app.router.add_route("PUT", f"{base_url}/start_matlab", start_matlab)
@@ -658,8 +668,6 @@ def create_app(config_name=matlab_proxy.get_default_config_name()):
     )
     app.router.add_route("*", f"{base_url}/", root_redirect)
     app.router.add_route("*", f"{base_url}", root_redirect)
-    mwi_auth_token_name = app["settings"]["mwi_auth_token_name"]
-    app.router.add_route("GET", f"{base_url}/get_mwi_auth_token", get_mwi_auth_token)
 
     app.router.add_route("*", f"{base_url}/{{proxyPath:.*}}", matlab_view)
     app.on_cleanup.append(cleanup_background_tasks)
