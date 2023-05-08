@@ -34,3 +34,4 @@ end
 matlab_settings.matlab.addons.explorer.isExplorerSupported.TemporaryValue = false;
 
 clear
+clc

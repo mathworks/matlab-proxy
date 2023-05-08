@@ -83,7 +83,9 @@ async def start_matlab(matlab_cmd, matlab_env):
         # before we can query for its child processes. Hence, to find the actual MATLAB
         # process, we check all the processes name and parent process id. Ideally, this
         # approach should work in all cases unless MATLAB itself has exited / crashed.
-        logger.debug("Intermediate process not found. Querying all process to find MATLAB")
+        logger.debug(
+            "Intermediate process not found. Querying all process to find MATLAB"
+        )
         for process in psutil.process_iter():
             if (
                 process.name() == "MATLAB.exe"
