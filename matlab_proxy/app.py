@@ -19,7 +19,7 @@ from matlab_proxy.default_configuration import config
 from matlab_proxy.util import list_servers, mwi
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import token_auth
-from matlab_proxy.util.mwi.exceptions import LicensingError, InvalidTokenError
+from matlab_proxy.util.mwi.exceptions import AppError, LicensingError, InvalidTokenError
 
 mimetypes.add_type("font/woff", ".woff")
 mimetypes.add_type("font/woff2", ".woff2")
@@ -76,11 +76,14 @@ def marshal_error(error):
     """
     if error is None:
         return None
-    return {
-        "message": error.message,
-        "logs": error.logs,
-        "type": error.__class__.__name__,
-    }
+    if isinstance(error, AppError):
+        return {
+            "message": error.message,
+            "logs": error.logs,
+            "type": error.__class__.__name__,
+        }
+    else:
+        return {"message": error.__str__, "logs": "", "type": error.__class__.__name__}
 
 
 async def create_status_response(app, loadUrl=None):

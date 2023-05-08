@@ -5,6 +5,7 @@ from matlab_proxy import util
 from matlab_proxy.util import mwi
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 
+
 """ This file contains methods specific to non-posix / windows OS.
 """
 
@@ -43,6 +44,7 @@ async def start_matlab(matlab_cmd, matlab_env):
     Returns:
         psutil.Process(): The MATLAB process object.
     """
+    import psutil
 
     intermediate_proc = await asyncio.create_subprocess_exec(
         *matlab_cmd,
@@ -54,11 +56,11 @@ async def start_matlab(matlab_cmd, matlab_env):
     # So, there is no need to check for an intermediate process when testing and can return
     # the same process as a psutil.Process() object.
     if mwi_env.is_testing_mode_enabled() or mwi_env.is_development_mode_enabled():
-        import psutil
-
         proc = psutil.Process(intermediate_proc.pid)
 
         return proc
+
+    matlab = None
 
     try:
         children = util.get_child_processes(intermediate_proc)
@@ -76,6 +78,21 @@ async def start_matlab(matlab_cmd, matlab_env):
 
     except AssertionError as err:
         raise err
+    except psutil.NoSuchProcess:
+        # We reach here when the intermediate process launched by matlab-proxy died
+        # before we can query for its child processes. Hence, to find the actual MATLAB
+        # process, we check all the processes name and parent process id. Ideally, this
+        # approach should work in all cases unless MATLAB itself has exited / crashed.
+        logger.debug("Intermediate process not found. Querying all process to find MATLAB")
+        for process in psutil.process_iter():
+            if (
+                process.name() == "MATLAB.exe"
+                and process.ppid() == intermediate_proc.pid
+            ):
+                matlab = process
+                break
+
+    assert matlab != None, "MATLAB Process ID not found"
 
     # Return the actual MATLAB processes
-    return children[0]
+    return matlab

@@ -163,7 +163,10 @@ def log_error(logger, err: Exception):
         err (Class): An instance of one of the  Error classes as defined above.
         Example: OnlineLicensingError, EntitlementError
     """
-    logs_str = ("\n" + "\n".join(err.logs)) if err.logs is not None else ""
-    logger.error(
-        err.message if err.message else "An Exception was raised:\n" + logs_str
-    )
+    if isinstance(err, AppError):
+        logs_str = ("\n" + "\n".join(err.logs)) if err.logs is not None else ""
+        logger.error(
+            err.message if err.message else "An Exception was raised:\n" + logs_str
+        )
+    else:
+        logger.error(err)

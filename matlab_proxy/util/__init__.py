@@ -11,6 +11,9 @@ from matlab_proxy.util.mwi import environment_variables as mwi_env
 
 logger = mwi.logger.get()
 
+# Global value to detect whether interrupt signal handler has been triggered or not.
+interrupt_signal_caught = False
+
 
 def parse_cli_args():
     """Parses CLI arguments passed to the main() function.
@@ -97,8 +100,18 @@ def add_signal_handlers(loop):
         Raises:
             SystemExit: Raises SystemExit which will stop execution of loop.run_forever() in app.main()
         """
-        logger.debug("Interrupt Signal handler called with args:\n", *args)
-        raise SystemExit
+        logger.debug("Interrupt Signal handler called")
+
+        # Only raise SystemExit when the handler is invoked for the first time.
+        # Ignore subsequent handler invocations of interrupt signals. This is
+        # required so that asyncio event loop gracefully cancels pending tasks
+        # and exits.
+        global interrupt_signal_caught
+        if interrupt_signal_caught is False:
+            interrupt_signal_caught = True
+            raise SystemExit
+
+        logger.debug("Interrupt is already being serviced.")
 
     for interrupt_signal in system.get_supported_termination_signals():
         logger.debug(f"Registering handler for signal: {interrupt_signal} ")
