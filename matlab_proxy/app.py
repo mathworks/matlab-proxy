@@ -403,7 +403,7 @@ async def matlab_view(req):
     matlab_port = state.matlab_port
     matlab_protocol = req.app["settings"]["matlab_protocol"]
     mwapikey = req.app["settings"]["mwapikey"]
-    matlab_base_url = f"{matlab_protocol}://localhost:{matlab_port}"
+    matlab_base_url = f"{matlab_protocol}://127.0.0.1:{matlab_port}"
 
     # WebSocket
     if (
