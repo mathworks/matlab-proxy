@@ -49,11 +49,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.7', '3.8', '3.9', '3.10']
-        exclude:
-        - os: windows-latest
-          # Python 3.7 in Windows does not run successfully
-          python-version: '3.7'
+        python-version: ['3.8', '3.9', '3.10', '3.11']
     runs-on: ${{ matrix.os }}
 
     steps:

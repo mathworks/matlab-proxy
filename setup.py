@@ -65,7 +65,7 @@ long_description = (HERE / "README.md").read_text()
 
 setuptools.setup(
     name="matlab-proxy",
-    version="0.5.12",
+    version="0.6.0",
     url=config["doc_url"],
     author="The MathWorks, Inc.",
     author_email="cloud@mathworks.com",
@@ -86,12 +86,12 @@ setuptools.setup(
         "Intended Audience :: Developers",
         "Natural Language :: English",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
     ],
-    python_requires="~=3.7",
+    python_requires="~=3.8",
     install_requires=INSTALL_REQUIRES,
     tests_require=TESTS_REQUIRES,
     extras_require={"dev": ["aiohttp-devtools", "black"] + TESTS_REQUIRES},
