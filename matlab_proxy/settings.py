@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import matlab_proxy
-from matlab_proxy.util import mwi
+from matlab_proxy.util import mwi, system
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import token_auth
 
@@ -156,6 +156,11 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
         )
         matlab_lic_mode = ["-licmode", "file"] if nlm_conn_str else ""
 
+        # flag to hide MATLAB Window
+        flag_to_hide_desktop = (
+            "-noDisplayDesktop" if system.is_windows() else "-nodesktop"
+        )
+
         # All config related to matlab-proxy will be saved to user's home folder.
         # This will allow for other user's to launch the integration from the same system
         # and not have their config's overwritten.
@@ -166,7 +171,7 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
             "matlab_cmd": [
                 "matlab",
                 "-nosplash",
-                "-nodesktop",
+                flag_to_hide_desktop,
                 "-softwareopengl",
                 *matlab_lic_mode,
                 "-r",
