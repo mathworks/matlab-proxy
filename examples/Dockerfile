@@ -19,7 +19,6 @@ USER root
 # Install dependencies for matlab-proxy
 RUN DEBIAN_FRONTEND=noninteractive && \
     apt-get update && apt-get install --no-install-recommends -y \
-    && apt-get install --no-install-recommends -y \
     python3 \
     python3-pip \
     xvfb \
