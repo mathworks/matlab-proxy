@@ -22,14 +22,12 @@ from matlab_proxy.util.mwi.exceptions import NetworkLicensingError
         ("1234"),
         ("hostname"),
         ("1234hostname"),
-        (""),
     ],
     ids=[
         "Invalid path to a license file",
         "NLM string with just port number",
         "NLM string with just hostname",
         "NLM string with just port number and hostname",
-        "empty value",
     ],
 )
 def test_validate_mlm_license_file_invalid_value(MLM_LICENSE_FILE, monkeypatch):

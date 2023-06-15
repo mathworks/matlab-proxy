@@ -57,7 +57,8 @@ def validate_mlm_license_file(nlm_connections_str):
 
     from .exceptions import NetworkLicensingError
 
-    if nlm_connections_str is None:
+    if not nlm_connections_str:
+        # Handles empty strings and None values
         return None
 
     # Regular expression to match port@hostname,
