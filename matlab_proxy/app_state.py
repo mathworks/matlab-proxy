@@ -1,17 +1,12 @@
 # Copyright (c) 2020-2022 The MathWorks, Inc.
 
 import asyncio
-import errno
 import json
 import logging
 import os
-import socket
-import sys
 import time
 from collections import deque
 from datetime import datetime, timedelta, timezone
-
-import aiohttp
 
 from matlab_proxy import util
 from matlab_proxy.util import mw, mwi, system, windows
@@ -28,6 +23,7 @@ from matlab_proxy.util.mwi.exceptions import (
     XvfbError,
     log_error,
 )
+from matlab_proxy.constants import CONNECTOR_SECUREPORT_FILENAME
 
 logger = mwi.logger.get()
 
@@ -36,6 +32,10 @@ class AppState:
     """A Class which represents the state of the App.
     This class handles state of MATLAB, MATLAB Licensing and Xvfb.
     """
+
+    # Constants that are applicable to AppState class
+    MATLAB_PORT_CHECK_DELAY_IN_SECONDS = 1
+    EMBEDDED_CONNECTOR_MAX_STARTUP_DURATION_IN_SECONDS = 120
 
     def __init__(self, settings):
         """Parameterized constructor for the AppState class.
@@ -55,9 +55,6 @@ class AppState:
 
         # Dictionary of all files used to manage the MATLAB session.
         self.matlab_session_files = {
-            # The file created by this instance of matlab-proxy to signal to other matlab-proxy processes
-            # that this self.matlab_port will be used by this instance.
-            "mwi_proxy_lock_file": None,
             # The file created and written by MATLAB's Embedded connector to signal readiness.
             "matlab_ready_file": None,
         }
@@ -209,6 +206,9 @@ class AppState:
         else:
             if matlab is None or not matlab.is_running():
                 return "down"
+
+        if not self.matlab_session_files["matlab_ready_file"].exists():
+            return "starting"
 
         # If execution reaches this else block, it implies that:
         # 1) MATLAB process has started.
@@ -395,14 +395,8 @@ class AppState:
             with open(cached_licensing_file, "w") as f:
                 f.write(json.dumps(self.licensing))
 
-    def prepare_lock_files_for_MATLAB_launch(self):
-        """Finds and reserves a free port for MATLAB Embedded Connector in the allowed range.
-        Creates the lock file to prevent any other matlab-proxy process to use the reserved port of this
-        process.
-
-        Raises:
-            e: socket.error if the exception raised is other than port already occupied.
-        """
+    def create_logs_dir_for_MATLAB(self):
+        """Creates the root folder where MATLAB writes the ready file and updates attibutes on self."""
 
         # NOTE It is not guranteed that the port will remain free!
         # FIXME Because of https://github.com/http-party/node-http-proxy/issues/1342 the
@@ -414,77 +408,23 @@ class AppState:
         ):
             return 31515
         else:
-            # TODO If MATLAB Connector is enhanced to allow any port, then the
-            # following can be used to get an unused port instead of the for loop and
-            # try-except.
-            # s.bind(("", 0))
-            # self.matlab_port = s.getsockname()[1]
+            mwi_logs_root_dir = self.settings["mwi_logs_root_dir"]
+            # Use the app_port number to identify the server as that is user visible
+            mwi_logs_dir = mwi_logs_root_dir / str(self.settings["app_port"])
 
-            for port in mw.range_matlab_connector_ports():
-                try:
-                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    s.bind(("", port))
+            # Create a folder to hold the matlab_ready_file that will be created by MATLAB to signal readiness
+            # This is the same folder to which MATLAB will write logs to.
+            mwi_logs_dir.mkdir(parents=True, exist_ok=True)
 
-                    mwi_logs_root_dir = self.settings["mwi_logs_root_dir"]
+            # Created by MATLAB when it is ready to service requests
+            matlab_ready_file = mwi_logs_dir / CONNECTOR_SECUREPORT_FILENAME
 
-                    # The mwi_proxy.lock file indicates to any other matlab-proxy processes
-                    # that this self.matlab_port number is taken up by this process.
-                    mwi_proxy_lock_file = mwi_logs_root_dir / (
-                        self.settings["mwi_proxy_lock_file_name"] + "." + str(port)
-                    )
+            # Update member variables of AppState class
+            self.mwi_logs_dir = mwi_logs_dir
+            self.matlab_session_files["matlab_ready_file"] = matlab_ready_file
 
-                    # Check if the mwi_proxy_lock_file exists.
-                    # Implies there was a competing matlab-proxy process which found the same port before this process
-                    if mwi_proxy_lock_file.exists():
-                        logger.debug(
-                            f"Skipping port number {port} for MATLAB as lock file already exists at {mwi_proxy_lock_file}"
-                        )
-                        s.close()
-
-                    else:
-                        # Use the app_port number to identify the server as that is user visible
-                        mwi_logs_dir = mwi_logs_root_dir / str(
-                            self.settings["app_port"]
-                        )
-
-                        # Create a folder to hold the matlab_ready_file that will be created by MATLAB to signal readiness.
-                        # This is the same folder to which MATLAB will write logs to.
-                        mwi_logs_dir.mkdir(parents=True, exist_ok=True)
-
-                        # Create the lock file first to minimize the critical section.
-                        mwi_proxy_lock_file.touch()
-                        logger.info(
-                            f"Communicating with MATLAB on port:{port}, lock file: {mwi_proxy_lock_file}"
-                        )
-
-                        # Created by MATLAB when it is ready to service requests.
-                        matlab_ready_file = mwi_logs_dir / "connector.securePort"
-
-                        # Update member variables of AppState class
-                        # Store the port number on which MATLAB will be launched for this matlab-proxy process.
-                        self.matlab_port = port
-                        self.mwi_logs_dir = mwi_logs_dir
-                        self.matlab_session_files[
-                            "mwi_proxy_lock_file"
-                        ] = mwi_proxy_lock_file
-                        self.matlab_session_files[
-                            "matlab_ready_file"
-                        ] = matlab_ready_file
-                        s.close()
-
-                        logger.debug(
-                            f"matlab_session_files:{self.matlab_session_files}"
-                        )
-                        return
-
-                # For windows container's (when testing in github workflows) PermissionError and in linux, OSError is
-                # thrown when trying to bind a used port from a previous test instead of the expected socket.error
-                except (OSError, PermissionError) as e:
-                    pass
-
-                except socket.error as e:
-                    if e.errno != errno.EADDRINUSE:
-                        raise e
+            logger.debug(f"matlab_session_files:{self.matlab_session_files}")
+            return
 
     def create_server_info_file(self):
         mwi_logs_root_dir = self.settings["mwi_logs_root_dir"]
@@ -581,10 +521,6 @@ class AppState:
         if system.is_linux():
             # Adding DISPLAY key which is only available after starting Xvfb successfully.
             matlab_env["DISPLAY"] = self.settings["matlab_display"]
-
-        # MW_CONNECTOR_SECURE_PORT and MATLAB_LOG_DIR keys to matlab_env as they are available after
-        # reserving port and preparing lockfiles for MATLAB
-        matlab_env["MW_CONNECTOR_SECURE_PORT"] = str(self.matlab_port)
 
         # The matlab ready file is written into this location(self.mwi_logs_dir) by MATLAB
         # The mwi_logs_dir is where MATLAB will write any subsequent logs
@@ -726,28 +662,28 @@ class AppState:
             self.processes["xvfb"] = xvfb
 
         try:
-            # Finds and reserves a free port, then prepare lock files for the MATLAB process.
-            self.prepare_lock_files_for_MATLAB_launch()
+            # Prepare ready file for the MATLAB process.
+            self.create_logs_dir_for_MATLAB()
 
             # Configure the environment MATLAB needs to start
             matlab_env = await self.__setup_env_for_matlab()
 
             logger.debug(
-                "Prepared lock files and configured the environment for MATLAB startup"
+                "Prepared ready file and configured the environment for MATLAB startup"
             )
 
-        # If there's something wrong with setting up lock files or env setup for starting matlab, capture the error for logging
+        # If there's something wrong with setting up files or env setup for starting matlab, capture the error for logging
         # and to pass to the front-end. Halt MATLAB process startup by returning early
         except Exception as err:
             self.error = err
             log_error(logger, err)
             # stop_matlab() does the teardown work by removing any residual files and processes created till now
-            # which is Xvfb process creation and preparing lock files for the MATLAB process.
+            # which is Xvfb process creation and ready file for the MATLAB process.
             await self.stop_matlab()
             return
 
         # Start MATLAB Process
-        logger.debug(f"Starting MATLAB on port {self.matlab_port}")
+        logger.debug("Starting MATLAB")
 
         matlab = await self.__start_matlab_process(matlab_env)
 
@@ -830,9 +766,45 @@ class AppState:
                         )
                         await asyncio.sleep(1)
 
-        loop = util.get_event_loop()
+        async def update_matlab_port(delay: int):
+            """Task to populate matlab_port from the matlab ready file. Times out if max_duration is breached
 
+            Args:
+                delay (int): time delay in seconds before retrying the file read operation
+            """
+            logger.debug(
+                f'updating matlab_port information from {self.matlab_session_files["matlab_ready_file"]}'
+            )
+            try:
+                await asyncio.wait_for(
+                    __read_matlab_ready_file(delay),
+                    self.EMBEDDED_CONNECTOR_MAX_STARTUP_DURATION_IN_SECONDS,
+                )
+            except asyncio.TimeoutError:
+                logger.debug(
+                    "Timeout error received while updating matlab port, stopping matlab!"
+                )
+                await self.stop_matlab(force_quit=True)
+                self.error = MatlabError(
+                    "Unable to start MATLAB because of a timeout. Try again by clicking Start MATLAB."
+                )
+
+        async def __read_matlab_ready_file(delay):
+            # reads with delays from the file where connector has written its port information
+            while not self.matlab_session_files["matlab_ready_file"].exists():
+                await asyncio.sleep(delay)
+
+            with open(self.matlab_session_files["matlab_ready_file"]) as f:
+                self.matlab_port = int(f.read())
+                logger.debug(
+                    f"MATLAB Ready file successfully read, matlab_port set to: {self.matlab_port}"
+                )
+
+        loop = util.get_event_loop()
         self.tasks["matlab_stderr_reader"] = loop.create_task(matlab_stderr_reader())
+        self.tasks["update_matlab_port"] = loop.create_task(
+            update_matlab_port(self.MATLAB_PORT_CHECK_DELAY_IN_SECONDS)
+        )
 
     """
     async def __send_terminate_integration_request(self):
@@ -1014,17 +986,18 @@ class AppState:
             for waiter in waiters:
                 await waiter
 
-        stderr_reader_task = self.tasks.get("matlab_stderr_reader")
-        if stderr_reader_task is not None:
-            try:
-                stderr_reader_task.cancel()
-                await stderr_reader_task
-            except asyncio.CancelledError:
-                pass
+        # Canceling all the async tasks in the list
+        for name, task in list(self.tasks.items()):
+            if task:
+                try:
+                    task.cancel()
+                    await task
+                except asyncio.CancelledError:
+                    pass
+            logger.debug(f"{name} task stopped successfully")
 
-            self.tasks.pop("matlab_stderr_reader")
-
-            logger.info("matlab_stderr_reader() task: Stopped successfully.")
+        # After stopping all the tasks, set self.tasks to empty dict
+        self.tasks = {}
 
         # Clear logs if MATLAB stopped intentionally
         logger.debug("Clearing logs!")

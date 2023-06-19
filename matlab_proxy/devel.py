@@ -11,6 +11,8 @@ from aiohttp import web
 
 from matlab_proxy import settings
 from matlab_proxy.util.mwi import environment_variables as mwi_env
+from matlab_proxy.constants import CONNECTOR_SECUREPORT_FILENAME
+from matlab_proxy.util.event_loop import *
 
 desktop_html = b"""
 <h1>Fake MATLAB Web Desktop</h1>
@@ -27,23 +29,13 @@ desktop_html = b"""
 """
 
 
-def wait_for_port(port):
-    """Waits for the given port to become available
-
-    Args:
-        port (Integer): Port number to start fake matlab server.
-    """
-    while True:
-        print(f"Waiting for port {port} to be available")
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.bind(("", port))
-        except OSError:
-            time.sleep(5)
-            continue
-        # Once successful, close the port and stop waiting
-        s.close()
-        break
+def assign_free_port():
+    """Finds an available free port"""
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
 
 
 async def web_handler(request):
@@ -176,10 +168,11 @@ async def fake_matlab_started(app):
 
     # Real MATLAB always uses  $MATLAB_LOG_DIR/connection.securePort as the ready file
     # We mock reading from the environment variable by calling the helper functions
-    mwi_logs_dir = settings.get(dev=True)["mwi_logs_root_dir"] / str(app["port"])
-    mwi_logs_dir.mkdir(parents=True, exist_ok=True)
+    matlab_logs_dir = os.getenv(mwi_env.get_env_name_matlab_log_dir())
 
-    app["matlab_ready_file"] = mwi_logs_dir / "connector.securePort"
+    app["matlab_ready_file"] = Path(
+        f"{matlab_logs_dir}/{CONNECTOR_SECUREPORT_FILENAME}"
+    )
 
     ready_delay = app["ready_delay"]
     try:
@@ -188,6 +181,10 @@ async def fake_matlab_started(app):
             f"Creating fake MATLAB Embedded Connector ready file at {app['matlab_ready_file']}"
         )
         app["matlab_ready_file"].touch()
+
+        # Populate ready file with the embedded connector port information
+        with open(app["matlab_ready_file"], "w") as f:
+            f.write(str(app["port"]))
     except asyncio.CancelledError:
         pass
 
@@ -223,8 +220,7 @@ def matlab(args):
     Args:
         args (Dict): Contains data on how to start web server.
     """
-    port = int(os.environ["MW_CONNECTOR_SECURE_PORT"])
-    wait_for_port(port)
+    port = assign_free_port()
     print(f"Serving fake MATLAB Embedded Connector at port {port}")
     app = web.Application()
     app["ready_delay"] = args.ready_delay

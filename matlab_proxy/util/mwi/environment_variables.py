@@ -135,3 +135,8 @@ def get_env_name_enable_mwi_auth_token():
 def get_env_name_mwi_auth_token():
     """User specified token for use with Token-Based Authentication"""
     return "MWI_AUTH_TOKEN"
+
+
+def get_env_name_matlab_log_dir():
+    """Returns the key used for MATLAB log dir env variable"""
+    return "MATLAB_LOG_DIR"

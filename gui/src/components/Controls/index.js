@@ -102,10 +102,10 @@ MATLAB version: ${matlabVersion}%0D%0A`,
                 onClick={() => callback(Confirmations.START)}
                 disabled={!licensed || matlabStarting || matlabStopping || (authEnabled && !isAuthenticated)}
                 data-for="control-button-tooltip"
-                data-tip={`${matlabRunning ? 'Restart' : 'Start'}  your MATLAB session`}
+                data-tip={`${matlabRunning ? 'Restart' : 'Start'}  MATLAB`}
             >
                 <span className={`icon-custom-${matlabRunning ? 're' : ''}start`}></span>
-                <span className='btn-label'>{`${matlabRunning ? 'Restart' : 'Start'} MATLAB Session`}</span>
+                <span className='btn-label'>{`${matlabRunning ? 'Restart' : 'Start'} MATLAB`}</span>
             </button>
             <button
                 id="stopMatlab"
@@ -114,10 +114,10 @@ MATLAB version: ${matlabVersion}%0D%0A`,
                 onClick={() => callback(Confirmations.STOP)}
                 disabled={!matlabRunning || (authEnabled && !isAuthenticated)}
                 data-for="control-button-tooltip"
-                data-tip="Stop your MATLAB session"
+                data-tip="Stop MATLAB"
             >
                 <span className='icon-custom-stop'></span>
-                <span className='btn-label'>Stop MATLAB Session</span>
+                <span className='btn-label'>Stop MATLAB</span>
             </button>
             <button
                 id="unsetLicensing"
