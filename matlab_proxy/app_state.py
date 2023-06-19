@@ -910,10 +910,13 @@ class AppState:
 
         waiters = []
         if matlab is not None:
-            # Sending a request to embedded connector works sporadically on posix systems.
-            # So, terminating the process when force_quit is set to True.
             if system.is_posix() and matlab.returncode is None:
-                if force_quit:
+                # Sending an exit request to the embedded connector takes time.
+                # When MATLAB is in a "starting" state (implies the Embedded connector is not up)
+                # OR
+                # When force_quit is set to True
+                # directly terminate the MATLAB process instead.
+                if await self.get_matlab_state() == "starting" or force_quit:   
                     logger.debug("Forcing the MATLAB process to terminate...")
                     matlab.terminate()
                     waiters.append(matlab.wait())

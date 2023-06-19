@@ -42,11 +42,6 @@ export const selectMatlabUp = createSelector(
     matlabStatus => matlabStatus === 'up'
 );
 
-export const selectMatlabRunning = createSelector(
-    selectMatlabStatus,
-    matlabStatus => matlabStatus === 'up'
-);
-
 export const selectMatlabStarting = createSelector(
     selectMatlabStatus,
     matlabStatus => matlabStatus === 'starting'
@@ -55,6 +50,11 @@ export const selectMatlabStarting = createSelector(
 export const selectMatlabStopping = createSelector(
     selectMatlabStatus,
     matlabStatus => matlabStatus === 'stopping'
+);
+
+export const selectMatlabDown = createSelector(
+    selectMatlabStatus,
+    matlabStatus => matlabStatus === 'down'
 );
 
 export const selectOverlayHidable = createSelector(

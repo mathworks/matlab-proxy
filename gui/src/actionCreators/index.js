@@ -286,7 +286,7 @@ export function fetchStopMatlab() {
         }
 
         dispatch(requestStopMatlab());
-        const response = await fetchWithTimeout(dispatch, './stop_matlab', options, 15000);
+        const response = await fetchWithTimeout(dispatch, './stop_matlab', options, 30000);
         const data = await response.json();
         dispatch(receiveStopMatlab(data));
 

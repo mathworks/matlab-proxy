@@ -8,9 +8,10 @@ import {
     selectSubmittingServerStatus,
     selectLicensingIsMhlm,
     selectLicensingProvided,
-    selectMatlabRunning,
+    selectMatlabUp,
     selectMatlabStarting,
     selectMatlabStopping,
+    selectMatlabDown, 
     selectMatlabVersion,
     selectError,
     selectIsAuthenticated,
@@ -36,14 +37,14 @@ function Controls({
     const submitting = useSelector(selectSubmittingServerStatus);
     const licensed = useSelector(selectLicensingProvided);
     const mhlmLicense = useSelector(selectLicensingIsMhlm);
-    const matlabRunning = useSelector(selectMatlabRunning);
     const matlabStarting = useSelector(selectMatlabStarting);
+    const matlabUp = useSelector(selectMatlabUp);
     const matlabStopping = useSelector(selectMatlabStopping);
+    const matlabDown = useSelector(selectMatlabDown);
     const matlabVersion = useSelector(selectMatlabVersion);
     const error = useSelector(selectError);
     const authEnabled = useSelector(selectAuthEnabled);
     const isAuthenticated = useSelector(selectIsAuthenticated);
-    //     const canTerminateIntegration = !submitting;
     const canResetLicensing = licensed && !submitting;
 
     const feedbackBody = useMemo(
@@ -57,7 +58,7 @@ MATLAB version: ${matlabVersion}%0D%0A`,
     const Confirmations = {
         START: {
             type: 'confirmation',
-            message: `Are you sure you want to ${matlabRunning ? 're' : ''}start MATLAB?`,
+            message: `Are you sure you want to ${ matlabUp ? 're' : ''}start MATLAB?`,
             callback: fetchStartMatlab
         },
         STOP: {
@@ -98,7 +99,7 @@ MATLAB version: ${matlabVersion}%0D%0A`,
             <button
                 id="startMatlab"
                 data-testid='startMatlabBtn'
-                className={getBtnClass(matlabRunning ? 'restart' : 'start')}
+                className={getBtnClass(matlabUp ? 'restart' : 'start')}
                 onClick={() => callback(Confirmations.START)}
                 disabled={!licensed || matlabStarting || matlabStopping || (authEnabled && !isAuthenticated)}
                 data-for="control-button-tooltip"
@@ -112,7 +113,7 @@ MATLAB version: ${matlabVersion}%0D%0A`,
                 data-testid='stopMatlabBtn'
                 className={getBtnClass('stop')}
                 onClick={() => callback(Confirmations.STOP)}
-                disabled={!matlabRunning || (authEnabled && !isAuthenticated)}
+                disabled={ matlabStopping || matlabDown || (authEnabled && !isAuthenticated)}
                 data-for="control-button-tooltip"
                 data-tip="Stop MATLAB"
             >
