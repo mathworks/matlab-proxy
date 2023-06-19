@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import MHLM from './MHLM';
 import NLM from './NLM';
+import ExistingLicense from './ExistingLicense';
 import './LicensingGatherer.css';
 
 function LicensingGatherer() {
@@ -18,11 +19,17 @@ function LicensingGatherer() {
         e.preventDefault();
         setActiveTab("nlm");
     };
+    const handleExistingLicenseTabClick = e => {
+        e.preventDefault();
+        setActiveTab("existingLicense");
+    }; 
 
     const mhlmActive = activeTab === "mhlm" ? "active" : "";
     const mhlmAriaExpanded = activeTab === "mhlm" ? "true" : "false";
     const nlmActive = activeTab === "nlm" ? "active" : "";
     const nlmAriaExpanded = activeTab === "nlm" ? "true" : "false";
+    const existingLicenseActive = activeTab === "existingLicense" ? "active" : "";
+    const existingLicenseAriaExpanded = activeTab === "existingLicense" ? "true" : "false";
 
     return (
         <div className="modal show" id="setup-dialog" tabIndex="-1" role="dialog" aria-labelledby="setup-dialog-title">
@@ -49,6 +56,15 @@ function LicensingGatherer() {
                                         aria-controls="nlm"
                                         aria-expanded={nlmAriaExpanded}>Network License Manager</a>
                                 </li>
+                                <li role="presentation" className={existingLicenseActive}>
+                                    <a
+                                        href="#existingLicense"
+                                        id="existingLicense-tab"
+                                        onClick={handleExistingLicenseTabClick}
+                                        role="tab"
+                                        aria-controls="existingLicense"
+                                        aria-expanded={existingLicenseAriaExpanded}>Existing License</a>
+                                </li>
                             </ul>
                             {/* Because the MHLM tab contains an iframe which is slow to load, always render both tabs and select the active one with React */}
                             <div id="setup-tabs-content" className="tab-content">
@@ -57,6 +73,9 @@ function LicensingGatherer() {
                                 </div>
                                 <div role="tabpanel" className={`tab-pane ${nlmActive}`} id="nlm" aria-labelledby="nlm-tab">
                                     <NLM />
+                                </div>
+                                <div role="tabpanel" className={`tab-pane ${existingLicenseActive}`} id="existingLicense" aria-labelledby="existingLicense-tab">
+                                    <ExistingLicense />
                                 </div>
                                 <div>
                                     <p id="LicensingGathererNote">
@@ -70,7 +89,7 @@ function LicensingGatherer() {
                                         </a>
                                     </p>
                                 </div>
-                            </div>
+                            </div>                            
                         </div>
                     </div>
                 </div>

@@ -140,3 +140,8 @@ def get_env_name_mwi_auth_token():
 def get_env_name_matlab_log_dir():
     """Returns the key used for MATLAB log dir env variable"""
     return "MATLAB_LOG_DIR"
+
+
+def get_env_name_mwi_use_existing_license():
+    """Returns the environment variable name used to instruct matlab-proxy to use an existing license. Usually used by already activated MATLAB installations."""
+    return "MWI_USE_EXISTING_LICENSE"

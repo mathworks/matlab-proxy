@@ -53,7 +53,7 @@ def get_connection_string():
         {
             "input": {"type": "mhlm", "email_addr": get_email()},
             "expected": {
-                "type": "MHLM",
+                "type": "mhlm",
                 "emailAddress": get_email(),
                 "entitlements": [],
                 "entitlementId": None,
@@ -61,13 +61,18 @@ def get_connection_string():
         },
         {
             "input": {"type": "nlm", "conn_str": get_connection_string()},
-            "expected": {"type": "NLM", "connectionString": get_connection_string()},
+            "expected": {"type": "nlm", "connectionString": get_connection_string()},
+        },
+        {
+            "input": {"type": "existing_license"},
+            "expected": {"type": "existing_license"},
         },
     ],
     ids=[
         "No Licensing info  supplied",
-        "Licensing type is MHLM",
-        "Licensing type is NLM",
+        "Licensing type is mhlm",
+        "Licensing type is nlm",
+        "Licensing type is existing_license",
     ],
 )
 def licensing_info_fixture(request):
@@ -466,7 +471,7 @@ async def test_set_licensing_info_put_nlm(test_server):
     """
 
     data = {
-        "type": "NLM",
+        "type": "nlm",
         "status": "starting",
         "version": "R2020b",
         "connectionString": "abc@nlm",
@@ -502,13 +507,26 @@ async def test_set_licensing_info_put_mhlm(test_server):
     """
 
     data = {
-        "type": "MHLM",
+        "type": "mhlm",
         "status": "starting",
         "version": "R2020b",
         "token": "abc@nlm",
         "emailaddress": "abc@nlm",
         "sourceId": "abc@nlm",
     }
+    resp = await test_server.put("/set_licensing_info", data=json.dumps(data))
+    assert resp.status == 200
+
+
+async def test_set_licensing_info_put_existing_license(test_server):
+    """Test to check endpoint : "/set_licensing_info"
+
+    Test which sends HTTP PUT request with local licensing information.
+    Args:
+        test_server (aiohttp_client): A aiohttp_client server to send HTTP GET request.
+    """
+
+    data = {"type": "existing_license"}
     resp = await test_server.put("/set_licensing_info", data=json.dumps(data))
     assert resp.status == 200
 

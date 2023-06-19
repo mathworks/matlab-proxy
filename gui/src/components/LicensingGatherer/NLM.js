@@ -50,7 +50,7 @@ function NLM() {
     function submitForm(event) {
         event.preventDefault();
         dispatch(fetchSetLicensing({
-            'type': 'NLM',
+            'type': 'nlm',
             'connectionString': connStr
         }));
     }

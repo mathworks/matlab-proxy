@@ -20,7 +20,7 @@ describe('Information Component', () => {
       tutorialHidden: false,
       overlayVisibility: false,
       serverStatus: {
-        licensingInfo: { type: 'MHLM', emailAddress: 'abc@mathworks.com' },
+        licensingInfo: { type: 'mhlm', emailAddress: 'abc@mathworks.com' },
         matlabStatus: 'up',
         matlabVersion: 'R2020b',
         isFetching: false,
@@ -71,7 +71,7 @@ describe('Information Component', () => {
   });
 
   it('should render Online Licensing info with licensing type MHLM', () => {
-    const { container, debug, getByText } = render(
+    const {  getByText } = render(
       <Information closeHandler={closeHandler} children={children} />,
       { initialState: initialState }
     );
@@ -85,10 +85,10 @@ describe('Information Component', () => {
 
   it('should render Online Licensing info with licensing type NLM', () => {
     initialState.serverStatus.licensingInfo = {
-      type: 'NLM',
+      type: 'nlm',
       connectionString: 'abc@nlm',
     };
-    const { container, debug, getByText } = render(
+    const { getByText } = render(
       <Information closeHandler={closeHandler} children={children} />,
       { initialState: initialState }
     );
@@ -98,6 +98,19 @@ describe('Information Component', () => {
     expect(licensingInfo.nextSibling.textContent).toContain(
       initialState.serverStatus.licensingInfo.connectionString
     );
+  });
+
+  it('should render Existing License with licensing type existing_license', () => {
+    initialState.serverStatus.licensingInfo = {
+      type: 'existing_license',
+    };
+    const { getByText } = render(
+      <Information closeHandler={closeHandler} children={children} />,
+      { initialState: initialState }
+    );
+
+    const licensingInfo = getByText('Licensing:');
+    expect(licensingInfo.nextSibling.textContent).toEqual("Existing License");
   });
 
   it('should display errors', () => {

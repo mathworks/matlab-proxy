@@ -15,7 +15,7 @@ describe('LicenseGatherer component', () => {
       overlayVisibility: false,
 
       serverStatus: {
-        licensingInfo: { type: 'MHLM', emailAddress: 'abc@mathworks.com' },
+        licensingInfo: { type: 'mhlm', emailAddress: 'abc@mathworks.com' },
         matlabStatus: 'up',
         matlabVersion: 'R2020b',
         isFetching: false,
@@ -63,7 +63,7 @@ describe('LicenseGatherer component', () => {
 
     initialState.serverStatus.wsEnv = 'mw-integ'
 
-    const { container, debug } = render(<LicenseGatherer />, { initialState: initialState });
+    const { container } = render(<LicenseGatherer />, { initialState: initialState });
 
     const mhlmTab = container.querySelector('#mhlm-tab');
 
@@ -99,11 +99,24 @@ describe('LicenseGatherer component', () => {
     // Click on nlm Tab
     fireEvent.click(nlmTab);
 
-    // Check if nlm iframe is rendered.
+    // Check if nlm tab is rendered.
     const nlmTabContent = container.querySelector('#NLM');
     expect(nlmTabContent).toBeInTheDocument();
   }); 
 
+  it('should have rendered existing license tab content without crashing', () => {
+    const { container } = render(<LicenseGatherer />, { initialState: initialState });
+
+    const existingLicenseTab = container.querySelector('#existingLicense-tab');
+    expect(existingLicenseTab).toBeInTheDocument();
+
+    // Click on existingLicense Tab
+    fireEvent.click(existingLicenseTab);
+
+    // Check if existingLicense tab is rendered.
+    const existingLicenseTabContent = container.querySelector('#existingLicense');
+    expect(existingLicenseTabContent).toBeInTheDocument();
+  }); 
 
   test.each([
     ['1234', true], ['hostname', true], ['1234hostname', true], ['1234,', true], ['hostname,', true], 

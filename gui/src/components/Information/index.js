@@ -11,7 +11,7 @@ import {
     selectInformationDetails,
     selectAuthEnabled,
     selectIsAuthenticated,
-    selectAuthToken
+    selectAuthToken,
 } from '../../selectors';
 import { updateAuthStatus } from '../../actionCreators';
 import './Information.css';
@@ -39,14 +39,19 @@ function Information({
 
     let info;
     switch (licensingInfo?.type) {
-        case "MHLM":
+        case "mhlm":
             info = {
                 label: `Online License Manager (${licensingInfo.emailAddress})`
             };
             break;
-        case "NLM":
+        case "nlm":
             info = {
                 label: `Network License Manager (${licensingInfo.connectionString})`
+            };
+            break;
+        case "existing_license":            
+            info = {
+                label : 'Existing License'
             };
             break;
         default:

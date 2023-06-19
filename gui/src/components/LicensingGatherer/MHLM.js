@@ -102,7 +102,7 @@ function MHLM() {
                 } else if (data.event === 'login') {
                     // Persist credentials to serverside
                     dispatch(fetchSetLicensing({
-                        type: 'MHLM',
+                        type: 'mhlm',
                         token: data.token,
                         profileId: data.profileId,
                         emailAddress: data.emailAddress,

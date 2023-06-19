@@ -68,6 +68,25 @@ async def get_state(mwi_server_url):
     url = get_ping_endpoint(mwi_server_url)
     try:
         resp = await send_request(url=url, data=data, method="POST")
+
+        # Additional assert statements to catch any changes in response from embedded connector
+        # Tested from R2020b to R2023a
+        assert (
+            "messages" in resp
+        ), '"messages" key missing in response from embedded connector'
+        assert (
+            "PingResponse" in resp["messages"]
+        ), '"PingResponse" key missing in response from embedded connector'
+        assert (
+            type(resp["messages"]["PingResponse"]) == list
+        ), 'Was expecting an array in the "PingResponse" field in response'
+        assert (
+            len(resp["messages"]["PingResponse"]) == 1
+        ), 'Was expecting an array of length 1 in the "PingResponse" field in response'
+        assert (
+            "messageFaults" in resp["messages"]["PingResponse"][0]
+        ), 'Was expecting "messageFaults" field in response'
+
         if not resp["messages"]["PingResponse"][0]["messageFaults"]:
             return "up"
     except Exception:

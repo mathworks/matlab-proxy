@@ -162,6 +162,9 @@ Install the version >=0.5.0 to use the package on MacOS.
 $ pip install --upgrade matlab-proxy>=0.5.0
 ```
 
+## Using an already activated MATLAB with matlab-proxy
+`matlab-proxy` version `v0.7.0` introduces support for using an existing MATLAB license. Use the Existing License option only if you have an activated MATLAB. This allows you to start MATLAB without authenticating every time.
+
 ## Limitations
 This package supports the same subset of MATLAB features and commands as MATLAB® Online, except there is no support for Simulink® Online.
 [Click here for a full list of Specifications and Limitations for MATLAB Online](https://www.mathworks.com/products/matlab-online/limitations.html). 

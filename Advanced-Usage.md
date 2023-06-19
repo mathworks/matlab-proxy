@@ -28,6 +28,7 @@ The following table describes all the environment variables that you can set to 
 | **MWI_SSL_KEY_FILE** | string | `"/path/to/keyfile.key"` | The keyfile string, if present, must point to a file containing the private key. Otherwise the private key will be taken from certfile as well. |
 | **MWI_ENABLE_TOKEN_AUTH** | string | `"True"` | When set to `True`, matlab-proxy will require users to provide the security token to access the proxy. <br />The default value is `False` . See [Token-Based Authentication](./SECURITY.md#token-based-authentication) for more information.|
 | **MWI_AUTH_TOKEN** | string (optional) | `"AnyURLSafeToken"` | Optionally, provide a custom `token` for use with `MWI_ENABLE_TOKEN_AUTH`. A token can safely contain any combination of alpha numeric text along with the following permitted characters: `- .  _  ~`.<br />When absent matlab-proxy will generate a random URL safe token. |
+| **MWI_USE_EXISTING_LICENSE** | string (optional) | `"True"` | When set to True, matlab-proxy will not ask you for additional licensing information and will try to launch an already activated MATLAB on your system PATH.
 
 
 ## Custom HTTP Headers 

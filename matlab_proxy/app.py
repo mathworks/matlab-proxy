@@ -51,18 +51,25 @@ def marshal_licensing_info(licensing_info):
     if licensing_info is None:
         return None
 
-    if licensing_info["type"] == "mhlm":
+    licensing_type = licensing_info.get("type")
+
+    if licensing_type is None:
+        return None
+
+    if licensing_type == "mhlm":
         return {
-            "type": "MHLM",
+            "type": "mhlm",
             "emailAddress": licensing_info["email_addr"],
             "entitlements": licensing_info.get("entitlements", []),
             "entitlementId": licensing_info.get("entitlement_id", None),
         }
-    elif licensing_info["type"] == "nlm":
+    elif licensing_type == "nlm":
         return {
-            "type": "NLM",
+            "type": "nlm",
             "connectionString": licensing_info["conn_str"],
         }
+    elif licensing_type == "existing_license":
+        return {"type": "existing_license"}
 
 
 def marshal_error(error):
@@ -233,15 +240,19 @@ async def set_licensing_info(req):
     lic_type = data.get("type")
 
     try:
-        if lic_type == "NLM":
+        if lic_type == "nlm":
             await state.set_licensing_nlm(data.get("connectionString"))
 
-        elif lic_type == "MHLM":
+        elif lic_type == "mhlm":
             await state.set_licensing_mhlm(
                 data.get("token"), data.get("emailAddress"), data.get("sourceId")
             )
+        elif lic_type == "existing_license":
+            state.set_licensing_existing_license()
         else:
-            raise Exception('License type must be "NLM" or "MHLM"!')
+            raise Exception(
+                'License type must be "NLM" or "MHLM" or "ExistingLicense"!'
+            )
     except Exception as e:
         raise web.HTTPBadRequest(text="Error with licensing!")
 
