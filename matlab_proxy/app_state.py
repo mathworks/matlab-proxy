@@ -1039,7 +1039,7 @@ class AppState:
                 # OR
                 # When force_quit is set to True
                 # directly terminate the MATLAB process instead.
-                if await self.get_matlab_state() == "starting" or force_quit:   
+                if await self.get_matlab_state() == "starting" or force_quit:
                     logger.debug("Forcing the MATLAB process to terminate...")
                     matlab.terminate()
                     waiters.append(matlab.wait())
@@ -1070,8 +1070,8 @@ class AppState:
 
             else:
                 # In a windows system
-                if not system.is_posix() and matlab.is_running():
-                    if force_quit:
+                if system.is_windows() and matlab.is_running():
+                    if await self.get_matlab_state() == "starting" or force_quit:
                         matlab.terminate()
                         matlab.wait()
 
@@ -1131,7 +1131,6 @@ class AppState:
 
         # After stopping all the tasks, set self.tasks to empty dict
         self.tasks = {}
-
 
         # Clear logs if MATLAB stopped intentionally
         logger.debug("Clearing logs!")

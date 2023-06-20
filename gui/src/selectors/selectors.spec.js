@@ -71,7 +71,6 @@ describe('selectors', () => {
     selectIsError,
     selectIsConnectionError,
     selectMatlabUp,
-    selectMatlabRunning,
     selectOverlayHidable,
     selectOverlayVisibility,
     getFetchAbortController,
@@ -163,17 +162,17 @@ describe('selectors', () => {
     });
 
 
-    test('selectMatlabRunning should return true when Matlab is up', () => {
-      expect(selectMatlabRunning(state)).toBe(true);
+    test('selectMatlabUp should return true when Matlab is up', () => {
+      expect(selectMatlabUp(state)).toBe(true);
       modifiedState = _.cloneDeep(state);
       modifiedState.serverStatus.matlabStatus = 'starting';
-      expect(selectMatlabRunning(modifiedState)).toBe(false);
+      expect(selectMatlabUp(modifiedState)).toBe(false);
     });
 
-    test('selectMatlabRunning should false when Matlab status is not up', () => {
+    test('selectMatlabUp should false when Matlab status is not up', () => {
       modifiedState = _.cloneDeep(state);
       modifiedState.serverStatus.matlabStatus = 'down';
-      expect(selectMatlabRunning(modifiedState)).toBe(false);
+      expect(selectMatlabUp(modifiedState)).toBe(false);
     });
 
     test('selectMatlabStopping should true when Matlab status is stopping', () => {

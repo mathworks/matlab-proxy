@@ -138,10 +138,10 @@ MATLAB version: ${matlabVersion}%0D%0A`,
                 onClick={() => callback(Confirmations.START)}
                 disabled={!licensed || matlabStarting || matlabStopping || (authEnabled && !isAuthenticated)}
                 data-for="control-button-tooltip"
-                data-tip={`${matlabRunning ? 'Restart' : 'Start'}  MATLAB`}
+                data-tip={`${matlabUp ? 'Restart' : 'Start'}  MATLAB`}
             >
-                <span className={`icon-custom-${matlabRunning ? 're' : ''}start`}></span>
-                <span className='btn-label'>{`${matlabRunning ? 'Restart' : 'Start'} MATLAB`}</span>
+                <span className={`icon-custom-${matlabUp ? 're' : ''}start`}></span>
+                <span className='btn-label'>{`${matlabUp ? 'Restart' : 'Start'} MATLAB`}</span>
             </button>
             <button
                 id="stopMatlab"
