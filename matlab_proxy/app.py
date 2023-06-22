@@ -304,8 +304,8 @@ async def termination_integration_delete(req):
     # End termination with 0 exit code to indicate intentional termination
     await req.app.shutdown()
     await req.app.cleanup()
-    """When testing with pytest, its not possible to catch sys.exit(0) using the construct 
-    'with pytest.raises()', there by causing the test : test_termination_integration_delete() 
+    """When testing with pytest, its not possible to catch sys.exit(0) using the construct
+    'with pytest.raises()', there by causing the test : test_termination_integration_delete()
     to fail. Inorder to avoid this, adding the below if condition to check to skip sys.exit(0) when testing
     """
     logger.debug("Exiting with return code 0")
@@ -408,6 +408,10 @@ async def matlab_view(req):
     Returns:
         WebSocketResponse or HTTPResponse: based on the Request type.
     """
+    # Special keys for web socket requests
+    CONNECTION = "connection"
+    UPGRADE = "upgrade"
+
     reqH = req.headers.copy()
 
     state = req.app["state"]
@@ -417,11 +421,12 @@ async def matlab_view(req):
     matlab_base_url = f"{matlab_protocol}://127.0.0.1:{matlab_port}"
 
     # WebSocket
+    # According to according to RFC6455 (https://www.rfc-editor.org/rfc/rfc6455.html)
+    # the values of 'connection' and 'upgrade'  keys of request header
+    # should be ASCII case-insensitive matches.
     if (
-        reqH.get("connection")
-        and reqH.get("connection").lower() == "upgrade"
-        and reqH.get("upgrade")
-        and reqH.get("upgrade").lower() == "websocket"
+        reqH.get(CONNECTION, "").lower() == UPGRADE
+        and reqH.get(UPGRADE, "").lower() == "websocket"
         and req.method == "GET"
     ):
         ws_server = web.WebSocketResponse()

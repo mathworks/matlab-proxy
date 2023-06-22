@@ -445,17 +445,36 @@ async def test_matlab_proxy_http_post_request(proxy_payload, test_server):
             raise ConnectionError
 
 
-async def test_matlab_proxy_web_socket(test_server):
+# While acceessing matlab-proxy directly, the web socket request looks like
+#     {
+#         "connection": "Upgrade",
+#         "Upgrade": "websocket",
+#     }
+# whereas while accessing matlab-proxy with nginx as the reverse proxy, the nginx server
+# modifies the web socket request to
+#     {
+#         "connection": "upgrade",
+#         "upgrade": "websocket",
+#     }
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {
+            "connection": "Upgrade",
+            "Upgrade": "websocket",
+        },
+        {
+            "connection": "upgrade",
+            "upgrade": "websocket",
+        },
+    ],
+)
+async def test_matlab_proxy_web_socket(test_server, headers):
     """Test to check if test_server proxies web socket request to fake matlab server
 
     Args:
         test_server (aiohttp_client): Test Server to send HTTP Requests.
     """
-
-    headers = {
-        "connection": "Upgrade",
-        "upgrade": "websocket",
-    }
 
     resp = await test_server.ws_connect("/http_ws_request.html", headers=headers)
     text = await resp.receive()
