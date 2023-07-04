@@ -6,6 +6,7 @@ import re
 import secrets
 from collections import namedtuple
 from datetime import timedelta, timezone
+from http import HTTPStatus
 
 import pytest
 from matlab_proxy import settings
@@ -119,10 +120,10 @@ def fetch_access_token_valid_json_fixture():
 
 
 class MockResponse:
-    def __init__(self, reason, payload={}, status=200, text=""):
+    def __init__(self, ok, payload={}, status=HTTPStatus.OK, text=""):
         self._payload = payload
         self._text = text
-        self.reason = reason
+        self.ok = ok
         self.status = status
 
     async def json(self):
@@ -152,7 +153,7 @@ async def test_fetch_access_token(mwa_api_data, fetch_access_token_valid_json, m
 
     payload = dict(accessTokenString=json_data["accessTokenString"])
 
-    mock_resp = MockResponse(payload=payload, reason="OK")
+    mock_resp = MockResponse(payload=payload, ok=True)
 
     url_pattern = mwa_api_data.mwa_api_endpoint_pattern
 
@@ -181,7 +182,7 @@ async def test_fetch_access_token_licensing_error(mwa_api_data, mocker):
 
     url_pattern = mwa_api_data.mwa_api_endpoint_pattern
 
-    mock_resp = MockResponse(payload={}, reason="NOT-OK", status=404)
+    mock_resp = MockResponse(payload={}, ok=False, status=HTTPStatus.NOT_FOUND)
 
     mocked = mocker.patch("aiohttp.ClientSession.post", return_value=mock_resp)
 
@@ -205,7 +206,9 @@ async def test_fetch_expand_token_licensing_error(mocker, mwa_api_data):
         mwa_api_data (namedtuple): A pytest fixture which returns a namedtuple containing values for MW authentication
     """
     url_pattern = mwa_api_data.mwa_api_endpoint_pattern
-    mock_resp = MockResponse(payload={}, reason="NOT-OK", status=503)
+    mock_resp = MockResponse(
+        payload={}, ok=False, status=HTTPStatus.SERVICE_UNAVAILABLE
+    )
     mocked = mocker.patch("aiohttp.ClientSession.post", return_value=mock_resp)
 
     with pytest.raises(exceptions.OnlineLicensingError):
@@ -275,7 +278,7 @@ async def test_fetch_expand_token(mocker, fetch_expand_token_valid_json, mwa_api
         expirationDate=json_data["expirationDate"], referenceDetail=referenceDetail
     )
 
-    mock_resp = MockResponse(payload=payload, reason="OK", status=200)
+    mock_resp = MockResponse(payload=payload, ok=True, status=HTTPStatus.OK)
     mocked = mocker.patch("aiohttp.ClientSession.post", return_value=mock_resp)
 
     resp = await mw.fetch_expand_token(
@@ -301,7 +304,9 @@ async def test_fetch_entitlements_licensing_error(mocker, mwa_api_data):
         mwa_api_data (namedtuple): A namedtuple which contains info related to mwa.
     """
     url_pattern = mwa_api_data.mhlm_api_endpoint_pattern
-    mock_resp = MockResponse(payload={}, reason="NOT-OK", status=503)
+    mock_resp = MockResponse(
+        payload={}, ok=False, status=HTTPStatus.SERVICE_UNAVAILABLE
+    )
     mocked = mocker.patch("aiohttp.ClientSession.post", return_value=mock_resp)
 
     with pytest.raises(exceptions.OnlineLicensingError):
@@ -364,7 +369,7 @@ async def test_fetch_entitlements_entitlement_error(
     url_pattern = mwa_api_data.mhlm_api_endpoint_pattern
 
     mock_resp = MockResponse(
-        payload={}, reason="OK", text=invalid_entitlements, status=404
+        payload={}, ok=True, text=invalid_entitlements, status=HTTPStatus.NOT_FOUND
     )
     mocked = mocker.patch("aiohttp.ClientSession.post", return_value=mock_resp)
 
@@ -417,7 +422,7 @@ async def test_fetch_entitlements(mocker, mwa_api_data, valid_entitlements):
     url_pattern = mwa_api_data.mhlm_api_endpoint_pattern
 
     mock_resp = MockResponse(
-        payload={}, reason="OK", text=valid_entitlements, status=404
+        payload={}, ok=True, text=valid_entitlements, status=HTTPStatus.OK
     )
     mocked = mocker.patch("aiohttp.ClientSession.post", return_value=mock_resp)
 

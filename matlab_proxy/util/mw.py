@@ -59,7 +59,7 @@ async def fetch_entitlements(mhlm_api_endpoint, access_token, matlab_release):
                 }
             ),
         ) as res:
-            if res.reason != "OK":
+            if not res.ok:
                 raise OnlineLicensingError(
                     f"Communication with {mhlm_api_endpoint} failed ({res.status}). For more details, see {__get_licensing_url()}."
                 )
@@ -114,7 +114,7 @@ async def fetch_expand_token(mwa_api_endpoint, identity_token, source_id):
                 }
             ),
         ) as res:
-            if res.reason != "OK":
+            if not res.ok:
                 raise OnlineLicensingError(
                     f"Communication with {mwa_api_endpoint} failed ({res.status}). For more details, see {__get_licensing_url()}."
                 )
@@ -161,7 +161,7 @@ async def fetch_access_token(mwa_api_endpoint, identity_token, source_id):
                 }
             ),
         ) as res:
-            if res.reason != "OK":
+            if not res.ok:
                 raise OnlineLicensingError(
                     f"Communication with {mwa_api_endpoint} failed ({res.status}). For more details, see {__get_licensing_url()}."
                 )

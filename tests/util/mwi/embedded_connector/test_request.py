@@ -8,7 +8,7 @@ async def test_send_request_success(mocker):
     json_data = {"hello": "world"}
 
     payload = json_data
-    mock_resp = MockResponse(payload=payload, reason="OK")
+    mock_resp = MockResponse(payload=payload, ok=True)
 
     mocked = mocker.patch("aiohttp.ClientSession.request", return_value=mock_resp)
     res = await mwi.embedded_connector.send_request(
@@ -22,7 +22,7 @@ async def test_send_request_failure(mocker):
     json_data = {"hello": "world"}
 
     payload = json_data
-    mock_resp = MockResponse(payload=payload, reason="NOT-OK")
+    mock_resp = MockResponse(payload=payload, ok=False)
 
     mocked = mocker.patch("aiohttp.ClientSession.request", return_value=mock_resp)
 
@@ -33,7 +33,7 @@ async def test_send_request_failure(mocker):
         )
 
     # Doesnt have url or data or method
-    mock_resp = MockResponse(payload=payload, reason="NOT-OK")
+    mock_resp = MockResponse(payload=payload, ok=False)
 
     for key in ["url", "method"]:
         options = {

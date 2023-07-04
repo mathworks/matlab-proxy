@@ -42,7 +42,7 @@ async def send_request(url: str, data: dict, method: str, headers: dict = None) 
             async with session.request(
                 method=method, url=url, data=data, headers=None, ssl=False
             ) as resp:
-                if resp.reason != "OK":
+                if not resp.ok:
                     # Converting to dict and formatting for printing
                     data = json.loads(data)
 
