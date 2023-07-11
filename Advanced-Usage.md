@@ -1,5 +1,5 @@
 # Advanced Usage
-Copyright (c) 2020-2022 The MathWorks, Inc. All rights reserved.
+Copyright (c) 2020-2023 The MathWorks, Inc. All rights reserved.
 
 This page lists some of the advanced manuevers that may be of specific interest to help configure the package for use in your environment.
 
@@ -29,6 +29,47 @@ The following table describes all the environment variables that you can set to 
 | **MWI_ENABLE_TOKEN_AUTH** | string | `"True"` | When set to `True`, matlab-proxy will require users to provide the security token to access the proxy. <br />The default value is `False` . See [Token-Based Authentication](./SECURITY.md#token-based-authentication) for more information.|
 | **MWI_AUTH_TOKEN** | string (optional) | `"AnyURLSafeToken"` | Optionally, provide a custom `token` for use with `MWI_ENABLE_TOKEN_AUTH`. A token can safely contain any combination of alpha numeric text along with the following permitted characters: `- .  _  ~`.<br />When absent matlab-proxy will generate a random URL safe token. |
 | **MWI_USE_EXISTING_LICENSE** | string (optional) | `"True"` | When set to True, matlab-proxy will not ask you for additional licensing information and will try to launch an already activated MATLAB on your system PATH.
+| **MWI_CUSTOM_MATLAB_ROOT** | string (optional) | `"/path/to/matlab/root/"` | Optionally, provide a custom path to MATLAB root. For more information see [Adding MATLAB to System Path](#adding-matlab-to-system-path) |
+
+## Adding MATLAB to System Path
+
+When `matlab-proxy` starts, it expects the `matlab` executable to be present on  system PATH in the environment from which it was spawned.
+
+`matlab-proxy` will error out if it is unable to find `matlab` on the PATH.
+
+One can add it to the system PATH using the following commands:
+```bash
+# On Linux & MacOS
+sudo ln -fs ${MATLAB_ROOT}/bin/matlab /usr/bin/matlab
+
+# On Windows environments
+setx PATH "${MATLAB_ROOT}\bin;%PATH%"
+```
+Where `MATLAB_ROOT` points to the folder in which MATLAB was installed.
+Example values of `MATLAB_ROOT` on various platforms are:
+```
+On linux: /usr/local/MATLAB/R2023a
+On MacOS: /Applications/MATLAB_R2023a.app
+On Windows: C:\Program Files\MATLAB\R2023a
+```
+
+### Custom MATLAB Root
+
+Use the environment variable `MWI_CUSTOM_MATLAB_ROOT` to specify the location of `MATLAB_ROOT`.
+
+When this environment variable is set, `matlab-proxy` will not search the system PATH for MATLAB.
+
+This might be useful in the following situations:
+
+1. Changes to the system PATH are not possible or desirable.
+2. There are multiple MATLAB installations on a system, and you want to use `matlab-proxy` with a particular installation of MATLAB.
+3. The existing `matlab` executable on PATH is a user defined script as explained in this [issue](https://github.com/mathworks/matlab-proxy/issues/3).
+
+Example usage:
+```bash
+env MWI_CUSTOM_MATLAB_ROOT=/opt/software/matlab/r2023a matlab-proxy-app
+```
+
 
 
 ## Custom HTTP Headers 

@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022 The MathWorks, Inc.
+# Copyright (c) 2020-2023 The MathWorks, Inc.
 """This file lists and exposes the environment variables which are used by the integration."""
 
 import os
@@ -145,3 +145,8 @@ def get_env_name_matlab_log_dir():
 def get_env_name_mwi_use_existing_license():
     """Returns the environment variable name used to instruct matlab-proxy to use an existing license. Usually used by already activated MATLAB installations."""
     return "MWI_USE_EXISTING_LICENSE"
+
+
+def get_env_name_custom_matlab_root():
+    """User specified path to MATLAB root"""
+    return "MWI_CUSTOM_MATLAB_ROOT"

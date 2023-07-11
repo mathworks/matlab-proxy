@@ -11,6 +11,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import matlab_proxy
+from matlab_proxy.constants import VERSION_INFO_FILE_NAME
 from matlab_proxy.util import mwi, system
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import token_auth
@@ -18,21 +19,60 @@ from matlab_proxy.util.mwi import token_auth
 logger = mwi.logger.get()
 
 
-def get_matlab_path():
+def get_matlab_root_path():
+    """Returns the path from the MWI_CUSTOM_MATLAB_ROOT environment variable if valid, else returns
+    MATLAB root based on the matlab executable if found on the system path.
+
+    Returns:
+        pathlib.Path: pathlib.Path object to MATLAB root.
+    """
+    custom_matlab_root_path = os.environ.get(mwi_env.get_env_name_custom_matlab_root())
+
+    if custom_matlab_root_path and mwi.validators.validate_custom_matlab_root_path(
+        Path(custom_matlab_root_path)
+    ):
+        return custom_matlab_root_path
+
     which_matlab = shutil.which("matlab")
-    if which_matlab is None:
+
+    return Path(which_matlab).resolve().parent.parent if which_matlab else None
+
+
+def get_matlab_executable_path(matlab_root_path: Path):
+    """Returns path to the MATLAB executable based on the OS
+
+    Args:
+        matlab_root_path (Path): Path to MATLAB Root
+
+    Returns:
+        [Path | None]: Path to MATLAB executable if a valid MATLAB root path is supplied else return None
+    """
+    if not matlab_root_path:
         return None
-    return Path(which_matlab).resolve().parent.parent
+
+    return (
+        matlab_root_path / "bin" / "matlab"
+        if system.is_posix()
+        else matlab_root_path / "bin" / "matlab.exe"
+    )
 
 
-def get_matlab_version(matlab_path):
-    """Get the MATLAB Release version in this image"""
+def get_matlab_version(matlab_root_path):
+    """Returns MATLAB version from VersionInfo.xml file present at matlab_root_path
 
-    if matlab_path is None:
+    Args:
+        matlab_root_path (pathlib.Path): pathlib.Path to MATLAB root.
+
+    Returns:
+        (str | None): Returns MATLAB version from VersionInfo.xml file.
+    """
+    if matlab_root_path is None:
         return None
 
-    tree = ET.parse(matlab_path / "VersionInfo.xml")
+    version_info_file_path = Path(matlab_root_path) / VERSION_INFO_FILE_NAME
+    tree = ET.parse(version_info_file_path)
     root = tree.getroot()
+
     return root.find("release").text
 
 
@@ -137,7 +177,8 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
         matlab_startup_file = str(
             Path(__file__).resolve().parent / "matlab" / "startup.m"
         )
-        matlab_path = get_matlab_path()
+        matlab_path = get_matlab_root_path()
+        matlab_executable_path = get_matlab_executable_path(Path(matlab_path))
         ws_env, ws_env_suffix = get_ws_env_settings()
 
         ssl_key_file, ssl_cert_file = mwi.validators.validate_ssl_key_and_cert_file(
@@ -172,7 +213,7 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
             "matlab_path": matlab_path,
             "matlab_version": get_matlab_version(matlab_path),
             "matlab_cmd": [
-                "matlab",
+                matlab_executable_path,
                 "-nosplash",
                 flag_to_hide_desktop,
                 "-softwareopengl",

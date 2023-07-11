@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022 The MathWorks, Inc.
+# Copyright (c) 2020-2023 The MathWorks, Inc.
 """This file contains validators for various runtime artefacts.
 A validator is defined as a function which verifies the input and 
 returns it unchanged if validation passes. 
@@ -14,14 +14,22 @@ import errno
 import os
 import socket
 import sys
+from pathlib import Path
+
+from typing import List
 
 import pkg_resources
 
 import matlab_proxy
+from matlab_proxy.constants import VERSION_INFO_FILE_NAME
 
 from . import environment_variables as mwi_env
 from matlab_proxy.util import system
 from . import logger as mwi_logger
+
+from matlab_proxy import util
+
+from .exceptions import MatlabError
 
 logger = mwi_logger.get()
 
@@ -276,3 +284,51 @@ def validate_use_existing_licensing(use_existing_license):
         bool: if use_existing_license is set to true
     """
     return True if use_existing_license.casefold() == "true" else False
+
+
+def validate_paths(paths: List[Path]):
+    """Validates if  paths of directories or files exists on the file system.
+
+    Args:
+        paths ([pathlib.Path]): List of pathlib.Path's to directories or files
+
+    Raises:
+        OSError: When an invalid path is supplied
+
+    Returns:
+        [pathlib.Path] | None: [pathlib.Path] if valid paths are supplied else None
+    """
+    for path in paths:
+        if not util.is_valid_path(path):
+            raise OSError(f"Supplied invalid path:{path}")
+
+    return paths
+
+
+def validate_custom_matlab_root_path(matlab_root: Path):
+    """Validate if path supplied is MATLAB_ROOT by checking for the existence of VersionInfo.xml file
+    at matlab_root
+
+    Args:
+        path (pathlib.Path): path to MATLAB root
+
+    Returns:
+        pathlib.Path | None: pathlib.Path if a valid path to MATLAB root is supplied else None
+    """
+    try:
+        matlab_root = matlab_root
+        validate_paths([matlab_root])
+        logger.debug(f"Supplied valid MATLAB root path:{matlab_root}")
+    except OSError as exc:
+        logger.error(". ".join(exc.args))
+        sys.exit(1)
+
+    version_info_file_path = matlab_root / VERSION_INFO_FILE_NAME
+
+    if not version_info_file_path.is_file():
+        logger.error(
+            f" {VERSION_INFO_FILE_NAME} file doesn't exist at the provided path :{matlab_root}"
+        )
+        sys.exit(1)
+
+    return matlab_root
