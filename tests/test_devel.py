@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022 The MathWorks, Inc.
+# Copyright (c) 2020-2023 The MathWorks, Inc.
 
 import os
 import socket
@@ -232,6 +232,9 @@ def get_matlab_port_from_ready_file(matlab_ready_file):
         try:
             with open(matlab_ready_file) as f:
                 return int(f.read())
-        except FileNotFoundError:
+        # Retry in the event that matlab_ready_file isn't created yet or
+        # it has been created but the matlab_port information is not yet
+        # written into the file which throws ValueError while converting to int.
+        except (FileNotFoundError, ValueError):
             time.sleep(HALF_SECOND_DELAY)
             continue
