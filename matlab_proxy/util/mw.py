@@ -69,7 +69,7 @@ async def fetch_entitlements(mhlm_api_endpoint, access_token, matlab_release):
 
             if entitlement_el is None or len(entitlement_el) == 0:
                 raise EntitlementError(
-                    f"Your MathWorks account is not linked to a valid license for MATLAB {matlab_release}."
+                    f"Your MathWorks account is not linked to a valid license for MATLAB {matlab_release}.\nSign out and login with a licensed user."
                 )
 
             entitlements = entitlement_el.findall("entitlement")

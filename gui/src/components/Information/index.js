@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright (c) 2020-2023 The MathWorks, Inc.
 
 import React, { useRef, useState } from 'react';
 import PropTypes from 'prop-types';
@@ -66,7 +66,7 @@ function Information({
         <div className="error-container alert alert-danger">
             <p><strong>Error</strong></p>
             <Linkify>
-                <div className="error-text">{error.message}</div>
+                <div className="error-text"><pre style={{backgroundColor: 'hsla(0,0%,100%,0)', border: 'none', fontFamily: 'inherit', fontSize: '15px'}}>{error.message}</pre></div>
             </Linkify>
         </div>
     ) : null;

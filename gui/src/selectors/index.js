@@ -111,10 +111,11 @@ export const selectLicensingMhlmUsername = createSelector(
     (licensingInfo, isMhlm) => isMhlm ? licensingInfo.emailAddress : ''
 );
 
+// Selector to check if the license type is mhlm and entitlements property is not empty
 export const selectLicensingMhlmHasEntitlements = createSelector(
     selectLicensingIsMhlm,
     selectLicensingInfo,
-    (isMhlm, licensingInfo) => isMhlm && licensingInfo.entitlements
+    (isMhlm, licensingInfo) => isMhlm && licensingInfo.entitlements && licensingInfo.entitlements.length > 0
 );
 
 export const selectIsEntitled = createSelector(
@@ -124,7 +125,7 @@ export const selectIsEntitled = createSelector(
 );
 
 // TODO Are these overkill? Perhaps just selecting status would be enough
-// TODO Could be used for detected intermedia failures, such as server being
+// TODO Could be used for detected intermediate failures, such as server being
 // temporarily inaccessible
 export const selectMatlabPending = createSelector(
     selectMatlabStatus,

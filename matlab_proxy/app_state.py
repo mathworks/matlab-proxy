@@ -446,6 +446,17 @@ class AppState:
             self.licensing["profile_id"] = None
             self.licensing["entitlements"] = []
             self.licensing["entitlement_id"] = None
+            # To ensure that any entitlement errors are displayed on the control panel,
+            # the function returns true. The cached license file only contains the license type
+            # and the user's email address. These two attributes are necessary for preventing
+            # the LicenseGatherer step from becoming stuck on the front-end side.
+            # Additionally, displaying the license type and user email address on the
+            # information panel makes it worthwhile to maintain these attributes in the state.
+            return True
+
+        except OnlineLicensingError as e:
+            self.error = e
+            log_error(logger, e)
             return False
 
         # Keeping base error class at the last to catch any uncaught licensing related issues
