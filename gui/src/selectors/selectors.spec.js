@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright (c) 2020-2023 The MathWorks, Inc.
 
 import * as selectors from './index';
 const _ = require('lodash');
@@ -20,7 +20,7 @@ describe('selectors', () => {
       isSubmitting: true,
       hasFetched: false,
       licensingInfo: {
-        type: 'MHLM',
+        type: 'mhlm',
         emailAddress: 'abc@mathworks.com',
       },
       fetchFailCount: 2,

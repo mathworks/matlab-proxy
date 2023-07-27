@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright (c) 2020-2023 The MathWorks, Inc.
 
 import { createSelector } from 'reselect';
 
@@ -102,13 +102,25 @@ export const selectLicensingProvided = createSelector(
 export const selectLicensingIsMhlm = createSelector(
     selectLicensingInfo,
     selectLicensingProvided,
-    (licensingInfo, licensingProvided) => licensingProvided && licensingInfo.type === 'MHLM'
+    (licensingInfo, licensingProvided) => licensingProvided && licensingInfo.type === 'mhlm'
 );
 
 export const selectLicensingMhlmUsername = createSelector(
     selectLicensingInfo,
     selectLicensingIsMhlm,
     (licensingInfo, isMhlm) => isMhlm ? licensingInfo.emailAddress : ''
+);
+
+export const selectLicensingMhlmHasEntitlements = createSelector(
+    selectLicensingIsMhlm,
+    selectLicensingInfo,
+    (isMhlm, licensingInfo) => isMhlm && licensingInfo.entitlements
+);
+
+export const selectIsEntitled = createSelector(
+    selectLicensingInfo,
+    selectLicensingMhlmHasEntitlements,
+    (licensingInfo, entitlementIdInfo) => entitlementIdInfo && licensingInfo.entitlementId
 );
 
 // TODO Are these overkill? Perhaps just selecting status would be enough
@@ -129,9 +141,9 @@ export const selectIsInvalidTokenError = createSelector(
     selectAuthEnabled,
     selectIsAuthenticated,
     selectIsError,
-    selectError,     
-    (authEnabled, isAuthenticated, isError, error) => {        
-        if ((authEnabled && !isAuthenticated) &&  isError && error.type === "InvalidTokenError"){
+    selectError,
+    (authEnabled, isAuthenticated, isError, error) => {
+        if ((authEnabled && !isAuthenticated) && isError && error.type === "InvalidTokenError") {
             return true
         }
         return false
@@ -142,7 +154,7 @@ export const selectInformationDetails = createSelector(
     selectMatlabStatus,
     selectIsError,
     selectError,
-    selectAuthEnabled,  
+    selectAuthEnabled,
     selectIsInvalidTokenError,
     (matlabStatus, isError, error, authEnabled, isInvalidTokenError) => {
         // Check for any errors on the front-end 
@@ -153,9 +165,9 @@ export const selectInformationDetails = createSelector(
                 alert: 'warning',
                 label: 'Unknown',
             }
-        }        
+        }
 
-        if(isError && authEnabled && isInvalidTokenError) {
+        if (isError && authEnabled && isInvalidTokenError) {
             return {
                 icon: 'warning',
                 alert: 'warning',

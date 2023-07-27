@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022 The MathWorks, Inc.
+# Copyright (c) 2020-2023 The MathWorks, Inc.
 
 import asyncio
 import json
@@ -331,7 +331,6 @@ class AppState:
             entitlements (list, optional): Eligible Entitlements of the user. Defaults to [].
             entitlement_id (String, optional): ID of an entitlement. Defaults to None.
         """
-
         try:
             token_data = await mw.fetch_expand_token(
                 self.settings["mwa_api_endpoint"], identity_token, source_id
@@ -434,10 +433,6 @@ class AppState:
                 self.settings["matlab_version"],
             )
 
-        except OnlineLicensingError as e:
-            self.error = e
-            log_error(logger, e)
-            return False
         except EntitlementError as e:
             self.error = e
             log_error(logger, e)
@@ -453,14 +448,26 @@ class AppState:
             self.licensing["entitlement_id"] = None
             return False
 
+        # Keeping base error class at the last to catch any uncaught licensing related issues
+        except OnlineLicensingError as e:
+            self.error = e
+            log_error(logger, e)
+            return False
+
         self.licensing["entitlements"] = entitlements
 
-        # If there is only one non-expired entitlement, set it as active
-        # TODO Also, for now, set the first entitlement as active if there are multiple
-        self.licensing["entitlement_id"] = entitlements[0]["id"]
+        # Auto-select the entitlement if only one entitlement is returned from MHLM
+        if len(entitlements) == 1:
+            self.licensing["entitlement_id"] = entitlements[0]["id"]
 
         # Successful update
         return True
+
+    # Set the entitlement information on app state as well as the cached file
+    async def update_user_selected_entitlement_info(self, entitlement_id):
+        self.licensing["entitlement_id"] = entitlement_id
+        logger.debug(f"Successfully set {entitlement_id} as the entitlement_id")
+        self.persist_licensing()
 
     def persist_licensing(self):
         """Saves licensing information to file"""
@@ -919,10 +926,10 @@ class AppState:
 
         loop = util.get_event_loop()
         # Start all tasks relevant to MATLAB process
-        self.tasks["matlab_stderr_reader_posix()"] = loop.create_task(
+        self.tasks["matlab_stderr_reader_posix"] = loop.create_task(
             __matlab_stderr_reader_posix()
         )
-        self.tasks["track_embedded_connector_state()"] = loop.create_task(
+        self.tasks["track_embedded_connector_state"] = loop.create_task(
             __track_embedded_connector_state()
         )
         self.tasks["update_matlab_port"] = loop.create_task(
@@ -1104,7 +1111,7 @@ class AppState:
                             except:
                                 pass
 
-        logger.info("Stopped (any running)MATLAB process.")
+        logger.info("Stopped (any running) MATLAB process.")
 
         # Terminating Xvfb
         if system.is_posix():
@@ -1137,6 +1144,8 @@ class AppState:
         self.logs["matlab"].clear()
         logger.debug("Cleared any logs created by the MATLAB process.")
 
+        # Update matlab_port information in the event of intentionally stopping MATLAB
+        self.matlab_port = None
         logger.debug("Completed Shutdown!!!")
 
     async def handle_matlab_output(self):

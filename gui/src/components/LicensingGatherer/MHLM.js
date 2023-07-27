@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright (c) 2020-2023 The MathWorks, Inc.
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
@@ -7,7 +7,7 @@ import {
     selectWsEnv
 } from '../../selectors';
 import {
-    fetchSetLicensing
+    fetchSetLicensing,
 } from '../../actionCreators';
 
 // Send a generated nonce to the login iframe
@@ -92,7 +92,6 @@ function MHLM() {
             // Only process events that are related to the iframe setup
             if (event.origin === mhlmLoginHostname) {
                 const data = JSON.parse(event.data);
-
                 if (data.event === 'nonce') {
                     initLogin(
                         data.clientTransactionId,
@@ -149,4 +148,3 @@ function MHLM() {
 }
 
 export default MHLM;
-

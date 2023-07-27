@@ -1,15 +1,21 @@
-# Copyright (c) 2020-2022 The MathWorks, Inc.
+# Copyright (c) 2020-2023 The MathWorks, Inc.
 
 import asyncio
 import json
 import time
+import datetime
 
 import aiohttp
 import pytest
-from aiohttp import web
+import random
+from http import HTTPStatus
 from matlab_proxy import app, util
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi.exceptions import MatlabInstallError
+from datetime import timedelta, timezone
+from matlab_proxy.util.mwi.exceptions import EntitlementError
+import test_constants
+import matlab_proxy
 
 
 def test_create_app():
@@ -192,7 +198,7 @@ async def test_get_status_route(test_server):
     """
 
     resp = await test_server.get("/get_status")
-    assert resp.status == 200
+    assert resp.status == HTTPStatus.OK
 
 
 async def test_get_env_config(test_server):
@@ -203,7 +209,7 @@ async def test_get_env_config(test_server):
     """
 
     resp = await test_server.get("/get_env_config")
-    assert resp.status == 200
+    assert resp.status == HTTPStatus.OK
 
     text = await resp.text()
     assert text is not None
@@ -219,11 +225,10 @@ async def test_start_matlab_route(test_server):
         test_server (aiohttp_client): A aiohttp_client server to send GET request to.
     """
     # Waiting for the matlab process to start up.
-    max_tries = 5
     count = 0
     while True:
         resp = await test_server.get("/get_status")
-        assert resp.status == 200
+        assert resp.status == HTTPStatus.OK
 
         resp_json = json.loads(await resp.text())
 
@@ -232,25 +237,28 @@ async def test_start_matlab_route(test_server):
         else:
             count += 1
             await asyncio.sleep(1)
-            if count > max_tries:
+            if count > test_constants.FIVE_MAX_TRIES:
                 raise ConnectionError
 
     # Send get request to end point
     await test_server.put("/start_matlab")
-    resp = await test_server.get("/get_status")
-    assert resp.status == 200
-    resp_json = json.loads(await resp.text())
-    count = 0
+
     # Check if Matlab restarted successfully
+    await check_for_matlab_startup(test_server)
+
+
+async def check_for_matlab_startup(test_server):
+    count = 0
     while True:
         resp = await test_server.get("/get_status")
-        assert resp.status == 200
+        assert resp.status == HTTPStatus.OK
+        resp_json = json.loads(await resp.text())
         if resp_json["matlab"]["status"] != "down":
             break
         else:
             count += 1
             await asyncio.sleep(0.5)
-            if count > max_tries:
+            if count > test_constants.FIVE_MAX_TRIES:
                 raise ConnectionError
 
 
@@ -262,7 +270,7 @@ async def test_stop_matlab_route(test_server):
         test_server (aiohttp_client): A aiohttp_client server to send HTTP DELETE request.
     """
     resp = await test_server.delete("/stop_matlab")
-    assert resp.status == 200
+    assert resp.status == HTTPStatus.OK
 
     resp_json = json.loads(await resp.text())
     assert resp_json["matlab"]["status"] == "down"
@@ -496,7 +504,7 @@ async def test_set_licensing_info_put_nlm(test_server):
         "connectionString": "abc@nlm",
     }
     resp = await test_server.put("/set_licensing_info", data=json.dumps(data))
-    assert resp.status == 200
+    assert resp.status == HTTPStatus.OK
 
 
 async def test_set_licensing_info_put_invalid_license(test_server):
@@ -514,7 +522,7 @@ async def test_set_licensing_info_put_invalid_license(test_server):
         "connectionString": "abc@nlm",
     }
     resp = await test_server.put("/set_licensing_info", data=json.dumps(data))
-    assert resp.status == 400
+    assert resp.status == HTTPStatus.BAD_REQUEST
 
 
 async def test_set_licensing_info_put_mhlm(test_server):
@@ -524,7 +532,8 @@ async def test_set_licensing_info_put_mhlm(test_server):
     Args:
         test_server (aiohttp_client): A aiohttp_client server to send HTTP GET request.
     """
-
+    # FIXME: This test is talking to production loginws endpoint and is resulting in an exception.
+    # TODO: Use mocks to test the mhlm workflows is working as expected
     data = {
         "type": "mhlm",
         "status": "starting",
@@ -534,7 +543,7 @@ async def test_set_licensing_info_put_mhlm(test_server):
         "sourceId": "abc@nlm",
     }
     resp = await test_server.put("/set_licensing_info", data=json.dumps(data))
-    assert resp.status == 200
+    assert resp.status == HTTPStatus.OK
 
 
 async def test_set_licensing_info_put_existing_license(test_server):
@@ -547,7 +556,7 @@ async def test_set_licensing_info_put_existing_license(test_server):
 
     data = {"type": "existing_license"}
     resp = await test_server.put("/set_licensing_info", data=json.dumps(data))
-    assert resp.status == 200
+    assert resp.status == HTTPStatus.OK
 
 
 async def test_set_licensing_info_delete(test_server):
@@ -561,7 +570,7 @@ async def test_set_licensing_info_delete(test_server):
 
     resp = await test_server.delete("/set_licensing_info")
     resp_json = json.loads(await resp.text())
-    assert resp.status == 200 and resp_json["licensing"] is None
+    assert resp.status == HTTPStatus.OK and resp_json["licensing"] is None
 
 
 async def test_set_termination_integration_delete(test_server):
@@ -575,7 +584,7 @@ async def test_set_termination_integration_delete(test_server):
     try:
         resp = await test_server.delete("/terminate_integration")
         resp_json = json.loads(await resp.text())
-        assert resp.status == 200 and resp_json["loadUrl"] == "../"
+        assert resp.status == HTTPStatus.OK and resp_json["loadUrl"] == "../"
     except ProcessLookupError:
         pass
 
@@ -616,3 +625,266 @@ def non_default_host_interface_fixture(monkeypatch):
 def test_get_access_url_non_dev(non_default_host_interface, non_test_env, test_server):
     """Test to check access url to not be 127.0.0.1 in non-dev mode"""
     assert "127.0.0.1" not in util.get_access_url(test_server.app)
+
+
+@pytest.fixture(name="set_licensing_info_mock_fetch_single_entitlement")
+def set_licensing_info_mock_fetch_single_entitlement_fixture():
+    """Fixture that returns a single entitlement
+
+    Returns:
+        json array: An array consisting of single entitlement information
+    """
+    return [
+        {"id": "Entitlement3", "label": "Label3", "license_number": "License3"},
+    ]
+
+
+@pytest.fixture(name="set_licensing_info_mock_fetch_multiple_entitlements")
+def set_licensing_info_mock_fetch_multiple_entitlements_fixture():
+    """Fixture that returns multiple entitlements
+
+    Returns:
+        json array: An array consisting of multiple entitlements
+    """
+    return [
+        {"id": "Entitlement1", "label": "Label1", "license_number": "License1"},
+        {"id": "Entitlement2", "label": "Label2", "license_number": "License2"},
+    ]
+
+
+@pytest.fixture(name="set_licensing_info_mock_access_token")
+def set_licensing_info_mock_access_token_fixture():
+    """Pytest fixture that returns a mock token that mimics mw.fetch_access_token() response"""
+    access_token_string = int("".join([str(random.randint(0, 10)) for _ in range(272)]))
+    return {
+        "token": str(access_token_string),
+    }
+
+
+@pytest.fixture(name="set_licensing_info_mock_expand_token")
+def set_licensing_info_mock_expand_token_fixture():
+    """Pytest fixture which returns a dict
+
+    The return value represents a valid json response when mw.fetch_expand_token function is called.
+
+    Returns:
+        json data with mimics mw.fetch_expand_token() response
+    """
+    now = datetime.datetime.now(timezone.utc)
+    first_name = "abc"
+
+    json_data = {
+        "expiry": str((now + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S.%f%z")),
+        "first_name": first_name,
+        "last_name": "def",
+        "display_name": first_name,
+        "email_addr": "test@test.com",
+        "user_id": "".join([str(random.randint(0, 10)) for _ in range(13)]),
+        "profile_id": "".join([str(random.randint(0, 10)) for _ in range(8)]),
+    }
+
+    return json_data
+
+
+@pytest.fixture(name="set_licensing_info")
+async def set_licensing_info_fixture(
+    mocker,
+    test_server,
+    set_licensing_info_mock_expand_token,
+    set_licensing_info_mock_access_token,
+    set_licensing_info_mock_fetch_multiple_entitlements,
+):
+    """Fixture to setup correct licensing state on the server"""
+    mocker.patch(
+        "matlab_proxy.app_state.mw.fetch_expand_token",
+        return_value=set_licensing_info_mock_expand_token,
+    )
+
+    mocker.patch(
+        "matlab_proxy.app_state.mw.fetch_access_token",
+        return_value=set_licensing_info_mock_access_token,
+    )
+
+    mocker.patch(
+        "matlab_proxy.app_state.mw.fetch_entitlements",
+        return_value=set_licensing_info_mock_fetch_multiple_entitlements,
+    )
+
+    data = {
+        "type": "mhlm",
+        "status": "starting",
+        "version": "R2020b",
+        "token": "abc@nlm",
+        "emailAddress": "abc@nlm",
+        "sourceId": "abc@nlm",
+    }
+    # Pre-req: stop the matlab that got started during test server startup
+    resp = await test_server.delete("/stop_matlab")
+    assert resp.status == HTTPStatus.OK
+
+    resp = await test_server.put("/set_licensing_info", data=json.dumps(data))
+    assert resp.status == HTTPStatus.OK
+
+    return test_server
+
+
+async def test_set_licensing_mhlm_zero_entitlement(
+    mocker,
+    set_licensing_info_mock_expand_token,
+    set_licensing_info_mock_access_token,
+    test_server,
+):
+    # Patching the functions where it is used (and not where it is defined)
+    mocker.patch(
+        "matlab_proxy.app_state.mw.fetch_expand_token",
+        return_value=set_licensing_info_mock_expand_token,
+    )
+
+    mocker.patch(
+        "matlab_proxy.app_state.mw.fetch_access_token",
+        return_value=set_licensing_info_mock_access_token,
+    )
+
+    mocker.patch(
+        "matlab_proxy.app_state.mw.fetch_entitlements",
+        side_effect=EntitlementError(
+            "Your MathWorks account is not linked to a valid license for MATLAB"
+        ),
+    )
+
+    data = {
+        "type": "mhlm",
+        "status": "starting",
+        "version": "R2020b",
+        "token": "abc@nlm",
+        "emailaddress": "abc@nlm",
+        "sourceId": "abc@nlm",
+    }
+    # Pre-req: stop the matlab that got started as during test server startup
+    resp = await test_server.delete("/stop_matlab")
+    assert resp.status == HTTPStatus.OK
+
+    resp = await test_server.put("/set_licensing_info", data=json.dumps(data))
+    assert resp.status == HTTPStatus.OK
+    resp_json = await resp.json()
+    expectedError = EntitlementError(message="entitlement error")
+    assert resp_json["error"]["type"] == type(expectedError).__name__
+
+
+async def test_set_licensing_mhlm_single_entitlement(
+    mocker,
+    test_server,
+    set_licensing_info_mock_expand_token,
+    set_licensing_info_mock_access_token,
+    set_licensing_info_mock_fetch_single_entitlement,
+):
+    mocker.patch(
+        "matlab_proxy.app_state.mw.fetch_expand_token",
+        return_value=set_licensing_info_mock_expand_token,
+    )
+
+    mocker.patch(
+        "matlab_proxy.app_state.mw.fetch_access_token",
+        return_value=set_licensing_info_mock_access_token,
+    )
+
+    mocker.patch(
+        "matlab_proxy.app_state.mw.fetch_entitlements",
+        return_value=set_licensing_info_mock_fetch_single_entitlement,
+    )
+
+    data = {
+        "type": "mhlm",
+        "status": "starting",
+        "version": "R2020b",
+        "token": "abc@nlm",
+        "emailAddress": "abc@nlm",
+        "sourceId": "abc@nlm",
+    }
+    # Pre-req: stop the matlab that got started during test server startup
+    resp = await test_server.delete("/stop_matlab")
+    assert resp.status == HTTPStatus.OK
+
+    resp = await test_server.put("/set_licensing_info", data=json.dumps(data))
+    assert resp.status == HTTPStatus.OK
+    resp_json = await resp.json()
+    assert len(resp_json["licensing"]["entitlements"]) == 1
+    assert resp_json["licensing"]["entitlementId"] == "Entitlement3"
+
+    # validate that MATLAB has started correctly
+    await check_for_matlab_startup(test_server)
+
+    # test-cleanup: unset licensing
+    # without this, we can leave test drool related to cached license file
+    # which can impact other non-dev workflows
+    resp = await test_server.delete("/set_licensing_info")
+    assert resp.status == HTTPStatus.OK
+
+
+async def test_set_licensing_mhlm_multi_entitlements(
+    mocker,
+    test_server,
+    set_licensing_info_mock_expand_token,
+    set_licensing_info_mock_access_token,
+    set_licensing_info_mock_fetch_multiple_entitlements,
+):
+    mocker.patch(
+        "matlab_proxy.app_state.mw.fetch_expand_token",
+        return_value=set_licensing_info_mock_expand_token,
+    )
+
+    mocker.patch(
+        "matlab_proxy.app_state.mw.fetch_access_token",
+        return_value=set_licensing_info_mock_access_token,
+    )
+
+    mocker.patch(
+        "matlab_proxy.app_state.mw.fetch_entitlements",
+        return_value=set_licensing_info_mock_fetch_multiple_entitlements,
+    )
+
+    data = {
+        "type": "mhlm",
+        "status": "starting",
+        "version": "R2020b",
+        "token": "abc@nlm",
+        "emailaddress": "abc@nlm",
+        "sourceId": "abc@nlm",
+    }
+    # Pre-req: stop the matlab that got started as during test server startup
+    resp = await test_server.delete("/stop_matlab")
+    assert resp.status == HTTPStatus.OK
+
+    resp = await test_server.put("/set_licensing_info", data=json.dumps(data))
+    assert resp.status == HTTPStatus.OK
+    resp_json = await resp.json()
+    assert len(resp_json["licensing"]["entitlements"]) == 2
+    assert resp_json["licensing"]["entitlementId"] == None
+
+    # MATLAB should not start if there are multiple entitlements and
+    # user hasn't selected the license yet
+    resp = await test_server.get("/get_status")
+    assert resp.status == HTTPStatus.OK
+    resp_json = json.loads(await resp.text())
+    assert resp_json["matlab"]["status"] == "down"
+
+    # test-cleanup: unset licensing
+    resp = await test_server.delete("/set_licensing_info")
+    assert resp.status == HTTPStatus.OK
+
+
+async def test_update_entitlement_with_correct_entitlement(set_licensing_info):
+    data = {
+        "type": "mhlm",
+        "entitlement_id": "Entitlement1",
+    }
+    # This test_server is pre-configured with multiple entitlements on app state but no entitlmentId
+    test_server = set_licensing_info
+    resp = await test_server.put("/update_entitlement", data=json.dumps(data))
+    assert resp.status == HTTPStatus.OK
+    resp_json = await resp.json()
+    assert resp_json["matlab"]["status"] != "down"
+
+    # test-cleanup: unset licensing
+    resp = await test_server.delete("/set_licensing_info")
+    assert resp.status == HTTPStatus.OK

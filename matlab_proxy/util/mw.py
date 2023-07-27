@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022 The MathWorks, Inc.
+# Copyright (c) 2020-2023 The MathWorks, Inc.
 
 import asyncio
 import os
@@ -85,7 +85,7 @@ async def fetch_entitlements(mhlm_api_endpoint, access_token, matlab_release):
 
 
 async def fetch_expand_token(mwa_api_endpoint, identity_token, source_id):
-    """Asynchronously fetch tokens from MWA API after MHLM licensing is successful.
+    """Asynchronously fetch tokens from MWA API endpoint.
 
     Args:
         mwa_api_endpoint (String): URL of the MWA API endpoint.

@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright (c) 2020-2023 The MathWorks, Inc.
 
 import {
     SET_TRIGGER_POSITION,
@@ -7,11 +7,13 @@ import {
     REQUEST_SERVER_STATUS,
     RECEIVE_SERVER_STATUS,
     REQUEST_SET_LICENSING,
+    REQUEST_UPDATE_LICENSING,
     REQUEST_TERMINATE_INTEGRATION,
     REQUEST_STOP_MATLAB,
     REQUEST_START_MATLAB,
     REQUEST_ENV_CONFIG,
     RECEIVE_SET_LICENSING,
+    RECEIVE_UPDATE_LICENSING,
     RECEIVE_TERMINATE_INTEGRATION,
     RECEIVE_STOP_MATLAB,
     RECEIVE_START_MATLAB,
@@ -99,6 +101,20 @@ export function receiveSetLicensing(status) {
         status
     };
 }
+
+export function requestUpdateLicensing() {
+    return {
+        type: REQUEST_UPDATE_LICENSING,
+    };
+}
+
+export function receiveUpdateLicensing(status) {
+    return {
+        type: RECEIVE_UPDATE_LICENSING,
+        status
+    };
+}
+
 
 export function requestTerminateIntegration() {
     return {
@@ -236,6 +252,27 @@ export function fetchSetLicensing(info) {
         const data = await response.json();
         dispatch(receiveSetLicensing(data));
 
+    }
+}
+
+export function fetchUpdateLicensing(info) {
+    return async function (dispatch, getState) {
+
+        const options = {
+            method: 'PUT',
+            mode: 'same-origin',
+            cache: 'no-cache',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(info),
+        }
+
+        dispatch(requestUpdateLicensing());
+        const response = await fetchWithTimeout(dispatch, './update_entitlement', options, 1500);
+        const data = await response.json();
+        dispatch(receiveUpdateLicensing(data));
     }
 }
 

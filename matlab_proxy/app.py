@@ -256,12 +256,39 @@ async def set_licensing_info(req):
     except Exception as e:
         raise web.HTTPBadRequest(text="Error with licensing!")
 
-    # Start MATLAB if licensing is complete
-    if state.is_licensed() is True and not isinstance(state.error, LicensingError):
-        # Start MATLAB
-        await state.start_matlab(restart_matlab=True)
+    # This is true for a user who has only one license associated with their account
+    await __start_matlab_if_licensed(state)
 
     return await create_status_response(req.app)
+
+
+async def update_entitlement(req):
+    """API endpoint to update selected entitlement to start MATLAB with.
+
+    Args:
+        req (HTTPRequest): HTTPRequest Object
+
+    Returns:
+        JSONResponse: JSONResponse object containing updated information on the state of MATLAB among other information.
+    """
+    state = req.app["state"]
+    data = await req.json()
+    lic_type = data.get("type")
+
+    # Set the entitlement id only if we are not already licensed
+    if lic_type == "mhlm" and not state.is_licensed():
+        entitlement_id = data.get("entitlement_id")
+        logger.debug(f"Received type: {lic_type}, entitlement_id: {entitlement_id}")
+        await state.update_user_selected_entitlement_info(entitlement_id)
+        await __start_matlab_if_licensed(state)
+
+    return await create_status_response(req.app)
+
+
+async def __start_matlab_if_licensed(state):
+    # Start MATLAB if licensing is complete
+    if state.is_licensed() and not isinstance(state.error, LicensingError):
+        await state.start_matlab(restart_matlab=True)
 
 
 async def licensing_info_delete(req):
@@ -679,6 +706,7 @@ def create_app(config_name=matlab_proxy.get_default_config_name()):
     app.router.add_route("PUT", f"{base_url}/start_matlab", start_matlab)
     app.router.add_route("DELETE", f"{base_url}/stop_matlab", stop_matlab)
     app.router.add_route("PUT", f"{base_url}/set_licensing_info", set_licensing_info)
+    app.router.add_route("PUT", f"{base_url}/update_entitlement", update_entitlement)
     app.router.add_route(
         "DELETE", f"{base_url}/set_licensing_info", licensing_info_delete
     )
