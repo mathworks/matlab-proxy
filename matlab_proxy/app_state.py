@@ -15,10 +15,9 @@ from matlab_proxy.util.mwi import token_auth
 from matlab_proxy.util.mwi.exceptions import (
     EmbeddedConnectorError,
     EntitlementError,
-    InternalError,
+    FatalError,
     LicensingError,
     MatlabError,
-    MatlabInstallError,
     OnlineLicensingError,
     XvfbError,
     log_error,
@@ -70,11 +69,12 @@ class AppState:
         self.logs = {
             "matlab": deque(maxlen=200),
         }
-        self.error = None
-        # Start in an error state if MATLAB is not present
-        if not self.is_matlab_present():
-            self.error = MatlabInstallError("'matlab' executable not found in PATH")
-            logger.error("'matlab' executable not found in PATH")
+
+        # Initialize with the error state from the initialization of settings
+        self.error = settings["error"]
+
+        if self.error is not None:
+            self.logs["matlab"].clear()
             return
 
         # Keep track of when the Embedded connector starts.
@@ -153,8 +153,8 @@ class AppState:
             self.__delete_cached_licensing_file()
 
         # NLM Connection String set in environment
-        elif self.settings["nlm_conn_str"] is not None:
-            nlm_licensing_str = self.settings["nlm_conn_str"]
+        elif self.settings.get("nlm_conn_str", None) is not None:
+            nlm_licensing_str = self.settings.get("nlm_conn_str")
             logger.debug(f"Found NLM:[{nlm_licensing_str}] set in environment")
             logger.debug(f"Using NLM string to connect ... ")
             self.licensing = {
@@ -395,26 +395,17 @@ class AppState:
                 return True
         return False
 
-    def is_matlab_present(self):
-        """Is MATLAB install accessible?
-
-        Returns:
-            Boolean: True if MATLAB is present in the system. False otherwise.
-        """
-
-        return self.settings["matlab_path"] is not None
-
     async def update_entitlements(self):
         """Speaks to MW and updates MHLM entitlements
 
         Raises:
-            InternalError: When licensing is None or when licensing type is not MHLM.
+            FatalError: When licensing is None or when licensing type is not MHLM.
 
         Returns:
             Boolean: True if update was successful
         """
         if self.licensing is None or self.licensing["type"] != "mhlm":
-            raise InternalError(
+            raise FatalError(
                 "MHLM licensing must be configured to update entitlements!"
             )
 
@@ -722,25 +713,7 @@ class AppState:
 
         Args:
             restart_matlab (bool, optional): Whether to restart MATLAB. Defaults to False.
-
-        Raises:
-            Exception: When MATLAB is already running and restart is False.
-            Exception: When MATLAB is not licensed.
         """
-
-        # FIXME
-        if await self.get_matlab_state() != "down" and restart_matlab is False:
-            raise Exception("MATLAB already running/starting!")
-
-        # FIXME
-        if not self.is_licensed():
-            raise Exception("MATLAB is not licensed!")
-
-        if not self.is_matlab_present():
-            self.error = MatlabInstallError("'matlab' executable not found in PATH")
-            logger.error("'matlab' executable not found in PATH")
-            self.logs["matlab"].clear()
-            return
 
         # Ensure that previous processes are stopped
         await self.stop_matlab()

@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022 The MathWorks, Inc.
+# Copyright (c) 2020-2023 The MathWorks, Inc.
 
 
 class AppError(Exception):
@@ -17,9 +17,19 @@ class AppError(Exception):
         self.stacktrace = stacktrace
 
 
-class InternalError(AppError):
-    """A Class which inherits the AppError class.
-    This class represents any Internal Error within the App
+class FatalError(AppError):
+    """An error which indicates that matlab-proxy web server cannot be brought up.
+    Args:
+        AppError (Class): Parent Class containing attributes to store
+        messages, logs and stacktrace.
+    """
+
+    pass
+
+
+class UIVisibleFatalError(AppError):
+    """A Class with inherits from the AppError class.
+    This class is used to represent Fatal Errors which need to be propagated to the front end.
 
     Args:
         AppError (Class): Parent Class containing attributes to store
@@ -29,7 +39,7 @@ class InternalError(AppError):
     pass
 
 
-class MatlabInstallError(AppError):
+class MatlabInstallError(UIVisibleFatalError):
     """A Class which inherits the AppError class.
 
     This class represents errors with MATLAB Installation.

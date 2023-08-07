@@ -19,7 +19,11 @@ from matlab_proxy.default_configuration import config
 from matlab_proxy.util import list_servers, mwi
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import token_auth
-from matlab_proxy.util.mwi.exceptions import AppError, InvalidTokenError, LicensingError
+from matlab_proxy.util.mwi.exceptions import (
+    AppError,
+    InvalidTokenError,
+    LicensingError,
+)
 
 mimetypes.add_type("font/woff", ".woff")
 mimetypes.add_type("font/woff2", ".woff2")
@@ -109,12 +113,12 @@ async def create_status_response(app, loadUrl=None):
         {
             "matlab": {
                 "status": await state.get_matlab_state(),
-                "version": state.settings["matlab_version"],
+                "version": state.settings.get("matlab_version", "Unknown"),
             },
             "licensing": marshal_licensing_info(state.licensing),
             "loadUrl": loadUrl,
             "error": marshal_error(state.error),
-            "wsEnv": state.settings["ws_env"],
+            "wsEnv": state.settings.get("ws_env", ""),
         }
     )
 
@@ -160,7 +164,6 @@ async def authenticate_request(req):
     Returns:
         JSONResponse: JSONResponse object containing information about authentication status and error if any.
     """
-    state = req.app["state"]
     if await token_auth.authenticate_request(req):
         logger.debug("!!!!!! REQUEST IS AUTHORIZED !!!!")
         authStatus = True

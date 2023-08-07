@@ -9,6 +9,7 @@ from matlab_proxy.constants import VERSION_INFO_FILE_NAME
 from pathlib import Path
 import pytest
 from matlab_proxy.util.mwi import environment_variables as mwi_env
+from matlab_proxy.util.mwi.exceptions import MatlabInstallError
 
 """This file tests methods defined in settings.py file
 """
@@ -101,7 +102,8 @@ def test_get_matlab_root_path_none(mock_shutil_which_none):
     Args:
         mock_shutil_which_none : Pytest fixture to mock shutil.which() method to return None.
     """
-    assert settings.get_matlab_root_path() is None
+    with pytest.raises(MatlabInstallError) as e:
+        _ = settings.get_matlab_executable_and_root_path()
 
 
 @pytest.fixture(name="mock_shutil_which")
@@ -134,7 +136,7 @@ def test_get_matlab_root_path(fake_matlab_root_path, mock_shutil_which):
         fake_matlab_executable_path : Pytest fixture which returns a path to fake matlab executable
         mock_shutil_which : Pytest fixture to mock shutil.which() method to return a fake matlab path
     """
-    assert settings.get_matlab_root_path() == fake_matlab_root_path
+    assert settings.get_matlab_executable_and_root_path()[1] == fake_matlab_root_path
 
 
 def test_get_matlab_root_path_invalid_custom_matlab_root(
@@ -146,18 +148,8 @@ def test_get_matlab_root_path_invalid_custom_matlab_root(
     )
 
     # Test for appropriate error
-    with pytest.raises(SystemExit) as e:
-        _ = settings.get_matlab_root_path()
-
-    assert e.value.code == 1
-
-
-def test_get_matlab_executable_path_none():
-    assert settings.get_matlab_executable_path(None) == None
-
-
-def test_get_matlab_executable_path(fake_matlab_root_path):
-    assert settings.get_matlab_executable_path(fake_matlab_root_path) is not None
+    with pytest.raises(MatlabInstallError) as e:
+        _ = settings.get_matlab_executable_and_root_path()
 
 
 def test_get_matlab_version_none():
@@ -175,8 +167,11 @@ def test_get_matlab_version(fake_matlab_root_path, mock_shutil_which):
     Args:
         mock_shutil_which : Pytest fixture to mock shutil.which() method.
     """
-    matlab_path = settings.get_matlab_root_path()
-    settings.get_matlab_version(matlab_path) is not None
+    (
+        matlab_executable_path,
+        matlab_root_path,
+    ) = settings.get_matlab_executable_and_root_path()
+    settings.get_matlab_version(matlab_root_path) is not None
 
 
 def test_get_matlab_version_invalid_custom_matlab_root(monkeypatch, non_existent_path):

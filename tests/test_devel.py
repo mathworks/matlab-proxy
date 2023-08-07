@@ -64,7 +64,7 @@ def valid_nlm_fixture(monkeypatch):
         monkeypatch : A built-in pytest fixture
     """
 
-    monkeypatch.setenv(mwi_env.get_env_name_network_license_manager(), "abc@nlm")
+    monkeypatch.setenv(mwi_env.get_env_name_network_license_manager(), "123@nlm")
 
 
 @pytest.fixture(name="invalid_nlm")

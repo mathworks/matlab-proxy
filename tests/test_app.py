@@ -501,7 +501,7 @@ async def test_set_licensing_info_put_nlm(test_server):
         "type": "nlm",
         "status": "starting",
         "version": "R2020b",
-        "connectionString": "abc@nlm",
+        "connectionString": "123@nlm",
     }
     resp = await test_server.put("/set_licensing_info", data=json.dumps(data))
     assert resp.status == HTTPStatus.OK
@@ -519,7 +519,7 @@ async def test_set_licensing_info_put_invalid_license(test_server):
         "type": "INVALID_TYPE",
         "status": "starting",
         "version": "R2020b",
-        "connectionString": "abc@nlm",
+        "connectionString": "123@nlm",
     }
     resp = await test_server.put("/set_licensing_info", data=json.dumps(data))
     assert resp.status == HTTPStatus.BAD_REQUEST
@@ -538,9 +538,9 @@ async def test_set_licensing_info_put_mhlm(test_server):
         "type": "mhlm",
         "status": "starting",
         "version": "R2020b",
-        "token": "abc@nlm",
-        "emailaddress": "abc@nlm",
-        "sourceId": "abc@nlm",
+        "token": "123@nlm",
+        "emailaddress": "123@nlm",
+        "sourceId": "123@nlm",
     }
     resp = await test_server.put("/set_licensing_info", data=json.dumps(data))
     assert resp.status == HTTPStatus.OK

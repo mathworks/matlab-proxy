@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022 The MathWorks, Inc.
+# Copyright (c) 2020-2023 The MathWorks, Inc.
 
 import datetime
 import random
@@ -484,7 +484,7 @@ def test_parse_nlm_error():
         "Diagnostic Information",
     ]
 
-    conn_str = "abc@nlm"
+    conn_str = "123@nlm"
 
     actual_output = mw.parse_nlm_error(logs, conn_str)
     expected_output = exceptions.NetworkLicensingError

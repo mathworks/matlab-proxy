@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright (c) 2020-2023 The MathWorks, Inc.
 
 import React from 'react';
 import Error from './index';
@@ -22,7 +22,7 @@ describe('Error Component', () => {
   it('should render without crashing ', () => {
     const { container } = render(<Error message={message} />);
 
-    const paragraphs = [...container.getElementsByTagName('p')];
+    const paragraphs = [...container.getElementsByTagName('pre')];
 
     expect(paragraphs.some((p) => p.textContent === message)).toBeTruthy();
   });

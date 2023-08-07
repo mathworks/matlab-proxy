@@ -151,7 +151,7 @@ describe('App Component', () => {
     });
 
 
-    const paragraphElements = [...container.getElementsByTagName('p')];
+    const paragraphElements = [...container.getElementsByTagName('pre')];
 
 
     expect(
@@ -173,7 +173,7 @@ describe('App Component', () => {
       initialState: initialState,
     });
 
-    const paragraphElements = [...container.getElementsByTagName('p')];
+    const paragraphElements = [...container.getElementsByTagName('pre')];
 
     expect(
       paragraphElements.some((p) =>

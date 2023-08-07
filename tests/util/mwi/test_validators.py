@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022 The MathWorks, Inc.
+# Copyright (c) 2020-2023 The MathWorks, Inc.
 """Tests for functions in matlab_proxy/util/mwi_validators.py
 """
 
@@ -12,7 +12,7 @@ import pytest
 from matlab_proxy.util import system
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import validators
-from matlab_proxy.util.mwi.exceptions import NetworkLicensingError
+from matlab_proxy.util.mwi.exceptions import NetworkLicensingError, FatalError
 
 
 @pytest.mark.parametrize(
@@ -144,9 +144,8 @@ def test_validate_app_port_is_free_false():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("", 0))
     port = s.getsockname()[1]
-    with pytest.raises(SystemExit) as e:
+    with pytest.raises(FatalError) as e:
         validators.validate_app_port_is_free(port)
-    assert e.value.code == 1
     s.close()
 
 
@@ -173,12 +172,10 @@ def test_validate_env_config_true():
 
 
 def test_validate_env_config_false():
-    """Passing a non existent config should raise SystemExit exception"""
+    """Passing a non existent config should raise FatalError exception"""
 
-    with pytest.raises(SystemExit) as e:
+    with pytest.raises(FatalError) as e:
         config = validators.validate_env_config(str(random.randint(10, 100)))
-
-    assert e.value.code == 1
 
 
 def test_get_configs():
@@ -215,9 +212,8 @@ def test_validate_base_url(base_url, validated_base_url):
 
 def test_validate_base_url_no_prefix_error():
     """Test to check base_url will throw error when a prefix / is not present in it.[summary]"""
-    with pytest.raises(SystemExit) as e:
+    with pytest.raises(FatalError) as e:
         validators.validate_base_url("matlab/")
-    assert e.value.code == 1
 
 
 def test_validate_mwi_ssl_key_and_cert_file(monkeypatch):
@@ -244,25 +240,22 @@ def test_validate_mwi_ssl_key_and_cert_file(monkeypatch):
         assert cert_file == str(path)
 
         # Verify that if KEY is provided, CERT must also be provided
-        with pytest.raises(SystemExit) as e:
+        with pytest.raises(FatalError) as e:
             validators.validate_ssl_key_and_cert_file(
                 os.getenv(ssl_key_file_env_name), None
             )
-        assert e.value.code == 1
 
         # Verify that KEY is valid file location
-        with pytest.raises(SystemExit) as e:
+        with pytest.raises(FatalError) as e:
             validators.validate_ssl_key_and_cert_file(
                 "/file/does/not/exist", os.getenv(ssl_cert_file_env_name)
             )
-        assert e.value.code == 1
 
         # Verify that KEY is valid file location
-        with pytest.raises(SystemExit) as e:
+        with pytest.raises(FatalError) as e:
             validators.validate_ssl_key_and_cert_file(
                 os.getenv(ssl_key_file_env_name), "/file/does/not/exist"
             )
-        assert e.value.code == 1
     finally:
         # Need to close the file descriptor in Windows
         # Or else PermissionError is raised.

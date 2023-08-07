@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright (c) 2020-2023 The MathWorks, Inc.
 
 import React from 'react';
 import PropTypes from 'prop-types';
@@ -28,7 +28,7 @@ function Error({ message, logs, children }) {
                         <h4 className="modal-title alert_heading">Error</h4>
                     </div>
                     <div className="modal-body">
-                        <p>{message}</p>
+                        <pre>{message}</pre>
                         <Linkify>{logReport}</Linkify>
                         {children}
                     </div>
