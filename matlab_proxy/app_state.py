@@ -34,6 +34,8 @@ class AppState:
 
     # Constants that are applicable to AppState class
     MATLAB_PORT_CHECK_DELAY_IN_SECONDS = 1
+    # The maximum amount of time in seconds the Embedded Connector can take
+    # for launching, before the matlab-proxy server concludes that something is wrong.
     EMBEDDED_CONNECTOR_MAX_STARTUP_DURATION_IN_SECONDS = 120
 
     def __init__(self, settings):
@@ -82,14 +84,10 @@ class AppState:
         self.embedded_connector_start_time = None
 
         # Keep track of the state of the Embedded Connector.
-        # If there is some problem with lauching the Embedded Connector(say an issue with licensing),
+        # If there is some problem with launching the Embedded Connector(say an issue with licensing),
         # the state of MATLAB process in app_state will continue to be in a 'starting' indefinitely.
         # This variable can be either "up" or "down"
         self.embedded_connector_state = "down"
-
-        # The maximum amount of time in seconds the Embedded Connector can take
-        # for lauching, before the matlab-proxy server concludes that something is wrong.
-        self.embedded_connector_max_startup_duration = 120
 
     def __get_cached_licensing_file(self):
         """Get the cached licensing file
@@ -773,7 +771,7 @@ class AppState:
             """track_embedded_connector_state is an asyncio task to track the status of MATLAB Embedded Connector.
             This task will start and stop with the MATLAB process.
             """
-            this_task = "track_embedded_connector_state() task"
+            this_task = "track_embedded_connector_state:"
             logger.debug(f"{this_task}: Starting task...")
 
             while True:
@@ -794,57 +792,50 @@ class AppState:
                         continue
 
                     else:
-                        # Compute the time difference
                         time_diff = time.time() - self.embedded_connector_start_time
-                        if time_diff > self.embedded_connector_max_startup_duration:
-                            # MATLAB has been up but the Embedded Connector is not responding for more than embedded_connector_max_startup_duration seconds.
-                            # Create/raise a generic error
-                            logger.error(
-                                f":{this_task}: MATLAB has been in a 'starting' state for more than {self.embedded_connector_max_startup_duration} seconds!"
-                            )
+                        if (
+                            time_diff
+                            > self.EMBEDDED_CONNECTOR_MAX_STARTUP_DURATION_IN_SECONDS
+                        ):
+                            # Since max allowed startup time has elapsed, it means that MATLAB is in a stuck state and cannot be launched.
+                            # Set the error and stop matlab.
+                            user_visible_error = "Unable to start MATLAB.\nTry again by clicking Start MATLAB."
 
-                            licensing_error = "Unable to use Existing License to launch MATLAB. Please check if you can successfully launch MATLAB outside of matlab-proxy"
-
-                            async def __force_stop_matlab():
+                            async def __force_stop_matlab(error):
                                 """A private method to update self.error and force stop matlab"""
-                                self.error = LicensingError(licensing_error)
-                                logger.error(f"{this_task}: {licensing_error}")
+                                self.error = MatlabError(error)
+                                logger.error(f"{this_task}: {error}")
 
                                 # If force_quit is not set to True, stop_matlab() would try to
                                 # send a HTTP request to the Embedded Connector (which is already "down")
                                 await self.stop_matlab(force_quit=True)
 
-                            # In WINDOWS systems, errors are raised as UI windows and cannot be captured programmatically.
-                            # So, raise a generic error wherever appropriate
                             if system.is_windows():
-                                generic_error = f"MATLAB has been in a starting state for more than {int(self.embedded_connector_max_startup_duration)} seconds. Use Windows Remote Desktop to check for any errors"
-
-                                # If licensing type is existing_license and there are no logs, then it means that MATLAB cannot be launched with an existing license
-                                # Set the error and stop matlab.
-                                if (
-                                    self.licensing["type"] == "existing_license"
-                                    and len(self.logs["matlab"]) == 0
-                                ):
-                                    await __force_stop_matlab()
-                                    # Breaking out of the loop will end this task as matlab-proxy was unable to launch MATLAB successfully even after embedded_connector_max_startup_duration
+                                # In WINDOWS systems, errors are raised as UI windows and cannot be captured programmatically.
+                                # So, raise a generic error wherever appropriate
+                                generic_error = f"MATLAB did not start in {int(self.EMBEDDED_CONNECTOR_MAX_STARTUP_DURATION_IN_SECONDS)} seconds. Use Windows Remote Desktop to check for any errors."
+                                logger.error(f":{this_task}: {generic_error}")
+                                if len(self.logs["matlab"]) == 0:
+                                    await __force_stop_matlab(user_visible_error)
+                                    # Breaking out of the loop to end this task as matlab-proxy was unable to launch MATLAB successfully
+                                    # even after waiting for EMBEDDED_CONNECTOR_MAX_STARTUP_DURATION_IN_SECONDS
                                     break
-
                                 else:
                                     # Do not stop the MATLAB process or break from the loop (the error type is unknown)
                                     self.error = MatlabError(generic_error)
-                                    logger.error(f"{this_task}: {generic_error}")
                                     await asyncio.sleep(5)
                                     continue
 
                             else:
-                                # If licensing type is existing license and then there are no error logs, then MATLAB cannot be launched with the existing license
+                                # If there are no logs after the max startup time has elapsed, it means that MATLAB is in a stuck state and cannot be launched.
                                 # Set the error and stop matlab.
-                                if (
-                                    self.licensing["type"] == "existing_license"
-                                    and len(self.logs["matlab"]) == 0
-                                ):
-                                    await __force_stop_matlab()
-                                    # Breaking out of the loop will end this task as matlab-proxy was unable to launch MATLAB successfully even after embedded_connector_max_startup_duration
+                                logger.error(
+                                    f":{this_task}: MATLAB did not start in {int(self.EMBEDDED_CONNECTOR_MAX_STARTUP_DURATION_IN_SECONDS)} seconds!"
+                                )
+                                if len(self.logs["matlab"]) == 0:
+                                    await __force_stop_matlab(user_visible_error)
+                                    # Breaking out of the loop to end this task as matlab-proxy was unable to launch MATLAB successfully
+                                    # even after waiting for EMBEDDED_CONNECTOR_MAX_STARTUP_DURATION_IN_SECONDS
                                     break
 
                         else:
