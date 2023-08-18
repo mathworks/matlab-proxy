@@ -4,9 +4,21 @@ import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { fetchUpdateLicensing } from "../../actionCreators";
 
+export const defaultLicenseUnavailableMsg = "License description unavailable";
+
+export function filterAndFormatEntitlements(entitlements) {
+  return entitlements
+    .filter(entitlement => entitlement.license_number && entitlement.license_number.trim() !== "")
+    .map(entitlement => ({
+      label: `${entitlement.license_number} - ${entitlement.label || defaultLicenseUnavailableMsg}`,
+      value: entitlement.id,
+    }));
+};
+
 function EntitlementSelector({ options }) {
   const dispatch = useDispatch();
-  const [selectedEntitlement, setSelected] = useState(options[0].value);
+  const filteredOptions = filterAndFormatEntitlements(options);
+  const [selectedEntitlement, setSelected] = useState(filteredOptions[0].value);
 
   function updateEntitlement(event) {
     event.preventDefault();
@@ -38,7 +50,7 @@ function EntitlementSelector({ options }) {
               value={selectedEntitlement}
               onChange={(e) => setSelected(e.target.value)}
             >
-              {options.map((entitlement) => (
+              {filteredOptions.map((entitlement) => (
                 <option value={entitlement.value} key={entitlement.label}>
                   {entitlement.label}
                 </option>
