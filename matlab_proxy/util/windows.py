@@ -1,4 +1,4 @@
-# Copyright 2022 The MathWorks, Inc.
+# Copyright 2022-2023 The MathWorks, Inc.
 import asyncio
 
 from matlab_proxy import util
@@ -49,6 +49,7 @@ async def start_matlab(matlab_cmd, matlab_env):
     intermediate_proc = await asyncio.create_subprocess_exec(
         *matlab_cmd,
         env=matlab_env,
+        stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
     )
 

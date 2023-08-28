@@ -294,7 +294,11 @@ def get_matlab_settings():
     )
     matlab_lic_mode = ["-licmode", "file"] if nlm_conn_str else ""
     # flag to hide MATLAB Window
-    flag_to_hide_desktop = "-noDisplayDesktop" if system.is_windows() else "-nodesktop"
+    flag_to_hide_desktop = (
+        ["-noDisplayDesktop", "-wait", "-log"]
+        if system.is_windows()
+        else ["-nodesktop"]
+    )
     matlab_startup_file = str(Path(__file__).resolve().parent / "matlab" / "startup.m")
     return {
         "matlab_path": matlab_root_path,
@@ -302,7 +306,7 @@ def get_matlab_settings():
         "matlab_cmd": [
             matlab_executable_path,
             "-nosplash",
-            flag_to_hide_desktop,
+            *flag_to_hide_desktop,
             "-softwareopengl",
             *matlab_lic_mode,
             "-r",
