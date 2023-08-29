@@ -641,7 +641,7 @@ class AppState:
         xvfb_cmd, dpipe = create_xvfb_cmd()
 
         try:
-            xvfb, display_port = await mw.create_xvfb_process(xvfb_cmd, dpipe)
+            xvfb, display_port = await mw.create_xvfb_process(xvfb_cmd, dpipe, os.environ.copy())
             self.settings["matlab_display"] = ":" + str(display_port)
 
             logger.debug(f"Started Xvfb with PID={xvfb.pid} on DISPLAY={display_port}")
