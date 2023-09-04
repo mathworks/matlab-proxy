@@ -7,23 +7,19 @@ import pkgutil
 import sys
 
 import aiohttp
-from aiohttp import web
+from aiohttp import client_exceptions, web
 from aiohttp_session import setup as aiohttp_session_setup
 from aiohttp_session.cookie_storage import EncryptedCookieStorage
 from cryptography import fernet
 
 import matlab_proxy
-from matlab_proxy import settings, util
+from matlab_proxy import constants, settings, util
 from matlab_proxy.app_state import AppState
 from matlab_proxy.default_configuration import config
 from matlab_proxy.util import list_servers, mwi
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import token_auth
-from matlab_proxy.util.mwi.exceptions import (
-    AppError,
-    InvalidTokenError,
-    LicensingError,
-)
+from matlab_proxy.util.mwi.exceptions import AppError, InvalidTokenError, LicensingError
 
 mimetypes.add_type("font/woff", ".woff")
 mimetypes.add_type("font/woff2", ".woff2")
@@ -465,46 +461,63 @@ async def matlab_view(req):
         async with aiohttp.ClientSession(
             cookies=req.cookies, connector=aiohttp.TCPConnector(verify_ssl=False)
         ) as client_session:
-            async with client_session.ws_connect(
-                matlab_base_url + req.path_qs,
-            ) as ws_client:
+            try:
+                async with client_session.ws_connect(
+                    matlab_base_url + req.path_qs,
+                ) as ws_client:
 
-                async def wsforward(ws_from, ws_to):
-                    async for msg in ws_from:
-                        mt = msg.type
-                        md = msg.data
+                    async def wsforward(ws_from, ws_to):
+                        async for msg in ws_from:
+                            mt = msg.type
+                            md = msg.data
 
-                        # When a websocket is closed by the MATLAB JSD, it sends out a few http requests to the Embedded Connector about the events
-                        # that had occured (figureWindowClosed etc.)
-                        # The Embedded Connector responds by sending a message of type 'Error' with close code as Abnormal closure.
-                        # When this happens, matlab-proxy can safely exit out of the loop
-                        # and close the websocket connection it has with the Embedded Connector (ws_client)
-                        if (
-                            mt == aiohttp.WSMsgType.ERROR
-                            and ws_from.close_code
-                            == aiohttp.WSCloseCode.ABNORMAL_CLOSURE
-                        ):
-                            break
+                            # When a websocket is closed by the MATLAB JSD, it sends out a few http requests to the Embedded Connector about the events
+                            # that had occured (figureWindowClosed etc.)
+                            # The Embedded Connector responds by sending a message of type 'Error' with close code as Abnormal closure.
+                            # When this happens, matlab-proxy can safely exit out of the loop
+                            # and close the websocket connection it has with the Embedded Connector (ws_client)
+                            if (
+                                mt == aiohttp.WSMsgType.ERROR
+                                and ws_from.close_code
+                                == aiohttp.WSCloseCode.ABNORMAL_CLOSURE
+                            ):
+                                break
 
-                        if mt == aiohttp.WSMsgType.TEXT:
-                            await ws_to.send_str(md)
-                        elif mt == aiohttp.WSMsgType.BINARY:
-                            await ws_to.send_bytes(md)
-                        elif mt == aiohttp.WSMsgType.PING:
-                            await ws_to.ping()
-                        elif mt == aiohttp.WSMsgType.PONG:
-                            await ws_to.pong()
-                        elif ws_to.closed:
-                            await ws_to.close(code=ws_to.close_code, message=msg.extra)
-                        else:
-                            raise ValueError(f"Unexpected message type: {msg}")
+                            if mt == aiohttp.WSMsgType.TEXT:
+                                await ws_to.send_str(md)
+                            elif mt == aiohttp.WSMsgType.BINARY:
+                                await ws_to.send_bytes(md)
+                            elif mt == aiohttp.WSMsgType.PING:
+                                await ws_to.ping()
+                            elif mt == aiohttp.WSMsgType.PONG:
+                                await ws_to.pong()
+                            elif ws_to.closed:
+                                await ws_to.close(
+                                    code=ws_to.close_code, message=msg.extra
+                                )
+                            else:
+                                raise ValueError(f"Unexpected message type: {msg}")
 
-                await asyncio.wait(
-                    [wsforward(ws_server, ws_client), wsforward(ws_client, ws_server)],
-                    return_when=asyncio.FIRST_COMPLETED,
+                    await asyncio.wait(
+                        [
+                            wsforward(ws_server, ws_client),
+                            wsforward(ws_client, ws_server),
+                        ],
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                    return ws_server
+
+            except Exception as err:
+                logger.error(
+                    f"Failed to create web socket connection with error: {err}"
                 )
 
-                return ws_server
+                code, message = (
+                    aiohttp.WSCloseCode.INTERNAL_ERROR,
+                    "Failed to establish websocket connection with MATLAB",
+                )
+                await ws_server.close(code=code, message=message.encode("utf-8"))
+                raise aiohttp.WebSocketError(code=code, message=message)
 
     # Standard HTTP Request
     else:
@@ -530,7 +543,22 @@ async def matlab_view(req):
                     headers.update(req.app["settings"]["mwi_custom_http_headers"])
 
                     return web.Response(headers=headers, status=res.status, body=body)
-            except Exception:
+
+            # Handles any pending HTTP requests from the browser when the MATLAB process is terminated before responding to them.
+            except (
+                client_exceptions.ServerDisconnectedError,
+                client_exceptions.ClientConnectionError,
+            ):
+                logger.debug(
+                    "Failed to forward HTTP request as MATLAB process may not be running."
+                )
+                raise web.HTTPServiceUnavailable()
+
+            # Some other exception has been raised (by MATLAB Embedded Connector), log the error and return 404
+            except Exception as err:
+                logger.error(
+                    f"Failed to forward HTTP request to MATLAB with error: {err}"
+                )
                 raise web.HTTPNotFound()
 
 
@@ -683,7 +711,7 @@ def create_app(config_name=matlab_proxy.get_default_config_name()):
     Returns:
         aiohttp server: An aiohttp server with routes, settings and env_config.
     """
-    app = web.Application()
+    app = web.Application(client_max_size=constants.MAX_HTTP_REQUEST_SIZE)
 
     # Get application settings
     app["settings"] = settings.get(
