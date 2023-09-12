@@ -628,6 +628,20 @@ class AppState:
 
         return matlab_env
 
+    def __filter_env_variables(env_vars: dict[str, str], prefix: str) -> dict[str, str]:
+        """Removes the keys that starts with the prefix supplied to this function
+
+        Args:
+            env_vars (dict[str, str]): dict to be filtered
+            prefix (str): starting characters of the keys to be removed
+
+        Returns:
+            dict[str, str]: dict with filtered keys
+        """
+        return {
+            key: value for key, value in env_vars.items() if not key.startswith(prefix)
+        }
+
     async def __start_xvfb_process(self):
         """Private method to start the xvfb process. Will set appropriate
         errors to self.error and return None when any exceptions are raised.
@@ -639,9 +653,14 @@ class AppState:
         # Start Xvfb process and update display number in settings
         create_xvfb_cmd = self.settings["create_xvfb_cmd"]
         xvfb_cmd, dpipe = create_xvfb_cmd()
+        filtered_env_variables = AppState.__filter_env_variables(
+            os.environ.copy(), "MWI_"
+        )
 
         try:
-            xvfb, display_port = await mw.create_xvfb_process(xvfb_cmd, dpipe)
+            xvfb, display_port = await mw.create_xvfb_process(
+                xvfb_cmd, dpipe, filtered_env_variables
+            )
             self.settings["matlab_display"] = ":" + str(display_port)
 
             logger.debug(f"Started Xvfb with PID={xvfb.pid} on DISPLAY={display_port}")

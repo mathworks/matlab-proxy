@@ -257,7 +257,7 @@ def parse_other_error(logs):
     )
 
 
-async def create_xvfb_process(xvfb_cmd, pipe, env={}):
+async def create_xvfb_process(xvfb_cmd, pipe, env=None):
     """Creates the Xvfb process.
 
     The Xvfb process is run with '-displayfd' flag set. This makes Xvfb choose an available
