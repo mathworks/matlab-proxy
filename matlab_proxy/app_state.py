@@ -628,15 +628,15 @@ class AppState:
 
         return matlab_env
 
-    def __filter_env_variables(env_vars: dict[str, str], prefix: str) -> dict[str, str]:
+    def __filter_env_variables(env_vars: dict, prefix: str) -> dict:
         """Removes the keys that starts with the prefix supplied to this function
 
         Args:
-            env_vars (dict[str, str]): dict to be filtered
+            env_vars (dict): dict to be filtered
             prefix (str): starting characters of the keys to be removed
 
         Returns:
-            dict[str, str]: dict with filtered keys
+            dict: dict with filtered keys
         """
         return {
             key: value for key, value in env_vars.items() if not key.startswith(prefix)
