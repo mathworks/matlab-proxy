@@ -52,6 +52,38 @@ def get_connection_string():
     return "nlm@localhost.com"
 
 
+async def wait_for_matlab_to_be_up(test_server, sleep_seconds):
+    """Checks at max five times for the MATLAB status to be up and throws ConnectionError
+    if MATLAB status is not up.
+
+    This function mitigates the scenario where the tests may try to send the request
+    to the test server and the MATLAB status is not up yet which may cause the test to fail
+    unexpectedly.
+
+    Use this function if the test intends to wait for the matlab status to be up before
+    sending any requests.
+
+    Args:
+        test_server (aiohttp_client) : A aiohttp_client server to send HTTP GET request.
+        sleep_seconds : Seconds to be sent to the asyncio.sleep method
+    """
+
+    count = 0
+    while True:
+        resp = await test_server.get("/get_status")
+        assert resp.status == HTTPStatus.OK
+
+        resp_json = json.loads(await resp.text())
+
+        if resp_json["matlab"]["status"] == "up":
+            break
+        else:
+            count += 1
+            await asyncio.sleep(sleep_seconds)
+            if count > test_constants.FIVE_MAX_TRIES:
+                raise ConnectionError
+
+
 @pytest.fixture(
     name="licensing_data",
     params=[
@@ -225,20 +257,8 @@ async def test_start_matlab_route(test_server):
         test_server (aiohttp_client): A aiohttp_client server to send GET request to.
     """
     # Waiting for the matlab process to start up.
-    count = 0
-    while True:
-        resp = await test_server.get("/get_status")
-        assert resp.status == HTTPStatus.OK
-
-        resp_json = json.loads(await resp.text())
-
-        if resp_json["matlab"]["status"] == "up":
-            break
-        else:
-            count += 1
-            await asyncio.sleep(1)
-            if count > test_constants.FIVE_MAX_TRIES:
-                raise ConnectionError
+    sleep_interval = 1
+    await wait_for_matlab_to_be_up(test_server, sleep_interval)
 
     # Send get request to end point
     await test_server.put("/start_matlab")
@@ -464,29 +484,6 @@ async def test_matlab_proxy_http_post_request(proxy_payload, test_server):
 #         "connection": "upgrade",
 #         "upgrade": "websocket",
 #     }
-@pytest.mark.parametrize(
-    "headers",
-    [
-        {
-            "connection": "Upgrade",
-            "Upgrade": "websocket",
-        },
-        {
-            "connection": "upgrade",
-            "upgrade": "websocket",
-        },
-    ],
-)
-async def test_matlab_proxy_web_socket(test_server, headers):
-    """Test to check if test_server proxies web socket request to fake matlab server
-
-    Args:
-        test_server (aiohttp_client): Test Server to send HTTP Requests.
-    """
-
-    resp = await test_server.ws_connect("/http_ws_request.html", headers=headers)
-    text = await resp.receive()
-    assert text.type == aiohttp.WSMsgType.CLOSED
 
 
 async def test_set_licensing_info_put_nlm(test_server):
@@ -523,6 +520,38 @@ async def test_set_licensing_info_put_invalid_license(test_server):
     }
     resp = await test_server.put("/set_licensing_info", data=json.dumps(data))
     assert resp.status == HTTPStatus.BAD_REQUEST
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {
+            "connection": "Upgrade",
+            "Upgrade": "websocket",
+        },
+        {
+            "connection": "upgrade",
+            "upgrade": "websocket",
+        },
+    ],
+    ids=["Uppercase header", "Lowercase header"],
+)
+async def test_matlab_proxy_web_socket(test_server, headers):
+    """Test to check if test_server proxies web socket request to fake matlab server
+
+    Args:
+        test_server (aiohttp_client): Test Server to send HTTP Requests.
+    """
+
+    sleep_interval = 2
+    await wait_for_matlab_to_be_up(test_server, sleep_interval)
+    resp = await test_server.ws_connect("/http_ws_request.html/", headers=headers)
+    text = await resp.receive()
+    websocket_response_string = (
+        "Hello world"  # This string is set by the web_socket_handler in devel.py
+    )
+    assert text.type == aiohttp.WSMsgType.TEXT
+    assert text.data == websocket_response_string
 
 
 async def test_set_licensing_info_put_mhlm(test_server):

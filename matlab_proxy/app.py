@@ -500,8 +500,8 @@ async def matlab_view(req):
 
                     await asyncio.wait(
                         [
-                            wsforward(ws_server, ws_client),
-                            wsforward(ws_client, ws_server),
+                            asyncio.create_task(wsforward(ws_server, ws_client)),
+                            asyncio.create_task(wsforward(ws_client, ws_server)),
                         ],
                         return_when=asyncio.FIRST_COMPLETED,
                     )
