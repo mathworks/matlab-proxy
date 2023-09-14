@@ -8,7 +8,7 @@ import matlab_proxy
 import pytest
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 
-from tests.test_app import FakeServer
+from tests.unit.test_app import FakeServer
 
 """
 This file checks whether static assets are being added successfully to the
