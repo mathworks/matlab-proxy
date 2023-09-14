@@ -1,3 +1,5 @@
+# Copyright (c) 2020-2023 The MathWorks, Inc.
+
 import pytest
 from matlab_proxy.util import mwi
 from matlab_proxy.util.mwi.exceptions import EmbeddedConnectorError

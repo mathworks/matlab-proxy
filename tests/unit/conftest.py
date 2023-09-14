@@ -1,6 +1,6 @@
-# Copyright (c) 2020-2022 The MathWorks, Inc.
+# Copyright (c) 2020-2023 The MathWorks, Inc.
 
-""" The conftest.py file is run by the pytest framework for setting things up for the test session. 
+""" The conftest.py file is run by the pytest framework for setting things up for the test session.
 """
 
 import os

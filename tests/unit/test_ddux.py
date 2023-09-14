@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022 The MathWorks, Inc.
+# Copyright (c) 2020-2023 The MathWorks, Inc.
 import matlab_proxy
 from matlab_proxy import util
 
