@@ -15,7 +15,6 @@ from matlab_proxy.util.mwi.exceptions import MatlabInstallError
 from datetime import timedelta, timezone
 from matlab_proxy.util.mwi.exceptions import EntitlementError
 import test_constants
-import matlab_proxy
 
 
 def test_create_app():
@@ -543,7 +542,7 @@ async def test_matlab_proxy_web_socket(test_server, headers):
         test_server (aiohttp_client): Test Server to send HTTP Requests.
     """
 
-    sleep_interval = 2
+    sleep_interval = 1
     await wait_for_matlab_to_be_up(test_server, sleep_interval)
     resp = await test_server.ws_connect("/http_ws_request.html/", headers=headers)
     text = await resp.receive()

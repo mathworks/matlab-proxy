@@ -77,6 +77,11 @@ This token can be provided to the server in 2 ways:
       <img width="800" src="./img/token_authentication_page.png">
     </p>
 
+3. Through a `mwi_auth_token` header. Example:
+    ``` html
+    mwi_auth_token:abcdef..
+    ```
+
 **NOTE** : Its highly recommended to use this feature along with SSL enabled as shown [here](#use-token-authentication-with-ssl-enabled).
 
 ### **Use with auto-generated tokens**

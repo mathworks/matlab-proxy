@@ -15,8 +15,7 @@ from cryptography import fernet
 import matlab_proxy
 from matlab_proxy import constants, settings, util
 from matlab_proxy.app_state import AppState
-from matlab_proxy.default_configuration import config
-from matlab_proxy.util import list_servers, mwi
+from matlab_proxy.util import mwi
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import token_auth
 from matlab_proxy.util.mwi.exceptions import AppError, InvalidTokenError, LicensingError
@@ -119,6 +118,9 @@ async def create_status_response(app, loadUrl=None):
     )
 
 
+# @token_auth.authenticate_access_decorator
+# Explicitly disabling authentication for this end-point,
+# because the front end requires this endpoint to be available at all times.
 async def get_env_config(req):
     """API Endpoint to get Matlab Web Desktop environment specific configuration.
 
@@ -142,6 +144,9 @@ async def get_env_config(req):
     return web.json_response(config)
 
 
+# @token_auth.authenticate_access_decorator
+# Explicitly disabling authentication for this end-point,
+# because the front end requires this endpoint to be available at all times.
 async def get_status(req):
     """API Endpoint to get the generic status of the server, MATLAB and MATLAB Licensing.
 
@@ -154,39 +159,39 @@ async def get_status(req):
     return await create_status_response(req.app)
 
 
+# @token_auth.authenticate_access_decorator
+# Explicitly disabling authentication for this end-point, as it checks for authenticity internally.
 async def authenticate_request(req):
     """API Endpoint to authenticate request to access server
 
     Returns:
         JSONResponse: JSONResponse object containing information about authentication status and error if any.
     """
-    if await token_auth.authenticate_request(req):
-        logger.debug("!!!!!! REQUEST IS AUTHORIZED !!!!")
-        authStatus = True
-        error = None
-    else:
-        logger.debug("!!!!!! REQUEST IS NOT AUTHORIZED !!!!")
-        authStatus = False
-        error = marshal_error(
+    is_authenticated = await token_auth.authenticate_request(req)
+    error = (
+        None
+        if is_authenticated
+        else marshal_error(
             InvalidTokenError(
                 "Token invalid. Please enter a valid token to authenticate"
             )
         )
-
+    )
     # If there is an error, state.error is not updated because the client may have set the
     # token incorrectly which is not an error raised on the backend.
-
-    token = await req.text() if not error else ""
+    # TODO: @krisctl to remove this.
+    token = req.app["settings"]["mwi_auth_token"] if is_authenticated else ""
 
     return web.json_response(
         {
-            "authStatus": authStatus,
+            "authStatus": is_authenticated,
             "authToken": token,
             "error": error,
         }
     )
 
 
+@token_auth.authenticate_access_decorator
 async def start_matlab(req):
     """API Endpoint to start MATLAB
 
@@ -204,6 +209,7 @@ async def start_matlab(req):
     return await create_status_response(req.app)
 
 
+@token_auth.authenticate_access_decorator
 async def stop_matlab(req):
     """API Endpoint to stop MATLAB
 
@@ -220,6 +226,7 @@ async def stop_matlab(req):
     return await create_status_response(req.app)
 
 
+@token_auth.authenticate_access_decorator
 async def set_licensing_info(req):
     """API Endpoint to set licensing information on the server side.
 
@@ -261,6 +268,7 @@ async def set_licensing_info(req):
     return await create_status_response(req.app)
 
 
+@token_auth.authenticate_access_decorator
 async def update_entitlement(req):
     """API endpoint to update selected entitlement to start MATLAB with.
 
@@ -290,6 +298,7 @@ async def __start_matlab_if_licensed(state):
         await state.start_matlab(restart_matlab=True)
 
 
+@token_auth.authenticate_access_decorator
 async def licensing_info_delete(req):
     """API Endpoint to stop MATLAB and remove licensing details.
 
@@ -312,6 +321,7 @@ async def licensing_info_delete(req):
     return await create_status_response(req.app)
 
 
+@token_auth.authenticate_access_decorator
 async def termination_integration_delete(req):
     """API Endpoint to terminate the Integration and shutdown the server.
 
@@ -339,6 +349,8 @@ async def termination_integration_delete(req):
         sys.exit(0)
 
 
+# @token_auth.authenticate_access_decorator
+# Explicitly disabling authentication for this end-point, as authenticity is checked by the redirected endpoint.
 async def root_redirect(request):
     """API Endpoint to return the root index.html file.
 
@@ -421,6 +433,7 @@ def make_static_route_table(app):
     return table
 
 
+@token_auth.authenticate_access_decorator
 async def matlab_view(req):
     """API Endpoint which proxies requests to the MATLAB Embedded Connector
 

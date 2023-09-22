@@ -271,9 +271,21 @@ class AppState:
         # If execution reaches here, it implies that:
         # 1) MATLAB process has started.
         # 2) Embedded connector has not started yet.
+        # Proceed to query the Embedded Connector about its state.
+        # matlab-proxy sends a request to itself to the endpoint: /messageservice/json/state
+        # which the server redirects to the matlab_view() function to handle (which then sends the request to EC)
+        # As the matlab_view is now a protected endpoint, we need to pass token information through headers.
+
+        # Include token information into the headers if authentication is enabled.
+        headers = (
+            {self.settings["mwi_auth_token_name"]: self.settings["mwi_auth_token"]}
+            if self.settings["mwi_is_token_auth_enabled"]
+            else None
+        )
 
         embedded_connector_status = await mwi.embedded_connector.request.get_state(
-            self.settings["mwi_server_url"]
+            mwi_server_url=self.settings["mwi_server_url"],
+            headers=headers,
         )
 
         # Embedded Connector can be in either "up" or "down" state

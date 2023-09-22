@@ -220,10 +220,8 @@ export function updateAuthStatus(token){
         const options = {
             method: 'POST',
             headers: {
-                'Accept': 'application/text',
-                'Content-Type': 'application/text'
+                'mwi_auth_token': token
                 },
-            body: token
         };
         const response = await fetchWithTimeout(dispatch, './authenticate_request', options, 15000);
         const data = await response.json()
