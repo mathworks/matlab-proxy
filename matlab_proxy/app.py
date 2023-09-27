@@ -20,6 +20,7 @@ from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import token_auth
 from matlab_proxy.util.mwi.exceptions import AppError, InvalidTokenError, LicensingError
 
+
 mimetypes.add_type("font/woff", ".woff")
 mimetypes.add_type("font/woff2", ".woff2")
 mimetypes.add_type("font/eot", ".eot")
@@ -118,6 +119,25 @@ async def create_status_response(app, loadUrl=None):
     )
 
 
+@token_auth.authenticate_access_decorator
+async def get_auth_token(req):
+    """API endpoint to return the auth token
+
+    Args:
+        req (HTTPRequest): HTTPRequest Object
+
+    Returns:
+        Response: auth token in JSON format
+    """
+    auth_token = await token_auth._get_token(req)
+
+    return web.json_response(
+        {
+            "authToken": auth_token,
+        }
+    )
+
+
 # @token_auth.authenticate_access_decorator
 # Explicitly disabling authentication for this end-point,
 # because the front end requires this endpoint to be available at all times.
@@ -135,12 +155,7 @@ async def get_env_config(req):
     config["authEnabled"] = state.settings["mwi_is_token_auth_enabled"]
 
     # In a previously authenticated session, if the url is accessed without the token(using session cookie), send the token as well.
-    config["authStatus"], config["authToken"] = (
-        (True, state.settings["mwi_auth_token"])
-        if await token_auth.authenticate_request(req)
-        else (False, None)
-    )
-
+    config["authStatus"] = True if await token_auth.authenticate_request(req) else False
     return web.json_response(config)
 
 
@@ -161,7 +176,7 @@ async def get_status(req):
 
 # @token_auth.authenticate_access_decorator
 # Explicitly disabling authentication for this end-point, as it checks for authenticity internally.
-async def authenticate_request(req):
+async def authenticate(req):
     """API Endpoint to authenticate request to access server
 
     Returns:
@@ -179,13 +194,10 @@ async def authenticate_request(req):
     )
     # If there is an error, state.error is not updated because the client may have set the
     # token incorrectly which is not an error raised on the backend.
-    # TODO: @krisctl to remove this.
-    token = req.app["settings"]["mwi_auth_token"] if is_authenticated else ""
 
     return web.json_response(
         {
             "authStatus": is_authenticated,
-            "authToken": token,
             "error": error,
         }
     )
@@ -743,9 +755,8 @@ def create_app(config_name=matlab_proxy.get_default_config_name()):
 
     base_url = app["settings"]["base_url"]
     app.router.add_route("GET", f"{base_url}/get_status", get_status)
-    app.router.add_route(
-        "POST", f"{base_url}/authenticate_request", authenticate_request
-    )
+    app.router.add_route("POST", f"{base_url}/authenticate", authenticate)
+    app.router.add_route("GET", f"{base_url}/get_auth_token", get_auth_token)
     app.router.add_route("GET", f"{base_url}/get_env_config", get_env_config)
     app.router.add_route("PUT", f"{base_url}/start_matlab", start_matlab)
     app.router.add_route("DELETE", f"{base_url}/stop_matlab", stop_matlab)

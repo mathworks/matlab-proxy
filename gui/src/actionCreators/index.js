@@ -20,19 +20,20 @@ import {
     RECEIVE_ERROR,
     RECEIVE_ENV_CONFIG,
     SET_AUTH_STATUS,
-    SET_AUTH_TOKEN    
+    SET_AUTH_TOKEN
 } from '../actions';
 import { selectMatlabPending } from '../selectors';
+import sha256 from 'crypto-js/sha256';
 
-export function setAuthStatus(authInfo){
+export function setAuthStatus(authInfo) {
     return {
         type: SET_AUTH_STATUS,
         authInfo
     }
 }
 
-export function setAuthToken(authInfo){
-    return{
+export function setAuthToken(authInfo) {
+    return {
         type: SET_AUTH_TOKEN,
         authInfo
     }
@@ -209,24 +210,37 @@ export function fetchEnvConfig() {
         dispatch(requestEnvConfig());
         const response = await fetchWithTimeout(dispatch, './get_env_config', {}, 10000);
         const data = await response.json();
-        dispatch(receiveEnvConfig(data));       
+        dispatch(receiveEnvConfig(data));
     };
 }
 
-export function updateAuthStatus(token){
+export function updateAuthStatus(token) {
     // make response consistent with rest of reducers (data)
-    return async function(dispatch, getState){
-        
+    return async function (dispatch, getState) {
+
+        const tokenHash = sha256(token)
         const options = {
             method: 'POST',
             headers: {
-                'mwi_auth_token': token
-                },
+                'mwi_auth_token': tokenHash
+            },
         };
-        const response = await fetchWithTimeout(dispatch, './authenticate_request', options, 15000);
+        const response = await fetchWithTimeout(dispatch, './authenticate', options, 15000);
         const data = await response.json()
 
         dispatch(setAuthStatus(data))
+    }
+}
+
+export function getAuthToken() {
+    // make response consistent with rest of reducers (data)
+    return async function (dispatch, getState) {
+
+        const options = {
+            method: 'GET'
+        };
+        const response = await fetchWithTimeout(dispatch, './get_auth_token', options, 10000);
+        const data = await response.json()
         dispatch(setAuthToken(data))
     }
 }

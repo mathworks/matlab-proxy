@@ -13,7 +13,7 @@ import {
     selectIsAuthenticated,
     selectAuthToken,
 } from '../../selectors';
-import { updateAuthStatus } from '../../actionCreators';
+import { updateAuthStatus, getAuthToken } from '../../actionCreators';
 import './Information.css';
 
 function Information({
@@ -96,7 +96,11 @@ function Information({
         }
     };
 
-    const viewToken = () => { 
+    const viewToken = () => {
+        // Fetch auth token from server if it is not already available in redux store
+        if (!authToken) {
+            dispatch(getAuthToken());
+        }
         setShowToken(true);
     }
 
@@ -108,7 +112,7 @@ function Information({
         // Update redux state with the token after validation from the backend
         dispatch(updateAuthStatus(token.trim()));
 
-        // Reset local state variable. 
+        // Reset local state variable which was used to hold user's input for token. 
         setToken('');
     }
 

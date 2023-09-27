@@ -26,8 +26,8 @@ import {
 
 // Stores info on whether token authentication enabled on the backend. 
 // This is enforced by the backend.
-export function authEnabled(state = false, action){
-    switch(action.type){
+export function authEnabled(state = false, action) {
+    switch (action.type) {
         case RECEIVE_ENV_CONFIG:
             return action.config.authEnabled;
         default:
@@ -36,10 +36,10 @@ export function authEnabled(state = false, action){
 }
 
 // Stores status of token authentication.
-export function authStatus(state = false, action){
-   switch(action.type){
-        case RECEIVE_ENV_CONFIG:            
-            return action.config.authStatus;            
+export function authStatus(state = false, action) {
+    switch (action.type) {
+        case RECEIVE_ENV_CONFIG:
+            return action.config.authStatus;
         case SET_AUTH_STATUS:
             return action.authInfo.authStatus;
         default:
@@ -48,17 +48,10 @@ export function authStatus(state = false, action){
 }
 
 // Stores auth token
-export function authToken(state = null, action){    
-    switch(action.type){
+export function authToken(state = null, action) {
+    switch (action.type) {
         case SET_AUTH_TOKEN:
-            if(!action.authInfo.error){
-                return action.authInfo.authToken;
-            } else {
-                return state
-            }
-        case RECEIVE_ENV_CONFIG:
-            return action.config.authToken;
-
+            return action.authInfo.authToken;
         default:
             return state;
     }
@@ -169,7 +162,7 @@ export function isFetching(state = false, action) {
         case RECEIVE_STOP_MATLAB:
         case RECEIVE_START_MATLAB:
         case RECEIVE_ERROR:
-        case RECEIVE_ENV_CONFIG: 
+        case RECEIVE_ENV_CONFIG:
             return false;
         default:
             return state;
@@ -235,8 +228,8 @@ export function loadUrl(state = null, action) {
 export function error(state = null, action) {
     switch (action.type) {
         case SET_AUTH_STATUS:
-            if(action?.authInfo?.error !== null){
-                const {message, type } = action.authInfo.error
+            if (action?.authInfo?.error !== null) {
+                const { message, type } = action.authInfo.error
                 return {
                     message: message,
                     type: type,
@@ -265,12 +258,12 @@ export function error(state = null, action) {
     }
 }
 
-export function envConfig(state = null, action) {    
+export function envConfig(state = null, action) {
     switch (action.type) {
         case RECEIVE_ENV_CONFIG:
             // Token authentication info is also sent as a response to /get_env_config endpoint.
             // As its already stored in 'authStatus', 'authEnabled' and 'authToken', ignoring it in envConfig.
-            const {authStatus, authEnabled, authToken, ...envConfig} = action.config
+            const { authStatus, authEnabled, ...envConfig } = action.config
             return envConfig
         default:
             return state;

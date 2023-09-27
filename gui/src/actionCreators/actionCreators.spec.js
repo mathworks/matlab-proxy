@@ -18,10 +18,10 @@ describe.each([
   [actionCreators.setOverlayVisibility, [false], { type: actions.SET_OVERLAY_VISIBILITY, visibility: false }],
   [actionCreators.setTriggerPosition, [12, 12], { type: actions.SET_TRIGGER_POSITION, x: 12, y: 12 }],
   [actionCreators.setTriggerPosition, [52, 112], { type: actions.SET_TRIGGER_POSITION, x: 52, y: 112 }],
-  [actionCreators.setAuthStatus, [true], {type: actions.SET_AUTH_STATUS, authInfo: true}],
-  [actionCreators.setAuthStatus, [false], {type: actions.SET_AUTH_STATUS, authInfo: false}],
-  [actionCreators.setAuthToken, ['string'], {type: actions.SET_AUTH_TOKEN, authInfo: 'string'}],
-  [actionCreators.setAuthToken, [null], {type: actions.SET_AUTH_TOKEN, authInfo: null}]
+  [actionCreators.setAuthStatus, [true], { type: actions.SET_AUTH_STATUS, authInfo: true }],
+  [actionCreators.setAuthStatus, [false], { type: actions.SET_AUTH_STATUS, authInfo: false }],
+  [actionCreators.setAuthToken, ['string'], { type: actions.SET_AUTH_TOKEN, authInfo: 'string' }],
+  [actionCreators.setAuthToken, [null], { type: actions.SET_AUTH_TOKEN, authInfo: null }]
 ])('Test Set actionCreators', (method, input, expectedAction) => {
   test(`check if an action of type  ${expectedAction.type} is returned when method actionCreator.${method.name}() is called`, () => {
     expect(method(...input)).toEqual(expectedAction);
@@ -206,9 +206,9 @@ describe('Test Async actionCreators', () => {
     fetchMock.restore();
   });
 
-  it('dispatches SET_AUTH_STATUS when fetching auth info and not authorised', () => {
+  it('dispatches SET_AUTH_STATUS when fetching auth info and not authorized', () => {
     let token = 'token'
-    fetchMock.once('/authenticate_request', {
+    fetchMock.once('/authenticate', {
       body: {
         authStatus: false,
         error: {
@@ -218,7 +218,7 @@ describe('Test Async actionCreators', () => {
         }
       }
     });
-    const expectedActions = [actions.SET_AUTH_STATUS, actions.SET_AUTH_TOKEN];
+    const expectedActions = [actions.SET_AUTH_STATUS];
 
     return store.dispatch(actionCreators.updateAuthStatus(token)).then(() => {
       const received = store.getActions();
@@ -226,15 +226,15 @@ describe('Test Async actionCreators', () => {
     });
   });
 
-  it('dispatches SET_AUTH_STATUS, when fetching auth info and authorised', () => {
+  it('dispatches SET_AUTH_STATUS, when fetching auth info and authorized', () => {
     let token = 'token'
-    fetchMock.once('/authenticate_request', {
+    fetchMock.once('/authenticate', {
       body: {
         authStatus: true,
         error: null
       }
     });
-    const expectedActions = [actions.SET_AUTH_STATUS, actions.SET_AUTH_TOKEN];
+    const expectedActions = [actions.SET_AUTH_STATUS];
 
     return store.dispatch(actionCreators.updateAuthStatus(token)).then(() => {
       const received = store.getActions();

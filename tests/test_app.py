@@ -238,12 +238,19 @@ async def test_get_env_config(test_server):
     Args:
         test_server (aiohttp_client): A aiohttp_client server for sending GET request.
     """
-
+    expected_json_structure = {
+        "authEnabled": None,
+        "authStatus": None,
+        "doc_url": "foo",
+        "extension_name": "bar",
+        "extension_name_short_description": "foobar",
+    }
     resp = await test_server.get("/get_env_config")
     assert resp.status == HTTPStatus.OK
 
-    text = await resp.text()
+    text = await resp.json()
     assert text is not None
+    assert set(expected_json_structure.keys()) == set(text.keys())
 
 
 async def test_start_matlab_route(test_server):
@@ -915,4 +922,17 @@ async def test_update_entitlement_with_correct_entitlement(set_licensing_info):
 
     # test-cleanup: unset licensing
     resp = await test_server.delete("/set_licensing_info")
+    assert resp.status == HTTPStatus.OK
+
+
+async def test_get_auth_token_route(test_server, monkeypatch):
+    """Test to check endpoint : "/get_auth_token"
+
+    Args:
+        test_server (aiohttp_client): A aiohttp_client server for sending GET request.
+    """
+    resp = await test_server.get("/get_auth_token")
+    res_json = await resp.json()
+    # Testing the default dev configuration where the auth is disabled
+    assert res_json["authToken"] == None
     assert resp.status == HTTPStatus.OK

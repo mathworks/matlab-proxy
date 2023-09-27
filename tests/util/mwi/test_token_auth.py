@@ -1,12 +1,13 @@
 # Copyright (c) 2023 The MathWorks, Inc.
 
+import pytest
 from aiohttp import web
 from aiohttp_session import setup as aiohttp_session_setup
 from aiohttp_session.cookie_storage import EncryptedCookieStorage
 from cryptography import fernet
+
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import token_auth
-import pytest
 
 ## APIs to test:
 # 1. generate_mwi_auth_token (auth enabled, auth enabled+custom token, custom token, auth disabled)
@@ -22,7 +23,7 @@ def test_generate_mwi_auth_token(monkeypatch):
         mwi_env.get_env_name_enable_mwi_auth_token(), str(expected_auth_enablement)
     )
 
-    generated_token = token_auth.generate_mwi_auth_token()
+    generated_token = token_auth.generate_mwi_auth_token_and_hash()["token"]
     assert generated_token is not None
 
     # Test if token is generated when MWI_ENABLE_AUTH_TOKEN is True & has custom token set
@@ -33,7 +34,7 @@ def test_generate_mwi_auth_token(monkeypatch):
     )
     monkeypatch.setenv(mwi_env.get_env_name_mwi_auth_token(), str(expected_auth_token))
 
-    generated_token = token_auth.generate_mwi_auth_token()
+    generated_token = token_auth.generate_mwi_auth_token_and_hash()["token"]
     assert generated_token == expected_auth_token
 
     # Test if token is generated when MWI_ENABLE_AUTH_TOKEN is unset & has custom token set
@@ -41,7 +42,7 @@ def test_generate_mwi_auth_token(monkeypatch):
     monkeypatch.delenv(mwi_env.get_env_name_enable_mwi_auth_token())
     monkeypatch.setenv(mwi_env.get_env_name_mwi_auth_token(), str(expected_auth_token))
 
-    generated_token = token_auth.generate_mwi_auth_token()
+    generated_token = token_auth.generate_mwi_auth_token_and_hash()["token"]
     assert generated_token == expected_auth_token
 
     # Test if token is not generated when MWI_ENABLE_AUTH_TOKEN is explicitly disabled & has custom token set
@@ -52,7 +53,7 @@ def test_generate_mwi_auth_token(monkeypatch):
     )
     monkeypatch.setenv(mwi_env.get_env_name_mwi_auth_token(), str(expected_auth_token))
 
-    generated_token = token_auth.generate_mwi_auth_token()
+    generated_token = token_auth.generate_mwi_auth_token_and_hash()["token"]
     assert generated_token is None
 
 
@@ -84,12 +85,16 @@ def fake_server_with_auth_enabled(
     )
     monkeypatch.setenv(mwi_env.get_env_name_mwi_auth_token(), str(auth_token))
 
-    mwi_auth_token = token_auth.generate_mwi_auth_token()
+    (
+        mwi_auth_token,
+        mwi_auth_token_hash,
+    ) = token_auth.generate_mwi_auth_token_and_hash().values()
 
     app = web.Application()
     app["settings"] = {
         "mwi_is_token_auth_enabled": mwi_auth_token != None,
         "mwi_auth_token": mwi_auth_token,
+        "mwi_auth_token_hash": mwi_auth_token_hash,
         "mwi_auth_token_name": mwi_env.get_env_name_mwi_auth_token().lower(),
     }
     app.router.add_get("/", fake_endpoint)
@@ -110,6 +115,38 @@ async def test_set_value_with_token(
         "/",
         data={"value": "foo"},
         headers={"mwi_auth_token": get_custom_auth_token_str},
+    )
+    assert resp.status == web.HTTPOk.status_code
+    assert await resp.text() == "thanks for the data"
+    assert fake_server_with_auth_enabled.server.app["value"] == "foo"
+
+    # Test subsequent requests do not need token authentication
+    resp2 = await fake_server_with_auth_enabled.post(
+        "/",
+        data={"value": "foobar"},
+    )
+    assert resp2.status == web.HTTPOk.status_code
+    assert fake_server_with_auth_enabled.server.app["value"] == "foobar"
+
+    # Test request which accepts cookies from previous request
+    resp3 = await fake_server_with_auth_enabled.post(
+        "/",
+        data={"value": "foobar1"},
+        cookies=resp.cookies,
+    )
+    assert resp3.status == web.HTTPOk.status_code
+    assert fake_server_with_auth_enabled.server.app["value"] == "foobar1"
+
+
+async def test_set_value_with_token_hash(
+    fake_server_with_auth_enabled, get_custom_auth_token_str
+):
+    resp = await fake_server_with_auth_enabled.post(
+        "/",
+        data={"value": "foo"},
+        headers={
+            "mwi_auth_token": token_auth._generate_hash(get_custom_auth_token_str)
+        },
     )
     assert resp.status == web.HTTPOk.status_code
     assert await resp.text() == "thanks for the data"
@@ -155,7 +192,7 @@ async def test_set_value_with_token_in_params(
     resp = await fake_server_with_auth_enabled.post(
         "/",
         data={"value": "foofoo"},
-        params={"mwi_auth_token": get_custom_auth_token_str},
+        params={"mwi_auth_token": token_auth._generate_hash(get_custom_auth_token_str)},
     )
     assert resp.status == web.HTTPOk.status_code
     assert await resp.text() == "thanks for the data"
@@ -181,7 +218,8 @@ async def test_get_value_with_token_in_query_params(
 ):
     fake_server_with_auth_enabled.server.app["value"] = "bar"
     resp = await fake_server_with_auth_enabled.get(
-        "/", params={"mwi_auth_token": get_custom_auth_token_str}
+        "/",
+        params={"mwi_auth_token": token_auth._generate_hash(get_custom_auth_token_str)},
     )
     assert resp.status == web.HTTPOk.status_code
     assert await resp.text() == "value: bar"
@@ -196,12 +234,16 @@ def fake_server_without_auth_enabled(loop, aiohttp_client, monkeypatch):
     monkeypatch.setenv(
         mwi_env.get_env_name_enable_mwi_auth_token(), str(auth_enablement)
     )
-    mwi_auth_token = token_auth.generate_mwi_auth_token()
+    (
+        mwi_auth_token,
+        mwi_auth_token_hash,
+    ) = token_auth.generate_mwi_auth_token_and_hash().values()
 
     app = web.Application()
     app["settings"] = {
         "mwi_is_token_auth_enabled": mwi_auth_token != None,
         "mwi_auth_token": mwi_auth_token,
+        "mwi_auth_token_hash": mwi_auth_token_hash,
         "mwi_auth_token_name": mwi_env.get_env_name_mwi_auth_token().lower(),
     }
     app.router.add_get("/", fake_endpoint)

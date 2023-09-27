@@ -15,7 +15,8 @@
     "react-use": "^15.3.4",
     "redux": "^4.0.5",
     "redux-thunk": "^2.3.0",
-    "reselect": "^4.0.0"
+    "reselect": "^4.0.0",
+    "crypto-js": "4.1.1"
   },
   "scripts": {
     "start": "react-scripts start",
