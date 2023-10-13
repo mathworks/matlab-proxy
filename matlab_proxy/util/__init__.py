@@ -232,12 +232,7 @@ def get_access_url(app):
 
     # NOTE: When windows container support is introduced this will need to be tweaked accordingly.
     if host_interface == "0.0.0.0" and system.is_windows():
-        import socket
-
-        hostname = socket.gethostname()
-        fqdn = socket.getfqdn(hostname)
-
-        url = f"{access_protocol}://{fqdn}:{port}{base_url}"
+        url = f"{access_protocol}://127.0.0.1:{port}{base_url}"
     else:
         url = f"{access_protocol}://{host_interface}:{port}{base_url}"
 
