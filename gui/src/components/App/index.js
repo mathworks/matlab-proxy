@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright 2020-2022 The MathWorks, Inc.
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
@@ -62,6 +62,11 @@ function App() {
         return url.split(window.location.origin)[1].split('index.html')[0]
     }, [])
     
+    const parseQueryParams = (url)  => {
+        const queryParams = new URLSearchParams(url.search);
+        return queryParams;
+    }
+
     const toggleOverlayVisible = useCallback(
         () => dispatch(setOverlayVisibility(!overlayVisible)),
         [overlayVisible, dispatch]
@@ -142,18 +147,14 @@ function App() {
     }, [loadUrl]);
 
     useEffect(() => {
-        const url = document.URL;
-      
-        if(url.includes("?mwi_auth_token=")){            
-            var token = url.split("?mwi_auth_token=")[1];      
+        const queryParams = parseQueryParams(window.location);
+        const token = queryParams.get("mwi_auth_token");      
 
-            if(token){
-                dispatch(updateAuthStatus(token))                
-            }
-            window.history.replaceState(null, '', `${baseUrl}index.html`);
-        } 
-    }
-    , [dispatch, baseUrl]);
+        if(token){
+            dispatch(updateAuthStatus(token));              
+        }
+        window.history.replaceState(null, '', `${baseUrl}index.html`); 
+    }, [dispatch, baseUrl]);
     
     // Display one of:
     // * Confirmation

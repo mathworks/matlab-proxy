@@ -1,8 +1,9 @@
-// Copyright (c) 2020-2023 The MathWorks, Inc.
+// Copyright 2020-2023 The MathWorks, Inc.
 
 import React from 'react';
 import { render, fireEvent } from '../../test/utils/react-test';
 import App from './index';
+import * as actionCreators from '../../actionCreators';
 
 describe('App Component', () => {
   let initialState;
@@ -249,4 +250,24 @@ describe('App Component', () => {
     // Check if href has been set to loadUrl by the useEffect  
     expect(window.location.href).toBe(url);
   });
-});
+
+  const tokenInQuery = '12345'
+  it.each([
+    [`?mwi_auth_token=${tokenInQuery}&test1=1&test2=2`, tokenInQuery],
+    [`?test1=1&mwi_auth_token=${tokenInQuery}&test2=2`, tokenInQuery],
+    [`?test1=1&test2=2&mwi_auth_token=${tokenInQuery}`, tokenInQuery],
+  ]) 
+    ("should pick the token correctly when the query parameters are '%s'", (queryParams, expectedToken) => {
+    const url = `http://localhost.com:5555`
+    const mockUpdateAuthStatus = jest.spyOn(actionCreators, 'updateAuthStatus');
+    delete window.location;
+    window.location = {
+      origin: '/',
+      href: url,
+      search: queryParams 
+    }; 
+    render(<App />, { initialState: initialState });
+    expect(mockUpdateAuthStatus).toHaveBeenCalledWith(expectedToken);
+    mockUpdateAuthStatus.mockRestore();
+  });
+}); 
