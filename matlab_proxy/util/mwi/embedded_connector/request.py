@@ -104,7 +104,10 @@ async def get_state(mwi_server_url, headers=None):
 
         if not resp["messages"]["PingResponse"][0]["messageFaults"]:
             return "up"
-    except Exception:
+    except Exception as err:
+        logger.debug(
+            f"{err}: Embbeded connector is currently not responding to ping requests."
+        )
         pass
 
     return "down"

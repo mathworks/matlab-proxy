@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import platform
 import time
 import datetime
 
@@ -657,9 +658,27 @@ def non_default_host_interface_fixture(monkeypatch):
 # First set the default host interface to a non-default value
 # Then set MWI_TEST to false and then create an instance of the test_server
 # This order will set the test_server with appropriate values.
-def test_get_access_url_non_dev(non_default_host_interface, non_test_env, test_server):
-    """Test to check access url to not be 127.0.0.1 in non-dev mode"""
-    assert "127.0.0.1" not in util.get_access_url(test_server.app)
+
+
+@pytest.mark.skipif(
+    platform.system() == "Linux" or platform.system() == "Darwin",
+    reason="Testing the windows access URL",
+)
+def test_get_access_url_non_dev_windows(
+    non_default_host_interface, non_test_env, test_server
+):
+    """Test to check access url to be 127.0.0.1 in non-dev mode on Windows"""
+    assert "127.0.0.1" in util.get_access_url(test_server.app)
+
+
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="Testing the non-Windows access URL"
+)
+def test_get_access_url_non_dev_posix(
+    non_default_host_interface, non_test_env, test_server
+):
+    """Test to check access url to be 0.0.0.0 in non-dev mode on Linux/Darwin"""
+    assert "0.0.0.0" in util.get_access_url(test_server.app)
 
 
 @pytest.fixture(name="set_licensing_info_mock_fetch_single_entitlement")
