@@ -1,5 +1,4 @@
 # Advanced Usage
-Copyright (c) 2020-2023 The MathWorks, Inc. All rights reserved.
 
 This page lists some of the advanced manuevers that may be of specific interest to help configure the package for use in your environment.
 
@@ -96,3 +95,9 @@ If you add the `frame-ancestors` directive, the browser does not block the conte
 For more information about `Content-Security-Policy` header,  check the [Mozilla developer docs for Content-Security-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy).
 
 **NOTE**: Setting custom HTTP headers is an advanced operation, only use this functionality if you are familiar with HTTP headers.
+
+----
+
+Copyright 2020-2023 The MathWorks, Inc.
+
+----

@@ -1,7 +1,5 @@
 # Security
-Copyright (c) 2020-2022 The MathWorks, Inc. All rights reserved.
 
----- 
 **Table of Contents:**
 - [Reporting Security Vulnerabilities](#reporting-security-vulnerabilities)
 - [Security Features](#security-features)
@@ -205,3 +203,9 @@ You can use them to gain access to your server as described in the [Introduction
   Never share URLs from `matlab-proxy` with others. Doing so is equivalent to sharing your user account.
   
 * System administrators who launch `matlab-proxy` for other users, must launch the proxy as the user for whom the server is intended.
+
+----
+
+Copyright 2020-2023 The MathWorks, Inc.
+
+----

@@ -1,31 +1,30 @@
 # Troubleshooting guide for MATLAB proxy
-Runs basic environment checks to determine if required dependencies are met or not.
-
+Use the `troubleshooting.py` script to check your environment for required dependencies.
 
 ## Table of Contents  
 1. [Requirements](#requirements)
-2. [Script invocation](#script-invocation)
-3. [Collecting matlab-proxy logs](#collecting-matlab-proxy-logs)
+2. [Running the Script](#running-the-script)
+3. [Collecting Logs](#collecting-logs)
 
 # Requirements
 * Python
 
 
-# Script invocation
+# Running the Script
 From the folder where this repository is cloned, you can run the following command to gather troubleshooting output:
-`python ./troubleshooting/troubleshooting.py`
-
-# Collecting MATLAB proxy logs
-If you are logging MATLAB proxy information into a log file using the **MWI_LOG_FILE** environment variable when initializing the matlab-proxy-app, we recommend that you also provide the same environment variable when executing the troubleshooting script. This ensures that the script can detect and gather the relevant logs for analysis.
+```bash
+$ python ./troubleshooting/troubleshooting.py
+```
+# Collecting Logs
+If you collect matlab-proxy logs using the **MWI_LOG_FILE** environment variable, we recommend that you provide the same variable when executing the troubleshooting script. This allows the script to gather the relevant logs for analysis.
 
 An example command to do that in linux would be:
-`MWI_LOG_FILE=/tmp/log.file python ./troubleshooting/troubleshooting.py` 
+```bash 
+$ MWI_LOG_FILE=/tmp/log.file python ./troubleshooting/troubleshooting.py
+``` 
 
 ----
 
 Copyright 2021-2023 The MathWorks, Inc.
 
 ----
-
-
-
