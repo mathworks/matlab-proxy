@@ -10,6 +10,7 @@ from collections import deque
 from datetime import datetime, timedelta, timezone
 
 from matlab_proxy import util
+from matlab_proxy.settings import get_process_startup_timeout
 from matlab_proxy.util import mw, mwi, system, windows
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import token_auth
@@ -35,9 +36,6 @@ class AppState:
 
     # Constants that are applicable to AppState class
     MATLAB_PORT_CHECK_DELAY_IN_SECONDS = 1
-    # The maximum amount of time in seconds the Embedded Connector can take
-    # for launching, before the matlab-proxy server concludes that something is wrong.
-    EMBEDDED_CONNECTOR_MAX_STARTUP_DURATION_IN_SECONDS = 120
 
     def __init__(self, settings):
         """Parameterized constructor for the AppState class.
@@ -48,6 +46,9 @@ class AppState:
         """
         self.settings = settings
         self.processes = {"matlab": None, "xvfb": None}
+
+        # Timeout for processes launched by matlab-proxy
+        self.PROCESS_TIMEOUT = get_process_startup_timeout()
 
         # The port on which MATLAB(launched by this matlab-proxy process) starts on.
         self.matlab_port = None
@@ -825,10 +826,7 @@ class AppState:
 
                     else:
                         time_diff = time.time() - self.embedded_connector_start_time
-                        if (
-                            time_diff
-                            > self.EMBEDDED_CONNECTOR_MAX_STARTUP_DURATION_IN_SECONDS
-                        ):
+                        if time_diff > self.PROCESS_TIMEOUT:
                             # Since max allowed startup time has elapsed, it means that MATLAB is in a stuck state and cannot be launched.
                             # Set the error and stop matlab.
                             user_visible_error = "Unable to start MATLAB.\nTry again by clicking Start MATLAB."
@@ -845,12 +843,12 @@ class AppState:
                             if system.is_windows():
                                 # In WINDOWS systems, errors are raised as UI windows and cannot be captured programmatically.
                                 # So, raise a generic error wherever appropriate
-                                generic_error = f"MATLAB did not start in {int(self.EMBEDDED_CONNECTOR_MAX_STARTUP_DURATION_IN_SECONDS)} seconds. Use Windows Remote Desktop to check for any errors."
+                                generic_error = f"MATLAB did not start in {int(self.PROCESS_TIMEOUT)} seconds. Use Windows Remote Desktop to check for any errors."
                                 logger.error(f":{this_task}: {generic_error}")
                                 if len(self.logs["matlab"]) == 0:
                                     await __force_stop_matlab(user_visible_error)
                                     # Breaking out of the loop to end this task as matlab-proxy was unable to launch MATLAB successfully
-                                    # even after waiting for EMBEDDED_CONNECTOR_MAX_STARTUP_DURATION_IN_SECONDS
+                                    # even after waiting for self.PROCESS_TIMEOUT
                                     break
                                 else:
                                     # Do not stop the MATLAB process or break from the loop (the error type is unknown)
@@ -862,12 +860,12 @@ class AppState:
                                 # If there are no logs after the max startup time has elapsed, it means that MATLAB is in a stuck state and cannot be launched.
                                 # Set the error and stop matlab.
                                 logger.error(
-                                    f":{this_task}: MATLAB did not start in {int(self.EMBEDDED_CONNECTOR_MAX_STARTUP_DURATION_IN_SECONDS)} seconds!"
+                                    f":{this_task}: MATLAB did not start in {int(self.PROCESS_TIMEOUT)} seconds!"
                                 )
                                 if len(self.logs["matlab"]) == 0:
                                     await __force_stop_matlab(user_visible_error)
                                     # Breaking out of the loop to end this task as matlab-proxy was unable to launch MATLAB successfully
-                                    # even after waiting for EMBEDDED_CONNECTOR_MAX_STARTUP_DURATION_IN_SECONDS
+                                    # even after waiting for self.PROCESS_TIMEOUT
                                     break
 
                         else:
@@ -909,7 +907,7 @@ class AppState:
             try:
                 await asyncio.wait_for(
                     __read_matlab_ready_file(delay),
-                    self.EMBEDDED_CONNECTOR_MAX_STARTUP_DURATION_IN_SECONDS,
+                    self.PROCESS_TIMEOUT,
                 )
             except asyncio.TimeoutError:
                 logger.debug(

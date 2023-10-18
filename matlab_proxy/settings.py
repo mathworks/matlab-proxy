@@ -10,7 +10,7 @@ import uuid
 import xml.etree.ElementTree as ET
 
 import matlab_proxy
-from matlab_proxy.constants import VERSION_INFO_FILE_NAME
+from matlab_proxy import constants
 from matlab_proxy.util import mwi, system
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import token_auth
@@ -21,6 +21,35 @@ from matlab_proxy.util.mwi.exceptions import (
 )
 
 logger = mwi.logger.get()
+
+
+def get_process_startup_timeout():
+    """Returns the timeout for a process launched by matlab-proxy as specified by MWI_PROCESS_START_TIMEOUT environment variable
+    if valid, else returns the default value.
+
+    Returns:
+        int: timeout for a process launched by matlab-proxy
+    """
+    custom_startup_timeout = os.getenv(mwi_env.get_env_name_process_startup_timeout())
+
+    if custom_startup_timeout:
+        if custom_startup_timeout.isdigit():
+            logger.info(
+                f"Using custom process startup timeout {custom_startup_timeout} seconds"
+            )
+            return int(custom_startup_timeout)
+
+        else:
+            logger.warn(
+                f"The value set for {mwi_env.get_env_name_process_startup_timeout()}:{custom_startup_timeout} is not a number. Using {constants.DEFAULT_PROCESS_START_TIMEOUT} as the default value"
+            )
+            return constants.DEFAULT_PROCESS_START_TIMEOUT
+
+    logger.info(
+        f"Using {constants.DEFAULT_PROCESS_START_TIMEOUT} seconds as the default timeout value"
+    )
+
+    return constants.DEFAULT_PROCESS_START_TIMEOUT
 
 
 def get_matlab_executable_and_root_path():
@@ -86,7 +115,7 @@ def get_matlab_version(matlab_root_path):
     if matlab_root_path is None:
         return None
 
-    version_info_file_path = Path(matlab_root_path) / VERSION_INFO_FILE_NAME
+    version_info_file_path = Path(matlab_root_path) / constants.VERSION_INFO_FILE_NAME
     tree = ET.parse(version_info_file_path)
     root = tree.getroot()
 

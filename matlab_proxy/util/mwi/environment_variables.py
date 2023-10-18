@@ -150,3 +150,8 @@ def get_env_name_mwi_use_existing_license():
 def get_env_name_custom_matlab_root():
     """User specified path to MATLAB root"""
     return "MWI_CUSTOM_MATLAB_ROOT"
+
+
+def get_env_name_process_startup_timeout():
+    """User specified timeout in seconds for processes launched by matlab-proxy"""
+    return "MWI_PROCESS_START_TIMEOUT"

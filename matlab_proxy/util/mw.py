@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 import aiohttp
 from matlab_proxy.default_configuration import config
 from matlab_proxy.util import mwi
+from matlab_proxy.settings import get_process_startup_timeout
 from matlab_proxy.util.mwi.exceptions import (
     EntitlementError,
     MatlabError,
@@ -290,8 +291,11 @@ async def create_xvfb_process(xvfb_cmd, pipe, env=None):
     number_of_bytes = 200
 
     logger.debug("Waiting for XVFB process to initialize and provide Display Number")
-    # Waits upto 10 seconds for the read_descriptor to be ready.
-    ready_descriptors, _, _ = select.select([read_descriptor], [], [], 10)
+
+    # Wait for timeout specified by matlab-proxy for launching processes.
+    ready_descriptors, _, _ = select.select(
+        [read_descriptor], [], [], get_process_startup_timeout()
+    )
 
     # If read_descriptor is in ready_descriptors, read from it.
     if read_descriptor in ready_descriptors:

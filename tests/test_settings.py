@@ -291,3 +291,31 @@ def test_get_mw_context_tags(monkeypatch):
     actual_result = settings.get_mw_context_tags(extension_name)
 
     assert expected_result == actual_result
+
+
+@pytest.mark.parametrize(
+    "timeout_value",
+    [(130, 130), ("asdf", 120), (120.5, 120), (None, 120)],
+    ids=["Valid number", "Invalid number", "Valid decimal number", "No value supplied"],
+)
+def test_get_process_timeout(timeout_value, monkeypatch):
+    """Parameterized test to check settings.test_get_process_timeout returns the correct timeout value when MWI_PROCESS_STARTUP_TIMEOUT is set.
+
+    Args:
+        timeout (str): Timeout for processes launched by matlab-proxy
+        monkeypatch (Builtin pytest fixture): Pytest fixture to monkeypatch environment variables.
+    """
+    # Arrange
+    supplied_timeout, expected_timeout = timeout_value[0], timeout_value[1]
+
+    # pytest would throw warnings if None is supplied to monkeypatch
+    if supplied_timeout:
+        monkeypatch.setenv(
+            mwi_env.get_env_name_process_startup_timeout(), str(supplied_timeout)
+        )
+
+    # Act
+    actual_timeout = settings.get_process_startup_timeout()
+
+    # Assert
+    assert expected_timeout == actual_timeout
