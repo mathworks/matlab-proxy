@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2023 The MathWorks, Inc.
+// Copyright 2020-2023 The MathWorks, Inc.
 
 import React from "react";
 import EntitlementSelector from "./index";
@@ -31,7 +31,6 @@ describe("EntitlementSelector Component", () => {
           entitlementId: null,
         },
         matlabStatus: "down",
-        matlabVersion: "R2023a",
         isFetching: false,
         hasFetched: true,
         isSubmitting: false,

@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2023 The MathWorks, Inc.
+// Copyright 2020-2023 The MathWorks, Inc.
 
 import { useState } from "react";
 import { useDispatch } from "react-redux";

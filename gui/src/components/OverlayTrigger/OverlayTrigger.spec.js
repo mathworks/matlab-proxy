@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright 2020-2023 The MathWorks, Inc.
 
 import { fireEvent, render } from "../../test/utils/react-test";
 import React from "react";
@@ -21,7 +21,6 @@ describe("OverlayTrigger Component", () => {
       serverStatus: {
         licensingInfo: { type: "MHLM", emailAddress: "abc@mathworks.com" },
         matlabStatus: "up",
-        matlabVersion: "R2020b",
         isFetching: false,
         hasFetched: true,
         isSubmitting: false,

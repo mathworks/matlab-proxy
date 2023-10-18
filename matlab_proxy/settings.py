@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2023 The MathWorks, Inc.
 
 from pathlib import Path
 import os
@@ -67,7 +67,7 @@ def get_matlab_executable_and_root_path():
         matlab_root_path = Path(custom_matlab_root_path)
 
         # Terminate process if invalid Custom Path was provided!
-        mwi.validators.terminate_on_invalid_matlab_root_path(
+        mwi.validators.validate_matlab_root_path(
             matlab_root_path, is_custom_matlab_root=True
         )
 
@@ -86,18 +86,15 @@ def get_matlab_executable_and_root_path():
 
     if matlab_executable_path:
         matlab_root_path = Path(matlab_executable_path).resolve().parent.parent
-        mwi.validators.terminate_on_invalid_matlab_root_path(
+        logger.info(f"Found MATLAB executable at: {matlab_executable_path}")
+        matlab_root_path = mwi.validators.validate_matlab_root_path(
             matlab_root_path, is_custom_matlab_root=False
-        )
-        logger.info(
-            f"Found MATLAB Executable: {matlab_executable_path} with Root: {matlab_root_path}"
         )
         return matlab_executable_path, matlab_root_path
 
     # Control only gets here if custom matlab root was not set AND which matlab returned no results.
     # Note, error messages are formatted as multi-line strings and the front end displays them as is.
-    error_message = f"""Unable to find MATLAB on the system PATH.
-Add MATLAB to the system PATH, and restart matlab-proxy."""
+    error_message = "Unable to find MATLAB on the system PATH. Add MATLAB to the system PATH, and restart matlab-proxy."
 
     logger.info(error_message)
     raise MatlabInstallError(error_message)
@@ -116,6 +113,9 @@ def get_matlab_version(matlab_root_path):
         return None
 
     version_info_file_path = Path(matlab_root_path) / constants.VERSION_INFO_FILE_NAME
+    if not version_info_file_path.exists():
+        return None
+
     tree = ET.parse(version_info_file_path)
     root = tree.getroot()
 
@@ -337,9 +337,22 @@ def get_matlab_settings():
         else ["-nodesktop"]
     )
     matlab_startup_file = str(Path(__file__).resolve().parent / "matlab" / "startup.m")
+
+    matlab_version = get_matlab_version(matlab_root_path)
+
+    # If the matlab on system PATH is a wrapper script, then it would not be possible to determine MATLAB root (inturn not being able to determine MATLAB version)
+    # unless MWI_CUSTOM_MATLAB_ROOT is set. Raising only a warning as the matlab version is only required for communicating with MHLM.
+    if not matlab_version:
+        logger.warn(
+            f"Could not determine MATLAB version from MATLAB root path: {matlab_root_path}"
+        )
+        logger.warn(
+            f"Set {mwi_env.get_env_name_custom_matlab_root()} to a valid MATLAB root path"
+        )
+
     return {
         "matlab_path": matlab_root_path,
-        "matlab_version": get_matlab_version(matlab_root_path),
+        "matlab_version": matlab_version,
         "matlab_cmd": [
             matlab_executable_path,
             "-nosplash",

@@ -6,13 +6,20 @@ import os
 import random
 import socket
 import tempfile
+from matlab_proxy.util.mwi.validators import validate_matlab_root_path
+from matlab_proxy import constants
+from pathlib import Path
 
 import matlab_proxy
 import pytest
 from matlab_proxy.util import system
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import validators
-from matlab_proxy.util.mwi.exceptions import NetworkLicensingError, FatalError
+from matlab_proxy.util.mwi.exceptions import (
+    NetworkLicensingError,
+    FatalError,
+    MatlabInstallError,
+)
 
 
 @pytest.mark.parametrize(
@@ -261,3 +268,63 @@ def test_validate_mwi_ssl_key_and_cert_file(monkeypatch):
         # Or else PermissionError is raised.
         os.close(fd)
         os.remove(path)
+
+
+def test_validate_matlab_root_path(tmp_path):
+    """Checks if matlab root is validated without raising exceptions"""
+
+    # Arrange
+    matlab_root = Path(tmp_path) / "MATLAB"
+    os.mkdir(matlab_root)
+    version_info_file = Path(matlab_root) / constants.VERSION_INFO_FILE_NAME
+    version_info_file.touch()
+
+    # Act
+    actual_matlab_root = validate_matlab_root_path(
+        matlab_root, is_custom_matlab_root=False
+    )
+    actual_matlab_root_custom = validate_matlab_root_path(
+        matlab_root, is_custom_matlab_root=True
+    )
+
+    # Assert
+    assert actual_matlab_root == matlab_root
+    assert actual_matlab_root_custom == matlab_root
+
+
+def test_validate_matlab_root_path_invalid_root_path(tmp_path):
+    """Checks if validate_matlab_root_path raises MatlabInstallError when non-existent path is supplied"""
+    # Arrange
+    matlab_root = Path(tmp_path) / "MATLAB"
+
+    # Act
+    with pytest.raises(MatlabInstallError):
+        actual_matlab_root = validate_matlab_root_path(
+            matlab_root, is_custom_matlab_root=False
+        )
+        actual_matlab_root_custom = validate_matlab_root_path(
+            matlab_root, is_custom_matlab_root=True
+        )
+
+        # Assert
+        assert actual_matlab_root is None
+        assert actual_matlab_root_custom is None
+
+
+def test_validate_matlab_root_path_non_existent_versioninfo_file(tmp_path):
+    """Checks if validate_matlab_root_path does not raise any exceptions even if VersionInfo.xml file does not exist"""
+    # Arrange
+    matlab_root = Path(tmp_path) / "MATLAB"
+    os.mkdir(matlab_root)
+
+    # Act
+    actual_matlab_root = validate_matlab_root_path(
+        matlab_root, is_custom_matlab_root=False
+    )
+    actual_matlab_root_custom = validate_matlab_root_path(
+        matlab_root, is_custom_matlab_root=True
+    )
+
+    # Assert
+    assert actual_matlab_root is None
+    assert actual_matlab_root_custom is None

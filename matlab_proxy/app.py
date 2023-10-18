@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2023 The MathWorks, Inc.
 
 import asyncio
 import json
@@ -104,12 +104,10 @@ async def create_status_response(app, loadUrl=None):
         JSONResponse: A JSONResponse object containing the generic state of the server, MATLAB and MATLAB Licensing.
     """
     state = app["state"]
-
     return web.json_response(
         {
             "matlab": {
                 "status": await state.get_matlab_state(),
-                "version": state.settings.get("matlab_version", "Unknown"),
             },
             "licensing": marshal_licensing_info(state.licensing),
             "loadUrl": loadUrl,

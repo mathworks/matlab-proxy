@@ -55,7 +55,7 @@ function Help({
                                 Sign out of MATLAB. Use this to stop MATLAB and to sign in with an alternative account. Available if using online licensing.<br />
                                 Unset network license manager server address. Use this to stop MATLAB and enter new licensing information. Available if using network license manager.
                             </p>
-                            <p className="icon-custom-feedback">{`Send feedback about the ${targetEnvMsg}. This action opens your default email application.`}</p>
+                            <p className="icon-custom-feedback">{`Send feedback about the ${targetEnvMsg}. This action opens the matlab-proxy repository on github.com`}</p>
                         </div>
                     </div>
                     <div className="modal-footer">

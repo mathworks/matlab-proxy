@@ -1,11 +1,10 @@
-// Copyright (c) 2020-2023 The MathWorks, Inc.
+// Copyright 2020-2023 The MathWorks, Inc.
 
 import { createSelector } from 'reselect';
 
 export const selectTutorialHidden = state => state.tutorialHidden;
 export const selectServerStatus = state => state.serverStatus;
 export const selectMatlabStatus = state => state.serverStatus.matlabStatus;
-export const selectMatlabVersion = state => state.serverStatus.matlabVersion;
 export const selectWsEnv = state => state.serverStatus.wsEnv;
 export const selectSubmittingServerStatus = state => state.serverStatus.isSubmitting;
 export const selectHasFetchedServerStatus = state => state.serverStatus.hasFetched;

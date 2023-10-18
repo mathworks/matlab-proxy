@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright 2020-2023 The MathWorks, Inc.
 
 import * as reducers from './index';
 import * as actions from '../actions';
@@ -253,25 +253,6 @@ describe('reducers', () => {
     it('should return matlab status down as default', () => {
       action = _.cloneDeep(genericAction);
       expect(reducers.matlabStatus(undefined, action)).toEqual('down');
-    });
-  });
-
-  describe('matlabVersion', () => {
-
-
-    it('should return matlab version for action type defined in receiveActions', () => {
-      for (let i = 0; i < receiveActions.length; i++) {
-        action = _.cloneDeep(genericAction);
-        action.type = receiveActions[i];
-        expect(reducers.matlabVersion(undefined, action)).toBe(
-          action.status.matlab.version
-        );
-      }
-    });
-
-    it('should return matlab version : null as default', () => {
-      action = _.cloneDeep(genericAction);
-      expect(reducers.matlabVersion(undefined, action)).toBeNull();
     });
   });
 

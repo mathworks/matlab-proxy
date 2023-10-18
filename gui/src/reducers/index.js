@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright 2020-2023 The MathWorks, Inc.
 
 import { combineReducers } from 'redux';
 
@@ -121,18 +121,6 @@ export function matlabStatus(state = 'down', action) {
     }
 }
 
-export function matlabVersion(state = null, action) {
-    switch (action.type) {
-        case RECEIVE_SERVER_STATUS:
-        case RECEIVE_SET_LICENSING:
-        case RECEIVE_TERMINATE_INTEGRATION:
-        case RECEIVE_STOP_MATLAB:
-        case RECEIVE_START_MATLAB:
-            return action.status.matlab.version;
-        default:
-            return state;
-    }
-}
 
 export function wsEnv(state = null, action) {
     switch (action.type) {
@@ -279,7 +267,6 @@ export const authInfo = combineReducers({
 export const serverStatus = combineReducers({
     licensingInfo,
     matlabStatus,
-    matlabVersion,
     wsEnv,
     isFetching,
     hasFetched,

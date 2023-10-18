@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright 2020-2023 The MathWorks, Inc.
 
 import React from 'react';
 import Controls from './index';
@@ -16,7 +16,6 @@ describe('Controls Component', () => {
       serverStatus: {
         licensingInfo: { type: 'MHLM', emailAddress: 'abc@mathworks.com' },
         matlabStatus: 'up',
-        matlabVersion: 'R2020b',
         isFetching: false,
         hasFetched: true,
         isSubmitting: false,

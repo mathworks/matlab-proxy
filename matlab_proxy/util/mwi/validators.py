@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2023 The MathWorks, Inc.
 """This file contains validators for various runtime artefacts.
 A validator is defined as a function which verifies the input and 
 returns it unchanged if validation passes. 
@@ -304,11 +304,9 @@ def __validate_if_paths_exist(paths: List[Path]):
     return paths
 
 
-def terminate_on_invalid_matlab_root_path(
-    matlab_root: Path, is_custom_matlab_root: bool
-):
+def validate_matlab_root_path(matlab_root: Path, is_custom_matlab_root: bool):
     """Validate if path supplied is MATLAB_ROOT by checking for the existence of VersionInfo.xml file
-    at matlab_root
+    at matlab_root.
 
     Args:
         path (pathlib.Path): path to MATLAB root
@@ -319,33 +317,29 @@ def terminate_on_invalid_matlab_root_path(
     Raises:
         MatlabInstallError
     """
-    error_string = f"""Unable to find MATLAB at: {matlab_root}"""
-
+    warn_string = ""
     if is_custom_matlab_root:
-        error_string += f"""\nEdit the environment variable {mwi_env.get_env_name_custom_matlab_root()} to the correct path, and restart matlab-proxy."""
-    else:
-        error_string += f"\nUpdate your system PATH, and restart matlab-proxy."
+        warn_string += f"""Edit the environment variable {mwi_env.get_env_name_custom_matlab_root()} to the correct path, and restart matlab-proxy."""
 
-    #  Check your system PATH, or the value in environment variable {mwi_env.get_env_name_custom_matlab_root()}.
-    #  Restart matlab-proxy after fixing the issue, to continue."""
     try:
-        matlab_root = matlab_root
         __validate_if_paths_exist([matlab_root])
-        logger.debug(
-            f"Specified MATLAB root path:{matlab_root} exists, continuing to verify its validity..."
+        logger.info(
+            f"MATLAB root path: {matlab_root} exists, continuing to verify its validity..."
         )
+
     except OSError as exc:
         logger.error(". ".join(exc.args))
-        raise MatlabInstallError(error_string)
+        raise MatlabInstallError(warn_string)
 
     version_info_file_path = matlab_root / VERSION_INFO_FILE_NAME
 
     if not version_info_file_path.is_file():
-        log_error_string = (
-            error_string
-            + f"Failed to locate {VERSION_INFO_FILE_NAME} at this location."
+        log_warn_string = (
+            warn_string + f"Unable to locate {VERSION_INFO_FILE_NAME} at {matlab_root}"
         )
-        logger.error(log_error_string)
-        raise MatlabInstallError(error_string)
+        logger.warn(log_warn_string)
+
+        # Returning None as matlab_root could not be determined
+        return None
 
     return matlab_root
