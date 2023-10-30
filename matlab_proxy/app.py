@@ -469,6 +469,16 @@ async def matlab_view(req):
     mwapikey = req.app["settings"]["mwapikey"]
     matlab_base_url = f"{matlab_protocol}://127.0.0.1:{matlab_port}"
 
+    # If we are trying to send request to matlab while the matlab_port is still not assigned
+    # by embedded connector, return service not available and log a message
+    if not matlab_port:
+        logger.debug(
+            "MATLAB hasn't fully started, please retry after embedded connector has started"
+        )
+        raise web.HTTPServiceUnavailable(
+            "MATLAB hasn't fully started yet, please retry after some time."
+        )
+
     # WebSocket
     # According to according to RFC6455 (https://www.rfc-editor.org/rfc/rfc6455.html)
     # the values of 'connection' and 'upgrade'  keys of request header
