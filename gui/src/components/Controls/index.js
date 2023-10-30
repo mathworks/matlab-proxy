@@ -28,7 +28,7 @@ import './Controls.css';
 
 // Suggested actions for certain errors
 const ERROR_TYPE_MAP = {
-    'sign-out': ['NetworkLicensingError', 'EntitlementError'],
+    'sign-out': ['NetworkLicensingError', 'EntitlementError', 'UIVisibleFatalError'],
     'restart': ['OnlineLicensingError']
 };
 
@@ -157,7 +157,7 @@ function Controls({
                 data-testid='unsetLicensingBtn'
                 className={getBtnClass('sign-out')}
                 onClick={() => callback(Confirmations.SIGN_OUT)}
-                disabled={!canResetLicensing || (authEnabled && !isAuthenticated) || (licensingIsMhlm && !isEntitled)}
+                disabled={!canResetLicensing || (authEnabled && !isAuthenticated)}
                 data-for="control-button-tooltip"
                 data-tip= {licensingData.dataTip}
             >
