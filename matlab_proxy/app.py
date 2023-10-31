@@ -475,9 +475,7 @@ async def matlab_view(req):
         logger.debug(
             "MATLAB hasn't fully started, please retry after embedded connector has started"
         )
-        raise web.HTTPServiceUnavailable(
-            "MATLAB hasn't fully started yet, please retry after some time."
-        )
+        raise web.HTTPServiceUnavailable()
 
     # WebSocket
     # According to according to RFC6455 (https://www.rfc-editor.org/rfc/rfc6455.html)

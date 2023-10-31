@@ -1,21 +1,21 @@
-# Copyright (c) 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2023 The MathWorks, Inc.
 
 import asyncio
+import datetime
 import json
 import platform
+import random
 import time
-import datetime
+from datetime import timedelta, timezone
+from http import HTTPStatus
 
 import aiohttp
 import pytest
-import random
-from http import HTTPStatus
+import test_constants
+
 from matlab_proxy import app, util
 from matlab_proxy.util.mwi import environment_variables as mwi_env
-from matlab_proxy.util.mwi.exceptions import MatlabInstallError
-from datetime import timedelta, timezone
-from matlab_proxy.util.mwi.exceptions import EntitlementError
-import test_constants
+from matlab_proxy.util.mwi.exceptions import EntitlementError, MatlabInstallError
 
 
 def test_create_app():
@@ -314,8 +314,18 @@ async def test_root_redirect(test_server):
         test_server (aiohttp_client):  A aiohttp_client server to send HTTP GET request.
 
     """
-    resp = await test_server.get("/")
-    assert resp.status == 404
+    count = 0
+    while True:
+        resp = await test_server.get("/")
+        if resp.status == HTTPStatus.SERVICE_UNAVAILABLE:
+            time.sleep(test_constants.ONE_SECOND_DELAY)
+            count += 1
+        else:
+            assert resp.status == HTTPStatus.NOT_FOUND
+            break
+
+        if count > test_constants.FIVE_MAX_TRIES:
+            raise ConnectionError
 
 
 @pytest.fixture(name="proxy_payload")
@@ -343,10 +353,21 @@ async def test_matlab_proxy_404(proxy_payload, test_server):
 
     # Request a non-existing html file.
     # Request gets proxied to app.matlab_view() which should raise HTTPNotFound() exception ie. return HTTP status code 404
-    resp = await test_server.post(
-        "./1234.html", data=json.dumps(proxy_payload), headers=headers
-    )
-    assert resp.status == 404
+
+    count = 0
+    while True:
+        resp = await test_server.post(
+            "./1234.html", data=json.dumps(proxy_payload), headers=headers
+        )
+        if resp.status == HTTPStatus.SERVICE_UNAVAILABLE:
+            time.sleep(test_constants.ONE_SECOND_DELAY)
+            count += 1
+        else:
+            assert resp.status == HTTPStatus.NOT_FOUND
+            break
+
+        if count > test_constants.FIVE_MAX_TRIES:
+            raise ConnectionError
 
 
 async def test_matlab_proxy_http_get_request(proxy_payload, test_server):
@@ -369,7 +390,7 @@ async def test_matlab_proxy_http_get_request(proxy_payload, test_server):
             "/http_get_request.html", data=json.dumps(proxy_payload)
         )
 
-        if resp.status == 404:
+        if resp.status in (HTTPStatus.NOT_FOUND, HTTPStatus.SERVICE_UNAVAILABLE):
             time.sleep(1)
             count += 1
 
@@ -402,7 +423,7 @@ async def test_matlab_proxy_http_put_request(proxy_payload, test_server):
             "/http_put_request.html", data=json.dumps(proxy_payload)
         )
 
-        if resp.status == 404:
+        if resp.status in (HTTPStatus.NOT_FOUND, HTTPStatus.SERVICE_UNAVAILABLE):
             time.sleep(1)
             count += 1
 
@@ -435,7 +456,7 @@ async def test_matlab_proxy_http_delete_request(proxy_payload, test_server):
             "/http_delete_request.html", data=json.dumps(proxy_payload)
         )
 
-        if resp.status == 404:
+        if resp.status in (HTTPStatus.NOT_FOUND, HTTPStatus.SERVICE_UNAVAILABLE):
             time.sleep(1)
             count += 1
 
@@ -467,7 +488,7 @@ async def test_matlab_proxy_http_post_request(proxy_payload, test_server):
             data=json.dumps(proxy_payload),
         )
 
-        if resp.status == 404:
+        if resp.status in (HTTPStatus.NOT_FOUND, HTTPStatus.SERVICE_UNAVAILABLE):
             time.sleep(1)
             count += 1
 
