@@ -1,12 +1,13 @@
-# Copyright (c) 2023 The MathWorks, Inc.
+# Copyright 2023 The MathWorks, Inc.
+from typing import Final
 
 """This module defines project-level constants"""
 
-CONNECTOR_SECUREPORT_FILENAME = "connector.securePort"
-VERSION_INFO_FILE_NAME = "VersionInfo.xml"
-MAX_HTTP_REQUEST_SIZE = 500_000_000  # 500MB
+CONNECTOR_SECUREPORT_FILENAME: Final[str] = "connector.securePort"
+VERSION_INFO_FILE_NAME: Final[str] = "VersionInfo.xml"
+MAX_HTTP_REQUEST_SIZE: Final[int] = 500_000_000  # 500MB
 
 # Max startup duration in seconds for processes launched by matlab-proxy
 # This constant is meant for internal use within matlab-proxy
 # Clients of this package should use settings.py::get_process_startup_timeout() function
-DEFAULT_PROCESS_START_TIMEOUT = 120
+DEFAULT_PROCESS_START_TIMEOUT: Final[int] = 120
