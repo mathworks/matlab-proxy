@@ -1,3 +1,5 @@
+# Copyright 2022 The MathWorks, Inc.
+
 from matlab_proxy.util import mwi
 
 

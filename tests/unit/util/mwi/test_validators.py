@@ -1,4 +1,5 @@
-# Copyright (c) 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2023 The MathWorks, Inc.
+
 """Tests for functions in matlab_proxy/util/mwi_validators.py
 """
 
@@ -195,7 +196,7 @@ def test_get_configs():
 
 
 @pytest.mark.parametrize(
-    "base_url, validated_base_url",
+    "mwi_base_url, validated_base_url",
     [
         ("", ""),
         ("/bla", "/bla"),
@@ -207,14 +208,14 @@ def test_get_configs():
         "Launch at custom with suffix: /",
     ],
 )
-def test_validate_base_url(base_url, validated_base_url):
+def test_validate_base_url(mwi_base_url, validated_base_url):
     """Tests multiple base_urls which will beparsed and validated successfully.
 
     Args:
         base_url (str): base_url
         validated_base_url (str): validated base_url
     """
-    assert validators.validate_base_url(base_url) == validated_base_url
+    assert validators.validate_base_url(mwi_base_url) == validated_base_url
 
 
 def test_validate_base_url_no_prefix_error():

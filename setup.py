@@ -56,6 +56,9 @@ TESTS_REQUIRES = [
     "pytest-mock",
     "pytest-aiohttp",
     "psutil",
+    "urllib3",
+    "requests",
+    "pytest-playwright",
 ]
 
 INSTALL_REQUIRES = ["aiohttp>=3.7.4", "psutil", "aiohttp_session[secure]"]

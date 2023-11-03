@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022 The MathWorks, Inc
+# Copyright 2020-2023 The MathWorks, Inc
 
 # Workflow to test MATLAB-Proxy while releasing to PyPi
 name: Release to PyPI
@@ -8,12 +8,25 @@ on:
     types: [created]
 
 jobs:
-  call-run-tests:
+  call-run-unit-tests:
     # Call workflow for running node and python tests
-    uses: ./.github/workflows/run-tests.yml
+    uses: ./.github/workflows/run-unit-tests.yml
+
+  generate-code-coverage:
+    # Generates Code coverage and uploads it
+    needs: [call-run-unit-tests]
+    if: success()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Generate Code Coverage XML
+        uses: ./.github/actions/generate-code-coverage
+
 
   build_and_publish_pypi:
-    needs: call-run-tests
+    needs: call-run-unit-tests
     if: success()
     # windows container is not required here
     runs-on: ubuntu-latest

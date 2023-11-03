@@ -12,7 +12,7 @@ from typing import Final
 
 from matlab_proxy import util
 from matlab_proxy.settings import get_process_startup_timeout
-from matlab_proxy.constants import CONNECTOR_SECUREPORT_FILENAME
+from matlab_proxy.constants import CONNECTOR_SECUREPORT_FILENAME, VERSION_INFO_FILE_NAME
 from matlab_proxy.util import mw, mwi, system, windows
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import token_auth
@@ -27,6 +27,7 @@ from matlab_proxy.util.mwi.exceptions import (
     UIVisibleFatalError,
     log_error,
 )
+
 
 logger = mwi.logger.get()
 
@@ -999,7 +1000,7 @@ class AppState:
             except asyncio.CancelledError:
                 pass
         If the request fails, the server process exits with error code 1.
-        
+
         url = self.settings["mwi_server_url"] + "/terminate_integration"
 
         try:

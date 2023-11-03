@@ -1,0 +1,85 @@
+# Copyright 2020-2023 The MathWorks, Inc
+
+# Workflow that contains jobs to run MATLAB-Proxy unit tests
+
+name: Unit testing of MATLAB Proxy
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  node_tests:
+    strategy:
+      # fail-fast=false runs all the jobs in strategy matrix
+      # irrespective of failures in a particular job, and marks
+      # the entire job as failed even if one job has failed
+      fail-fast: false
+
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: ['16.x', '18.x']
+
+    runs-on: ${{ matrix.os }}
+
+    defaults:
+      run:
+        # build and test node project in gui directory
+        working-directory: ./gui
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install Node dependencies
+        run: npm install
+
+      - name: Build Project
+        run: npm run build --if-present
+
+      - name: Run Node tests
+        run: npm test
+
+  python_tests:
+    strategy:
+      # fail-fast=false runs all the jobs in strategy matrix
+      # irrespective of failures in a particular job, and marks
+      # the entire job as failed even if one job has failed
+      fail-fast: false
+
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11']
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Use Node.js 18.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install wheel
+          python3 -m pip install .[dev]
+
+      - name: Lint with black
+        run: black --check .
+
+      - name: Unit Test with pytest
+        run: python3 -m pytest tests/unit

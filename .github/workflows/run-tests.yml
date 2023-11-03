@@ -1,81 +1,26 @@
-# Copyright (c) 2020-2022 The MathWorks, Inc
+# Copyright 2020-2023 The MathWorks, Inc
 
-# Workflow that contains jobs to test MATLAB-Proxy
-name: Testing MATLAB Proxy
+# Workflow that contains jobs to test MATLAB Proxy
+name: Testing MATLAB Proxy Integration
 
 on:
-  # Reusable workflow
-  # Trigger on workflow call
-  workflow_call:
+  workflow_dispatch:
+  push:
+    branches:
+      - "main"
 
 jobs:
-  node_tests:
-    strategy:
-      # fail-fast=false runs all the jobs in strategy matrix
-      # irrespective of failures in a particular job, and marks
-      # the entire job as failed even if one job has failed
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        # build and test node project in gui directory
-        working-directory: ./gui
+  # Runs unit tests
+  call-run-unit-tests-r000:
+    uses: ./.github/workflows/run-unit-tests.yml
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+  call-run-unit-tests-r001:
+    uses: ./.github/workflows/run-unit-tests.yml
 
-      - name: Use Node.js 18
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
+  call-run-unit-tests-r002:
+      uses: ./.github/workflows/run-unit-tests.yml
 
-      - name: Install Node dependencies
-        run: npm install
-
-      - name: Build Project
-        run: npm run build --if-present
-
-      - name: Run Node tests
-        run: npm test
-
-  python_tests:
-    strategy:
-      # fail-fast=false runs all the jobs in strategy matrix
-      # irrespective of failures in a particular job, and marks
-      # the entire job as failed even if one job has failed
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11']
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Use Node.js 18.x
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-
-      - name: Install dependencies
-        # Installing wheel package will slightly speed-up installing dependencies.
-        # Installing the package with "[dev]" flag  will install test dependecies as well,
-        # enabling us to run pytest.
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install wheel
-          pip install .[dev]
-      - name: Lint with black
-        run: black --check .
-
-      - name: Test with pytest
-        run: python -m pytest
+   # Runs integration tests
+  call-integration-tests:
+    uses: ./.github/workflows/run-integration-tests.yml
+    secrets: inherit

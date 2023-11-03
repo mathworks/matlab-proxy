@@ -1,0 +1,57 @@
+# Copyright 2023 The MathWorks, Inc
+
+# Workflow to run MATLAB-Proxy integration tests
+name: Integration testing for MATLAB Proxy
+
+on:
+  # Reusable workflow
+  # Trigger on workflow call
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  python_tests:
+    strategy:
+      # fail-fast=false runs all the jobs in strategy matrix
+      # irrespective of failures in a particular job, and marks
+      # the entire job as failed even if one job has failed
+      fail-fast: false
+
+      matrix:
+        os: [ubuntu-latest]
+        matlab-release: [R2020b, R2023a]
+        python-version: ['3.8', '3.11']
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup MATLAB ${{ matrix.matlab-release }}
+        uses: matlab-actions/setup-matlab@v2-beta
+
+      - name: Setup nodejs
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install wheel
+          python3 -m pip install .[dev]
+
+      - name: Ensure browsers are installed for playwright
+        run: python3 -m playwright install --with-deps
+
+      - name: Test with pytest
+        run: python3 -m pytest tests/integration -vs
+        env:
+          TEST_USERNAME: ${{secrets.TEST_USERNAME}}
+          TEST_PASSWORD: ${{secrets.TEST_PASSWORD}}

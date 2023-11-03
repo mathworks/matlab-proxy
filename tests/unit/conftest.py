@@ -1,11 +1,14 @@
-# Copyright 2020-2021 The MathWorks, Inc.
+# Copyright 2020-2022 The MathWorks, Inc.
+
+""" The conftest.py file is run by the pytest framework for setting things up for the test session.
+"""
 
 import os
 import shutil
+import asyncio
 
 import pytest
-
-from matlab_proxy import settings
+from matlab_proxy import settings, util
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 
 
@@ -48,3 +51,17 @@ def cleanup(request):
             pass
 
     request.addfinalizer(delete_matlab_test_dir)
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Overriding the default event loop of pytest. Intended for windows systems for
+    python <= 3.7 where WindowsSelectorEvent Loop is the default event loop. For
+    python >= 3.8, WindowsProactorEvent Loop is the default.
+
+    Yields:
+        asyncio.loop: WindowsProactorEvent loop in Windows or UnixSelectorEventLoop in posix.
+    """
+    loop = util.get_event_loop()
+    yield loop
+    loop.close()

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 The MathWorks, Inc.
+# Copyright 2023 The MathWorks, Inc.
 
 import pytest
 from aiohttp import web

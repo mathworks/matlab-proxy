@@ -1,7 +1,9 @@
+# Copyright 2022 The MathWorks, Inc.
+
 import pytest
 from matlab_proxy.util import mwi
 from matlab_proxy.util.mwi.exceptions import EmbeddedConnectorError
-from tests.util import MockResponse
+from tests.unit.util import MockResponse
 
 
 async def test_send_request_success(mocker):
