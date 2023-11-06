@@ -5,7 +5,7 @@ import time
 
 import matlab_proxy
 import matlab_proxy.settings as settings
-from matlab_proxy.constants import VERSION_INFO_FILE_NAME
+from matlab_proxy.constants import VERSION_INFO_FILE_NAME, DEFAULT_PROCESS_START_TIMEOUT
 from pathlib import Path
 import pytest
 from matlab_proxy.util.mwi import environment_variables as mwi_env
@@ -295,7 +295,12 @@ def test_get_mw_context_tags(monkeypatch):
 
 @pytest.mark.parametrize(
     "timeout_value",
-    [(130, 130), ("asdf", 120), (120.5, 120), (None, 120)],
+    [
+        (130, 130),
+        ("asdf", DEFAULT_PROCESS_START_TIMEOUT),
+        (120.5, DEFAULT_PROCESS_START_TIMEOUT),
+        (None, DEFAULT_PROCESS_START_TIMEOUT),
+    ],
     ids=["Valid number", "Invalid number", "Valid decimal number", "No value supplied"],
 )
 def test_get_process_timeout(timeout_value, monkeypatch):

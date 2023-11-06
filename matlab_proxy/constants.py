@@ -10,4 +10,4 @@ MAX_HTTP_REQUEST_SIZE: Final[int] = 500_000_000  # 500MB
 # Max startup duration in seconds for processes launched by matlab-proxy
 # This constant is meant for internal use within matlab-proxy
 # Clients of this package should use settings.py::get_process_startup_timeout() function
-DEFAULT_PROCESS_START_TIMEOUT: Final[int] = 120
+DEFAULT_PROCESS_START_TIMEOUT: Final[int] = 600
