@@ -395,3 +395,35 @@ def test_env_variables_filtration_for_xvfb_process(
 
     # Assert
     assert filtered_env_vars.get(env_var) == is_filtered
+
+
+@pytest.mark.parametrize("platform", [("linux"), ("windows"), ("mac")])
+async def test_setup_env_for_matlab(
+    mocker_os_patching_fixture, platform, app_state_fixture, tmp_path
+):
+    """Test to check MW_DIAGNOSTIC_DEST is set appropriately for posix and non-posix systems
+
+    Args:
+        mocker_os_patching_fixture (mocker): Custom pytest fixture for mocking
+        platform (str): string describing a platform
+        app_state_fixture (AppState): Object of AppState class with defaults set
+        tmp_path (Path): Built-in pytest fixture for temporary paths
+    """
+
+    # Arrange
+    expected_log_file_path = tmp_path / "matlab_logs.txt"
+    app_state_fixture.licensing = {"type": "existing_license"}
+    app_state_fixture.settings = {"mwapikey": None, "matlab_display": ":1"}
+    app_state_fixture.mwi_logs_dir = tmp_path
+    mocker_os_patching_fixture.patch(
+        "matlab_proxy.app_state.logger.isEnabledFor", return_value=True
+    )
+
+    # Act
+    matlab_env = await app_state_fixture._AppState__setup_env_for_matlab()
+
+    # Assert
+    if "linux" or "mac" in platform:
+        assert matlab_env["MW_DIAGNOSTIC_DEST"] == "stdout"
+    else:
+        assert matlab_env["MW_DIAGNOSTIC_DEST"] == expected_log_file_path

@@ -4,8 +4,11 @@
 
 import logging
 import os
+import sys
+from pathlib import Path
 
 from . import environment_variables as mwi_env
+
 
 logging.getLogger("aiohttp_session").setLevel(logging.ERROR)
 
@@ -47,19 +50,35 @@ def __set_logging_configuration():
         Logger: Logger object with the set configuration.
     """
     # query for user specified environment variables
-    log_level, log_file = __query_environment()
+    log_level = os.getenv(
+        mwi_env.get_env_name_logging_level(), __get_default_log_level()
+    )
+    log_file = os.getenv(mwi_env.get_env_name_log_file(), None)
 
     ## Set logging object
     logger = __get_mw_logger()
-    if log_file is not None:
-        logger.info(f"Initializing logger with log_file:{log_file}")
-        file_handler = logging.FileHandler(filename=log_file)
-        formatter = logging.Formatter(
-            fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        file_handler.setFormatter(formatter)
-        file_handler.setLevel(log_level)
-        logger.addHandler(file_handler)
+    try:
+        if log_file:
+            log_file = Path(log_file)
+            # Need to create the file if it doesn't exist or else logging.FileHandler
+            # would open it in 'write' mode instead of 'append' mode.
+            log_file.touch(exist_ok=True)
+            logger.info(f"Initializing logger with log file:{log_file}")
+            file_handler = logging.FileHandler(filename=log_file, mode="a")
+            formatter = logging.Formatter(
+                fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
+            file_handler.setFormatter(formatter)
+            file_handler.setLevel(log_level)
+            logger.addHandler(file_handler)
+
+    except PermissionError:
+        print(f"PermissionError: Permission denied to create log file at: {log_file}")
+        sys.exit(1)
+
+    except Exception as err:
+        print(f"Failed to use log file: {log_file} with error: {err}")
+        sys.exit(1)
 
     # log_level is either set by environment or is the default value.
     logger.info(f"Initializing logger with log_level: {log_level}")
@@ -91,16 +110,3 @@ def __get_default_log_level():
         String: The default logging level
     """
     return "INFO"
-
-
-def __query_environment():
-    """Private function to query environment variables
-        to control logging
-
-    Returns:
-        tuple: Log level & Log file as found in the environment
-    """
-    env_var_log_level, env_var_log_file = get_environment_variable_names()
-    log_level = os.environ.get(env_var_log_level, __get_default_log_level())
-    log_file = os.environ.get(env_var_log_file)
-    return log_level, log_file
