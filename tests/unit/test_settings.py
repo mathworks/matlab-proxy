@@ -2,6 +2,7 @@
 
 import os
 import time
+import tempfile
 
 import matlab_proxy
 import matlab_proxy.settings as settings
@@ -324,3 +325,51 @@ def test_get_process_timeout(timeout_value, monkeypatch):
 
     # Assert
     assert expected_timeout == actual_timeout
+
+
+def test_get_mwi_config_folder_dev():
+    ## Arrange
+    expected_config_dir = Path(tempfile.gettempdir()) / "MWI" / "tests"
+
+    # Act
+    actual_config_dir = settings.get_mwi_config_folder(dev=True)
+
+    # Assert
+    assert expected_config_dir == actual_config_dir
+
+
+@pytest.mark.parametrize(
+    "hostname, home, expected_mwi_config_dir",
+    [
+        (
+            "bob",
+            Path("/home/bob"),
+            Path("/home/bob") / ".matlab" / "MWI" / "hosts" / "bob",
+        ),
+        (
+            "bob",
+            Path("/home/CommonProject"),
+            Path("/home/CommonProject") / ".matlab" / "MWI" / "hosts" / "bob",
+        ),
+        (
+            None,
+            Path("/home/CommonProject"),
+            Path("/home/CommonProject") / ".matlab" / "MWI",
+        ),
+    ],
+    ids=[
+        "Single host machine with unique $HOME per host",
+        "Multi-host machine with common $HOME for multiple hosts",
+        "default directory when hostname is missing",
+    ],
+)
+def test_get_mwi_config_folder(mocker, hostname, home, expected_mwi_config_dir):
+    # Arrange
+    mocker.patch("matlab_proxy.settings.Path.home", return_value=home)
+    mocker.patch("matlab_proxy.settings.socket.gethostname", return_value=hostname)
+
+    # Act
+    actual_config_dir = settings.get_mwi_config_folder()
+
+    # Assert
+    assert expected_mwi_config_dir == actual_config_dir

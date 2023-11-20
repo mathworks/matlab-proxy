@@ -34,13 +34,20 @@ def matlab_log_dir_fixture(monkeypatch, tmp_path):
         monkeypatch : A built-in pytest fixture.
         tmp_path: tmp_path fixture provides a temporary directory unique to the test invocation.
     """
-    matlab_log_dir = str(tmp_path)
-    monkeypatch.setenv("MATLAB_LOG_DIR", matlab_log_dir)
+    hostname = socket.gethostname()
+    matlab_log_dir = Path(tmp_path)
+
+    if hostname:
+        matlab_log_dir = matlab_log_dir / "hosts" / hostname
+        matlab_log_dir.mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setenv("MATLAB_LOG_DIR", str(matlab_log_dir))
+
     return matlab_log_dir
 
 
 @pytest.fixture(name="matlab_ready_file")
-def matlab_ready_file_fixture(matlab_log_dir, monkeypatch):
+def matlab_ready_file_fixture(matlab_log_dir):
     """A pytest fixture to create the matlab_ready_file.
 
     This fixture creates the matlab readyfile path based on the matlab_log_dir fixture output.
@@ -124,8 +131,7 @@ def matlab_process_valid_nlm_fixture(matlab_log_dir, matlab_process_setup, valid
     """
 
     matlab_process = subprocess.Popen(
-        matlab_process_setup.matlab_cmd,
-        stderr=subprocess.PIPE,
+        matlab_process_setup.matlab_cmd, stderr=subprocess.PIPE
     )
 
     yield

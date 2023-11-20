@@ -132,8 +132,22 @@ def get_ws_env_settings():
 def get_mwi_config_folder(dev=False):
     if dev:
         return get_test_temp_dir()
+
     else:
-        return Path.home() / ".matlab" / "MWI"
+        config_folder_path = Path.home() / ".matlab" / "MWI"
+        # In multi-host environments, Path.home() can be the same for
+        # multiple hosts and can cause issues when different hosts launch
+        # matlab-proxy on the same port.
+        # Using hostname to be part of the path of the config folder would avoid collisions.
+        hostname = socket.gethostname()
+        if hostname:
+            config_folder_path = config_folder_path / "hosts" / hostname
+
+        logger.debug(
+            f"{'Hostname could not be determined. ' if not hostname else '' }Using the folder: {config_folder_path} for storing all matlab-proxy related session information"
+        )
+
+        return config_folder_path
 
 
 def get_mwi_logs_root_dir(dev=False):
