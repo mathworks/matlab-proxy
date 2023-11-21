@@ -138,7 +138,6 @@ describe('Test fetchWithTimeout method', () => {
   });
 
   it('dispatches RECIEVE_ERROR when no response is received', async () => {
-
     const expectedActions = [
       actions.RECEIVE_ERROR,
     ];
@@ -154,15 +153,13 @@ describe('Test fetchWithTimeout method', () => {
 
 
   it('should send a delayed response after timeout expires, thereby triggering abort() method of AbortController', async () => {
-
     const timeout = 10
-    const delay = (response, after = 500) => () => new Promise(resolve => setTimeout(resolve, after)).then(() => response);
 
     // Send a delayed response, well after the timeout for the request has expired.
     // This should trigger the abort() method of the AbortController()
-    fetchMock.mock('/get_status', delay(200, timeout + 100));
+    fetchMock.getOnce('/get_status', new Promise(resolve => setTimeout(() => resolve({ body: 'ok' }), 1000 + timeout)));
 
-    const abortSpy = jest.spyOn(AbortController.prototype, 'abort');
+    const abortSpy = jest.spyOn(global.AbortController.prototype, 'abort');
     const expectedActions = [
       actions.RECEIVE_ERROR,
     ];

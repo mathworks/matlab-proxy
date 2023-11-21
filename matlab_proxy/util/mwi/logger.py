@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022 The MathWorks, Inc.
+# Copyright 2020-2023 The MathWorks, Inc.
 """Functions to access & control the logging behavior of the app
 """
 
