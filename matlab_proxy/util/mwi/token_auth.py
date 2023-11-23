@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2023 The MathWorks, Inc.
 
 # This file contains functions required to enable token based authentication in the server.
 
@@ -135,6 +135,8 @@ def authenticate_access_decorator(endpoint):
 
 
 ## Module Private Methods:
+
+
 async def _get_token_name(request):
     """Gets the name of the token from settings.
 

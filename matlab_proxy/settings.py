@@ -150,10 +150,6 @@ def get_mwi_config_folder(dev=False):
         return config_folder_path
 
 
-def get_default_mwi_log_file_path():
-    return get_mwi_config_folder() / constants.MATLAB_LOGS_FILE_NAME
-
-
 def get_mwi_logs_root_dir(dev=False):
     return get_mwi_config_folder(dev) / "ports"
 

@@ -8,12 +8,11 @@ import os
 import time
 from collections import deque
 from datetime import datetime, timedelta, timezone
-from typing import Final
+from typing import Final, Optional
 
 from matlab_proxy import util
 from matlab_proxy.settings import (
     get_process_startup_timeout,
-    get_default_mwi_log_file_path,
 )
 from matlab_proxy.constants import (
     CONNECTOR_SECUREPORT_FILENAME,
@@ -293,7 +292,24 @@ class AppState:
 
         return True
 
-    async def _get_matlab_connector_status(self):
+    def _get_token_auth_headers(self) -> Optional[dict]:
+        """Returns token info as headers if authentication is enabled.
+
+        Returns:
+            [Dict | None]: Returns token authentication headers if any.
+        """
+        return (
+            {self.settings["mwi_auth_token_name"]: self.settings["mwi_auth_token_hash"]}
+            if self.settings["mwi_is_token_auth_enabled"]
+            else None
+        )
+
+    async def _get_matlab_connector_status(self) -> str:
+        """Returns the status of MATLABs Embedded Connector.
+
+        Returns:
+            str: Returns any of "up", "down" or "starting" indicating the status of Embedded Connector.
+        """
         if not self.matlab_session_files["matlab_ready_file"].exists():
             return "starting"
 
@@ -303,11 +319,7 @@ class AppState:
         # As the matlab_view is now a protected endpoint, we need to pass token information through headers.
 
         # Include token information into the headers if authentication is enabled.
-        headers = (
-            {self.settings["mwi_auth_token_name"]: self.settings["mwi_auth_token_hash"]}
-            if self.settings["mwi_is_token_auth_enabled"]
-            else None
-        )
+        headers = self._get_token_auth_headers()
 
         embedded_connector_status = await mwi.embedded_connector.request.get_state(
             mwi_server_url=self.settings["mwi_server_url"],
@@ -683,10 +695,13 @@ class AppState:
             else:
                 # On windows stdout is not supported yet.
                 # So, use the default log file for MATLAB logs
-                default_matlab_logs_file = get_default_mwi_log_file_path()
+                matlab_logs_file = self.mwi_logs_dir / MATLAB_LOGS_FILE_NAME
                 # Write MATLAB logs
-                matlab_env["MW_DIAGNOSTIC_DEST"] = f"file={default_matlab_logs_file}"
+                matlab_env["MW_DIAGNOSTIC_DEST"] = f"file={matlab_logs_file}"
 
+            logger.info(
+                f"Writing MATLAB process logs to: {matlab_env['MW_DIAGNOSTIC_DEST']}"
+            )
             matlab_env[
                 "MW_DIAGNOSTIC_SPEC"
             ] = "connector::http::server=all;connector::lifecycle=all"
@@ -1069,12 +1084,16 @@ class AppState:
 
         try:
             data = mwi.embedded_connector.helpers.get_data_to_eval_mcode("exit")
+            headers = self._get_token_auth_headers()
             url = mwi.embedded_connector.helpers.get_mvm_endpoint(
                 self.settings["mwi_server_url"]
             )
 
             resp_json = await mwi.embedded_connector.send_request(
-                url=url, method="POST", data=data, headers=None
+                url=url,
+                method="POST",
+                data=data,
+                headers=headers,
             )
 
             if resp_json["messages"]["EvalResponse"][0]["isError"]:

@@ -10,6 +10,7 @@ import pytest
 
 from matlab_proxy.app_state import AppState
 from matlab_proxy.util.mwi.exceptions import LicensingError, MatlabError
+from tests.unit.util import MockResponse
 
 
 @pytest.fixture
@@ -22,6 +23,36 @@ def app_state_fixture():
     settings = {"error": None}
     app_state = AppState(settings=settings)
     return app_state
+
+
+@pytest.fixture
+def sample_token_headers_fixture():
+    return {"mwi_auth_token_name": "asdf"}
+
+
+@pytest.fixture
+def app_state_with_token_auth_fixture(
+    app_state_fixture, sample_token_headers_fixture, tmp_path
+):
+    """Pytest fixture which returns AppState instance with token authentication enabled.
+
+    Args:
+        app_state_fixture (AppState): Pytest fixture
+        tmp_path (str): Built-in pytest fixture
+
+    Returns:
+        (AppState, dict): Instance of the AppState class with token authentication enabled and token headers
+    """
+    tmp_matlab_ready_file = Path(tmp_path) / "tmp_file.txt"
+    tmp_matlab_ready_file.touch()
+    ((mwi_auth_token_name, mwi_auth_token_hash),) = sample_token_headers_fixture.items()
+    app_state_fixture.matlab_session_files["matlab_ready_file"] = tmp_matlab_ready_file
+    app_state_fixture.settings["mwi_is_token_auth_enabled"] = True
+    app_state_fixture.settings["mwi_auth_token_name"] = mwi_auth_token_name
+    app_state_fixture.settings["mwi_auth_token_hash"] = mwi_auth_token_hash
+    app_state_fixture.settings["mwi_server_url"] = "http://localhost:8888"
+
+    return app_state_fixture
 
 
 @pytest.fixture
@@ -38,12 +69,20 @@ def mocker_os_patching_fixture(mocker, platform):
     mocker.patch("matlab_proxy.app_state.system.is_linux", return_value=False)
     mocker.patch("matlab_proxy.app_state.system.is_windows", return_value=False)
     mocker.patch("matlab_proxy.app_state.system.is_mac", return_value=False)
+    mocker.patch("matlab_proxy.app_state.system.is_posix", return_value=False)
+
     if platform == "linux":
         mocker.patch("matlab_proxy.app_state.system.is_linux", return_value=True)
+        mocker.patch("matlab_proxy.app_state.system.is_posix", return_value=True)
+
     elif platform == "windows":
         mocker.patch("matlab_proxy.app_state.system.is_windows", return_value=True)
+        mocker.patch("matlab_proxy.app_state.system.is_posix", return_value=False)
+
     else:
         mocker.patch("matlab_proxy.app_state.system.is_mac", return_value=True)
+        mocker.patch("matlab_proxy.app_state.system.is_posix", return_value=True)
+
     return mocker
 
 
@@ -397,9 +436,12 @@ def test_env_variables_filtration_for_xvfb_process(
     assert filtered_env_vars.get(env_var) == is_filtered
 
 
-@pytest.mark.parametrize("platform", [("linux"), ("windows"), ("mac")])
+@pytest.mark.parametrize(
+    "platform, expected_output",
+    [("linux", "stdout"), ("windows", "file"), ("mac", "stdout")],
+)
 async def test_setup_env_for_matlab(
-    mocker_os_patching_fixture, platform, app_state_fixture, tmp_path
+    mocker_os_patching_fixture, platform, expected_output, app_state_fixture, tmp_path
 ):
     """Test to check MW_DIAGNOSTIC_DEST is set appropriately for posix and non-posix systems
 
@@ -411,7 +453,6 @@ async def test_setup_env_for_matlab(
     """
 
     # Arrange
-    expected_log_file_path = tmp_path / "matlab_logs.txt"
     app_state_fixture.licensing = {"type": "existing_license"}
     app_state_fixture.settings = {"mwapikey": None, "matlab_display": ":1"}
     app_state_fixture.mwi_logs_dir = tmp_path
@@ -423,7 +464,47 @@ async def test_setup_env_for_matlab(
     matlab_env = await app_state_fixture._AppState__setup_env_for_matlab()
 
     # Assert
-    if "linux" or "mac" in platform:
-        assert matlab_env["MW_DIAGNOSTIC_DEST"] == "stdout"
-    else:
-        assert matlab_env["MW_DIAGNOSTIC_DEST"] == expected_log_file_path
+    assert expected_output in matlab_env["MW_DIAGNOSTIC_DEST"]
+
+
+@pytest.mark.parametrize(
+    "function_to_call ,mock_response",
+    [
+        ("_get_matlab_connector_status", MockResponse(ok=True)),
+        (
+            "_AppState__send_stop_request_to_matlab",
+            MockResponse(
+                ok=True, payload={"messages": {"EvalResponse": [{"isError": None}]}}
+            ),
+        ),
+    ],
+    ids=["request matlab connector status", "send request to stop matlab"],
+)
+async def test_requests_sent_by_matlab_proxy_have_headers(
+    app_state_with_token_auth_fixture,
+    function_to_call,
+    mock_response,
+    mocker,
+    sample_token_headers_fixture,
+):
+    """Test to check if token headers are included in requests sent by matlab-proxy when authentication is enabled
+
+    Args:
+        app_state_fixture_with_token_auth (AppState): Instance of AppState class with token authentication enabled
+        mocker : Built-in pytest fixture
+    """
+    # Arrange
+    mocked_request = mocker.patch(
+        "aiohttp.ClientSession.request", return_value=mock_response
+    )
+
+    # Act
+    # Call the function passed as a string
+    method = getattr(app_state_with_token_auth_fixture, function_to_call)
+    _ = await method()
+
+    # Assert
+    connector_status_request_headers = list(mocked_request.call_args_list)[0].kwargs[
+        "headers"
+    ]
+    assert sample_token_headers_fixture == connector_status_request_headers
