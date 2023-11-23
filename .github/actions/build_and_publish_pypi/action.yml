@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022 The MathWorks, Inc
+# Copyright 2020-2023 The MathWorks, Inc.
 
 # Composite Action to Build and Publish in PyPi
 name: Build and Publish in PyPi
@@ -16,12 +16,12 @@ runs:
 
     - name: Install Python build dependencies
       run: |
-        python -m pip install --upgrade pip
-        python -m pip install wheel
+        python3 -m pip install --upgrade pip
+        python3 -m pip install wheel
       shell: bash
 
     - name: Build Source and Binary wheel distributions
-      run: python setup.py bdist_wheel sdist
+      run: python3 setup.py bdist_wheel sdist
       shell: bash
 
     - name: Publish to PyPI.

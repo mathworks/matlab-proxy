@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022 The MathWorks, Inc
+# Copyright 2020-2023 The MathWorks, Inc.
 
 # Composite Action to generate Code Coverage XML and Upload it
 name: Generate Code Coverage XML
@@ -17,17 +17,17 @@ runs:
 
     - name: Install Python build dependencies
       run: |
-        python -m pip install --upgrade pip
-        python -m pip install wheel
-        pip install .[dev]
+        python3 -m pip install --upgrade pip
+        python3 -m pip install wheel
+        python3 -m pip install .[dev]
       shell: bash
 
     - name: Generate Code Coverage report for Python code
-      run: pytest --cov=./ --cov-report=xml
+      run: python3 -m pytest --cov=./ --cov-report=xml tests/unit
       shell: bash
 
     - name: Upload python coverage report to Codecov
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v3
       with:
         directory: ./
         name: Python-codecov
@@ -44,7 +44,7 @@ runs:
       shell: bash
 
     - name: Upload Javscript coverage report to Codecov
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v3
       with:
         directory: ./gui/coverage/
         fail_ci_if_error: true

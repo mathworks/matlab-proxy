@@ -9,3 +9,5 @@ htmlcov/
 .coverage
 *.key
 *.pem
+.python-version
+coverage.xml
