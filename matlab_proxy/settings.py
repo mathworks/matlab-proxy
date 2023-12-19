@@ -369,6 +369,14 @@ def get_matlab_settings():
             f"Set {mwi_env.get_env_name_custom_matlab_root()} to a valid MATLAB root path"
         )
 
+    mpa_flags = (
+        mwi_env.Experimental.get_mpa_flags()
+        if mwi_env.Experimental.is_mpa_enabled()
+        else ""
+    )
+    profile_matlab_startup = (
+        "-timing" if mwi_env.Experimental.is_matlab_startup_profiling_enabled() else ""
+    )
     return {
         "matlab_path": matlab_root_path,
         "matlab_version": matlab_version,
@@ -377,7 +385,10 @@ def get_matlab_settings():
             "-nosplash",
             *flag_to_hide_desktop,
             "-softwareopengl",
+            # " v=mvm ",
             *matlab_lic_mode,
+            *mpa_flags,
+            profile_matlab_startup,
             "-r",
             f"try; run('{matlab_startup_file}'); catch ME; disp(ME.message); end;",
         ],

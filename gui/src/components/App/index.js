@@ -1,4 +1,4 @@
-// Copyright 2020-2022 The MathWorks, Inc.
+// Copyright 2020-2023 The MathWorks, Inc.
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
@@ -14,20 +14,22 @@ import Information from '../Information';
 import Help from '../Help';
 import Error from '../Error';
 import {
-  selectOverlayVisible,
-  selectFetchStatusPeriod,
-  selectHasFetchedServerStatus,
-  selectLicensingProvided,
-  selectMatlabUp,
-  selectError,
-  selectLoadUrl,
-  selectIsConnectionError,
-  selectHasFetchedEnvConfig,
-  selectAuthEnabled,
-  selectIsAuthenticated,
-  selectLicensingMhlmHasEntitlements,
-  selectIsEntitled,
-  selectLicensingInfo,
+    selectOverlayVisible,
+    selectFetchStatusPeriod,
+    selectHasFetchedServerStatus,
+    selectLicensingProvided,
+    selectMatlabUp,
+    selectError,
+    selectLoadUrl,
+    selectIsConnectionError,
+    selectHasFetchedEnvConfig,
+    selectAuthEnabled,
+    selectIsAuthenticated,
+    selectLicensingMhlmHasEntitlements,
+    selectIsEntitled,
+    selectLicensingInfo,
+    selectUseMOS,
+    selectUseMRE,
 } from "../../selectors";
 
 import {
@@ -56,15 +58,32 @@ function App() {
     const isAuthenticated = useSelector(selectIsAuthenticated)
     const authEnabled = useSelector(selectAuthEnabled);
     const licensingInfo = useSelector(selectLicensingInfo);
+    const useMOS = useSelector(selectUseMOS);
+    const useMRE = useSelector(selectUseMRE);
 
     const baseUrl = useMemo(() => {
-        const url = document.URL        
+        const url = document.URL
         return url.split(window.location.origin)[1].split('index.html')[0]
     }, [])
-    
-    const parseQueryParams = (url)  => {
+
+    const parseQueryParams = (url) => {
         const queryParams = new URLSearchParams(url.search);
         return queryParams;
+    }
+
+    const fullyQualifiedUrl = useMemo(() => {
+        // Returns the Fully Qualified URL used to load the page.
+        const url = document.URL
+        let baseUrlStr = url.split('/index.html')[0]
+        return baseUrlStr;
+    }, [])
+
+    const htmlToRenderMATLAB = () => {
+        let theHtmlToRenderMATLAB = useMOS ? "index-matlabonlineserver.html" : 'index-jsd-cr.html'
+        if (useMRE) {
+            theHtmlToRenderMATLAB += `?mre=${fullyQualifiedUrl}`
+        }
+        return theHtmlToRenderMATLAB
     }
 
     const toggleOverlayVisible = useCallback(
@@ -137,10 +156,10 @@ function App() {
     // Periodic fetch server status
     useInterval(() => {
         dispatch(fetchServerStatus());
-    },  fetchStatusPeriod);
+    }, fetchStatusPeriod);
 
     // Load URL
-    useEffect(() => {      
+    useEffect(() => {
         if (loadUrl !== null) {
             window.location.href = loadUrl;
         }
@@ -148,14 +167,14 @@ function App() {
 
     useEffect(() => {
         const queryParams = parseQueryParams(window.location);
-        const token = queryParams.get("mwi_auth_token");      
+        const token = queryParams.get("mwi_auth_token");
 
-        if(token){
-            dispatch(updateAuthStatus(token));              
+        if (token) {
+            dispatch(updateAuthStatus(token));
         }
-        window.history.replaceState(null, '', `${baseUrl}index.html`); 
+        window.history.replaceState(null, '', `${baseUrl}index.html`);
     }, [dispatch, baseUrl]);
-    
+
     // Display one of:
     // * Confirmation
     // * Help
@@ -163,16 +182,16 @@ function App() {
     // * License gatherer
     // * License selector
     // * Status Information
-    let overlayContent;   
+    let overlayContent;
 
     if (dialog) {
         // TODO Inline confirmation component build
         overlayContent = dialog;
-    }    
+    }
     // Give precedence to token auth over licensing info ie. once after token auth is done, show licensing if not provided.
-    else if((!licensingProvided) && hasFetchedServerStatus && (!authEnabled || isAuthenticated)) {    
+    else if ((!licensingProvided) && hasFetchedServerStatus && (!authEnabled || isAuthenticated)) {
         overlayContent = <LicensingGatherer role="licensing" aria-describedby="license-window" />;
-    } 
+    }
     // Show license selector if the user has entitlements and is not currently entitled
     else if (hasEntitlements && !isEntitled) {
         overlayContent = <EntitlementSelector options={licensingInfo.entitlements} />;
@@ -192,19 +211,23 @@ function App() {
         </Overlay>
     ) : null;
 
+
     // FIXME Until https://github.com/http-party/node-http-proxy/issues/1342
     // is addressed, use a direct URL in development mode. Once that is
     // fixed, the request will be served by the fake MATLAB Embedded Connector
     // process in development mode
+
+    // MW Internal Comment: See g2992889 for a discussion on why a FQDN is required in the MRE parameter.
+    // MW Internal Comment: Using websocket on breaks some UI components : `./index-matlabonlineserver.html?websocket=on&mre=${fullyQualifiedUrl}`;
     const matlabUrl = process.env.NODE_ENV === 'development'
         ? 'http://localhost:31515/index-jsd-cr.html'
-        : './index-jsd-cr.html';
+        : `./${htmlToRenderMATLAB()}`;
 
     let matlabJsd = null;
-    if(matlabUp){
-        matlabJsd = (!authEnabled || isAuthenticated) 
-        ? ( <MatlabJsd url={matlabUrl} /> ) 
-        : <img style={{objectFit: 'fill'}}src={blurredBackground} alt='Blurred MATLAB environment'/> 
+    if (matlabUp) {
+        matlabJsd = (!authEnabled || isAuthenticated)
+            ? (<MatlabJsd url={matlabUrl} />)
+            : <img style={{ objectFit: 'fill' }} src={blurredBackground} alt='Blurred MATLAB environment' />
     }
 
     const overlayTrigger = overlayVisible ? null : <OverlayTrigger />;

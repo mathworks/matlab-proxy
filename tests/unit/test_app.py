@@ -241,6 +241,8 @@ async def test_get_env_config(test_server):
     """
     expected_json_structure = {
         "authEnabled": None,
+        "useMOS": False,
+        "useMRE": False,
         "authStatus": None,
         "doc_url": "foo",
         "extension_name": "bar",

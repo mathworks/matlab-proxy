@@ -15,6 +15,8 @@ export const selectError = state => state.error;
 export const selectAuthEnabled = state => state.authInfo.authEnabled;
 export const selectAuthToken = state => state.authInfo.authToken;
 export const selectIsAuthenticated = state => state.authInfo.authStatus === true;
+export const selectUseMOS = state => state.useMOS === true;
+export const selectUseMRE = state => state.useMRE === true;
 
 export const selectTriggerPosition = createSelector(
     state => state.triggerPosition,

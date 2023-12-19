@@ -35,6 +35,26 @@ export function authEnabled(state = false, action) {
     }
 }
 
+// Stores information on whether to use MOS HTML while rendering MATLAB.
+export function useMOS(state = false, action) {
+    switch (action.type) {
+        case RECEIVE_ENV_CONFIG:
+            return action.config.useMOS;
+        default:
+            return state;
+    }
+}
+
+// Stores information on whether to provide MRE parameter to HTML while rendering MATLAB.
+export function useMRE(state = false, action) {
+    switch (action.type) {
+        case RECEIVE_ENV_CONFIG:
+            return action.config.useMRE;
+        default:
+            return state;
+    }
+}
+
 // Stores status of token authentication.
 export function authStatus(state = false, action) {
     switch (action.type) {
@@ -251,7 +271,7 @@ export function envConfig(state = null, action) {
         case RECEIVE_ENV_CONFIG:
             // Token authentication info is also sent as a response to /get_env_config endpoint.
             // As its already stored in 'authStatus', 'authEnabled' and 'authToken', ignoring it in envConfig.
-            const { authStatus, authEnabled, ...envConfig } = action.config
+            const { authStatus, authEnabled, useMOS, useMRE, ...envConfig } = action.config
             return envConfig
         default:
             return state;
@@ -284,4 +304,6 @@ export default combineReducers({
     error,
     envConfig,
     authInfo,
+    useMOS,
+    useMRE,
 });

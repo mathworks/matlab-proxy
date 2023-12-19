@@ -152,6 +152,9 @@ async def get_env_config(req):
     config = state.settings["env_config"]
     config["authEnabled"] = state.settings["mwi_is_token_auth_enabled"]
 
+    config["useMOS"] = mwi_env.Experimental.should_use_mos_html()
+    config["useMRE"] = mwi_env.Experimental.should_use_mre_html()
+
     # In a previously authenticated session, if the url is accessed without the token(using session cookie), send the token as well.
     config["authStatus"] = True if await token_auth.authenticate_request(req) else False
     return web.json_response(config)
