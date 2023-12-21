@@ -1,4 +1,4 @@
-% Copyright (c) 2020-2022 The MathWorks, Inc.
+% Copyright (c) 2020-2023 The MathWorks, Inc.
 
 % Configure logged in user if possible
 if ~isempty(getenv('MW_LOGIN_USER_ID'))
@@ -29,7 +29,7 @@ evalc('connector.internal.Worker.start');
 % The following settings instructs it to display appropriate error messages when used.
 matlab_settings = settings;
 if ~matlab_settings.matlab.addons.explorer.hasSetting('isExplorerSupported')
-    matlab_settings.matlab.addons.explorer.addSetting('isExplorerSupported');
+    matlab_settings.matlab.addons.explorer.addSetting('isExplorerSupported', 'PersonalValue', true);
 end
 matlab_settings.matlab.addons.explorer.isExplorerSupported.TemporaryValue = false;
 
