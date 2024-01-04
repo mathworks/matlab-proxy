@@ -7,7 +7,7 @@ import './Help.css';
 
 import {
     selectOverlayHidable,
-    selectHasFetchedEnvConfig,
+    selectEnvConfig,
 } from '../../selectors';
 
 function Help({
@@ -23,10 +23,8 @@ function Help({
         }
     };
 
-    const config = useSelector(selectHasFetchedEnvConfig);
-
+    const config = useSelector(selectEnvConfig);
     const url = config.doc_url;
-
     const targetEnvMsg = config.extension_name === "" ? `MATLAB Web Desktop` : `MATLAB Integration for ${config.extension_name_short_description}`;
 
 

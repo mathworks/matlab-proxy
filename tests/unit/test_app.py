@@ -240,10 +240,14 @@ async def test_get_env_config(test_server):
         test_server (aiohttp_client): A aiohttp_client server for sending GET request.
     """
     expected_json_structure = {
-        "authEnabled": None,
         "useMOS": False,
         "useMRE": False,
-        "authStatus": None,
+        "authentication": {"enabled": False, "status": False},
+        "matlab": {
+            "status": "up",
+            "version": "R2023a",
+            "supported_versions": ["R2020b", "R2023a"],
+        },
         "doc_url": "foo",
         "extension_name": "bar",
         "extension_name_short_description": "foobar",
@@ -794,13 +798,21 @@ async def set_licensing_info_fixture(
         "token": "abc@nlm",
         "emailAddress": "abc@nlm",
         "sourceId": "abc@nlm",
+        "matlabVersion": "R2023a",
     }
+    # Set matlab_version to None to check if the version is updated
+    # after sending a request t o /set_licensing_info endpoint
+    test_server.server.app["settings"]["matlab_version"] = None
+
     # Pre-req: stop the matlab that got started during test server startup
     resp = await test_server.delete("/stop_matlab")
     assert resp.status == HTTPStatus.OK
 
     resp = await test_server.put("/set_licensing_info", data=json.dumps(data))
     assert resp.status == HTTPStatus.OK
+
+    # Assert whether the matlab_version was updated from None when licensing type is mhlm
+    assert test_server.server.app["settings"]["matlab_version"] == "R2023a"
 
     return test_server
 

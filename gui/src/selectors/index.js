@@ -4,7 +4,10 @@ import { createSelector } from 'reselect';
 
 export const selectTutorialHidden = state => state.tutorialHidden;
 export const selectServerStatus = state => state.serverStatus;
-export const selectMatlabStatus = state => state.serverStatus.matlabStatus;
+export const selectMatlabStatus = state => state.matlab.status;
+export const selectMatlabVersionOnPath = state => state.matlab.versionOnPath;
+export const selectSupportedMatlabVersions = state => state.matlab.supportedVersions;
+export const selectEnvConfig = state => state.envConfig;
 export const selectWsEnv = state => state.serverStatus.wsEnv;
 export const selectSubmittingServerStatus = state => state.serverStatus.isSubmitting;
 export const selectHasFetchedServerStatus = state => state.serverStatus.hasFetched;
@@ -12,11 +15,11 @@ export const selectLicensingInfo = state => state.serverStatus.licensingInfo;
 export const selectServerStatusFetchFailCount = state => state.serverStatus.fetchFailCount;
 export const selectLoadUrl = state => state.loadUrl;
 export const selectError = state => state.error;
-export const selectAuthEnabled = state => state.authInfo.authEnabled;
-export const selectAuthToken = state => state.authInfo.authToken;
-export const selectIsAuthenticated = state => state.authInfo.authStatus === true;
 export const selectUseMOS = state => state.useMOS === true;
 export const selectUseMRE = state => state.useMRE === true;
+export const selectAuthEnabled = state => state.authentication.enabled;
+export const selectAuthToken = state => state.authentication.token;
+export const selectIsAuthenticated = state => state.authentication.status === true;
 
 export const selectTriggerPosition = createSelector(
     state => state.triggerPosition,
@@ -24,8 +27,8 @@ export const selectTriggerPosition = createSelector(
 );
 
 export const selectHasFetchedEnvConfig = createSelector(
-    (state) => state.envConfig,
-    (config) => (config === null ? false : config)
+    selectEnvConfig,
+    envConfig => envConfig !== null 
 );
 
 export const selectIsError = createSelector(

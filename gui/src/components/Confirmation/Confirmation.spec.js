@@ -5,6 +5,10 @@ import Confirmation from './index';
 import App from '../App'
 import { render, fireEvent } from '../../test/utils/react-test';
 
+import state from '../../test/utils/state';
+
+const _ = require("lodash");
+
 describe('Confirmation Component', () => {
   let children, confirmMock, cancelMock, initialState;
   beforeAll(() => {
@@ -18,27 +22,7 @@ describe('Confirmation Component', () => {
   });
 
   beforeEach(() => {
-    initialState = {
-      triggerPosition: { x: 539, y: 0 },
-      tutorialHidden: false,
-      overlayVisibility: false,
-      serverStatus: {
-        licensingInfo: { type: 'MHLM', emailAddress: 'abc@mathworks.com' },
-        matlabStatus: 'up',
-        isFetching: false,
-        hasFetched: true,
-        isSubmitting: false,
-        fetchFailCount: 0,
-        wsEnv: 'mw'
-      },
-      loadUrl: null,
-      error: null,
-      authInfo: {
-        authEnabled: false,
-        authStatus: false,
-        authToken: null,
-      },
-    };
+    initialState = _.cloneDeep(state); 
   });
 
 
@@ -87,17 +71,17 @@ describe('Confirmation Component', () => {
     expect(cancelMock).toHaveBeenCalledTimes(1);
   });
 
-
   test.each([
     ['confirmButton'], ['cancelButton']])(
       'Test to check if confirmation component disappears when %s is clicked',
       (input) => {
-
         // Hide the tutorial and make the overlay visible.
         initialState.tutorialHidden = true;
         initialState.overlayVisibility = true;
+        initialState.serverStatus.licensingInfo.entitlements = [initialState.serverStatus.licensingInfo.entitlements[0]];
+        initialState.serverStatus.licensingInfo.entitlementId = initialState.serverStatus.licensingInfo.entitlements[0].id;
 
-        const { debug, getByTestId, container } = render(<App />, {
+        const { getByTestId, container } = render(<App />, {
           initialState: initialState,
         });
 
@@ -115,5 +99,4 @@ describe('Confirmation Component', () => {
         expect(container.querySelector('#confirmation')).not.toBeInTheDocument();
       }
     );
-
 });

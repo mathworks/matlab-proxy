@@ -3,7 +3,10 @@
 import React from 'react';
 import Information from './index';
 import App from '../App';
-import { render, fireEvent, getByTestId } from '../../test/utils/react-test';
+import { render, fireEvent } from '../../test/utils/react-test';
+import state from '../../test/utils/state'
+
+const _ = require('lodash');
 
 describe('Information Component', () => {
   let closeHandler, children, initialState;
@@ -14,27 +17,10 @@ describe('Information Component', () => {
       </div>
     );
     closeHandler = jest.fn().mockImplementation(() => { });
-
-    initialState = {
-      triggerPosition: { x: 539, y: 0 },
-      tutorialHidden: false,
-      overlayVisibility: false,
-      serverStatus: {
-        licensingInfo: { type: 'mhlm', emailAddress: 'abc@mathworks.com' },
-        matlabStatus: 'up',
-        isFetching: false,
-        hasFetched: true,
-        isSubmitting: false,
-        fetchFailCount: 0,
-      },
-      loadUrl: null,
-      error: null,
-      authInfo: {
-        authEnabled: false,
-        authStatus: false,
-        authToken: null,
-      },
-    };
+    
+    initialState = _.cloneDeep(state)
+    initialState.serverStatus.licensingInfo.entitlements = [initialState.serverStatus.licensingInfo.entitlements[0]];
+    initialState.serverStatus.licensingInfo.entitlementId = initialState.serverStatus.licensingInfo.entitlements[0].id;
 
     const mockIntersectionObserver = jest.fn();
     mockIntersectionObserver.mockReturnValue({
@@ -132,33 +118,33 @@ describe('Information Component', () => {
     expect(errorContent).toEqual(initialState.error.logs.join('\n').trim());
   });
 
-  // it('should close overlay on button click', () => {
-  //   const { debug, container } = render(
-  //     <Information closeHandler={closeHandler} children={children} />,
-  //     { initialState: initialState }
-  //   );
+  it('should close overlay on button click', () => {
+    const { container } = render(
+      <Information closeHandler={closeHandler} children={children} />,
+      { initialState: initialState }
+    );
 
-  //   const closeBtn = container.getElementsByClassName('close').item(0);
+    const closeBtn = container.getElementsByClassName('close').item(0);
 
-  //   fireEvent.click(closeBtn);
-  // });
+    fireEvent.click(closeBtn);
+  });
 
 
   it('should close the Information Component and display the overlayTrigger when close button is clicked', () => {
-
     // Hide the tutorial and make the overlay visible.
     initialState.tutorialHidden = true;
     initialState.overlayVisibility = true;
-    initialState.authInfo.authEnabled = true;
-    initialState.authInfo.authStatus = true;
+    initialState.authentication.enabled = true;
+    initialState.authentication.status = true;
 
     //Rendering the App component with the above changes to the initial
     // state should render the Information Component.
-    const { getByTestId, debug, container } = render(<App />, {
+    const { getByTestId, container } = render(<App />, {
       initialState: initialState,
     });
 
     const informationComponent = container.querySelector('#information');
+
 
     //Check if information dialog is displayed
     expect(informationComponent).toBeInTheDocument();
@@ -172,13 +158,12 @@ describe('Information Component', () => {
     // Check if information dialog is not displayed and overlay trigger is displayed.
     expect(informationComponent).not.toBeInTheDocument();
     expect(overlayTriggerComponent).toBeInTheDocument();
-
   });
 
 
   it('should call the closeHandler callback when the modal is clicked', () => {
-    initialState.authInfo.authEnabled = true;
-    initialState.authInfo.authStatus = true;
+    initialState.authentication.enabled = true;
+    initialState.authentication.status = true;
     const { getByRole } = render(
       <Information closeHandler={closeHandler} children={children} />,
       { initialState: initialState }

@@ -108,6 +108,7 @@ async def create_status_response(app, loadUrl=None):
         {
             "matlab": {
                 "status": await state.get_matlab_state(),
+                "version": state.settings["matlab_version"],
             },
             "licensing": marshal_licensing_info(state.licensing),
             "loadUrl": loadUrl,
@@ -150,13 +151,21 @@ async def get_env_config(req):
     """
     state = req.app["state"]
     config = state.settings["env_config"]
-    config["authEnabled"] = state.settings["mwi_is_token_auth_enabled"]
 
     config["useMOS"] = mwi_env.Experimental.should_use_mos_html()
     config["useMRE"] = mwi_env.Experimental.should_use_mre_html()
 
     # In a previously authenticated session, if the url is accessed without the token(using session cookie), send the token as well.
-    config["authStatus"] = True if await token_auth.authenticate_request(req) else False
+    config["authentication"] = {
+        "enabled": state.settings["mwi_is_token_auth_enabled"],
+        "status": True if await token_auth.authenticate_request(req) else False,
+    }
+
+    config["matlab"] = {
+        "version": state.settings["matlab_version"],
+        "supported_versions": constants.SUPPORTED_MATLAB_VERSIONS,
+    }
+
     return web.json_response(config)
 
 
@@ -198,7 +207,7 @@ async def authenticate(req):
 
     return web.json_response(
         {
-            "authStatus": is_authenticated,
+            "status": is_authenticated,
             "error": error,
         }
     )
@@ -263,11 +272,20 @@ async def set_licensing_info(req):
             await state.set_licensing_nlm(data.get("connectionString"))
 
         elif lic_type == "mhlm":
+            # If matlab version could not be determined on startup update
+            # the value received from the front-end.
+            if not state.settings.get(
+                "matlab_version_determined_on_startup"
+            ) and data.get("matlabVersion"):
+                state.settings["matlab_version"] = data.get("matlabVersion")
+
             await state.set_licensing_mhlm(
                 data.get("token"), data.get("emailAddress"), data.get("sourceId")
             )
+
         elif lic_type == "existing_license":
             state.set_licensing_existing_license()
+
         else:
             raise Exception(
                 'License type must be "NLM" or "MHLM" or "ExistingLicense"!'
@@ -325,11 +343,18 @@ async def licensing_info_delete(req):
     # Removing license information implies terminating MATLAB
     await state.stop_matlab()
 
+    # When removing licensing data, if matlab version was fetched from the user, remove it
+    # on the server side to have a complete 'reset'.
+    if state.licensing["type"] == "mhlm" and not state.settings.get(
+        "matlab_version_determined_on_startup"
+    ):
+        state.settings["matlab_version"] = None
+
     # Unset licensing information
     state.unset_licensing()
 
-    # Persist licensing information
-    state.persist_licensing()
+    # Persist config information
+    state.persist_config_data()
 
     return await create_status_response(req.app)
 

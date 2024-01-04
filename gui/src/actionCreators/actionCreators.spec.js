@@ -5,6 +5,9 @@ import thunk from 'redux-thunk';
 import fetchMock from 'fetch-mock';
 import * as actions from '../actions';
 import * as actionCreators from './index';
+import state from '../test/utils/state';
+
+const _ = require("lodash");
 
 const middlewares = [thunk];
 const mockStore = configureMockStore(middlewares);
@@ -60,25 +63,7 @@ describe.each([
 
 describe('Test Sync actionCreators', () => {
   it('should dispatch action of type RECEIVE_SERVER_STATUS ', () => {
-    const store = mockStore({
-      overlayVisibility: false,
-      error: null,
-      serverStatus: {
-        matlabStatus: 'starting',
-        isFetching: true,
-        hasFetched: false,
-        fetchFailCount: 0,
-        licensingInfo: {
-          type: 'NLM',
-          connectionString: 'abc@nlm',
-        }
-      },
-      authInfo: {
-        authEnabled: false,
-        authStatus: false,
-        authToken: null,
-      }
-    });
+    const store = mockStore(state);
 
     const status = {
       matlab: {
@@ -101,19 +86,7 @@ describe('Test Sync actionCreators', () => {
 describe('Test fetchWithTimeout method', () => {
   let store;
   beforeEach(() => {
-    store = mockStore({
-      error: null,
-      serverStatus: {
-        licensingInfo: {
-          type: 'NLM',
-          connectionString: 'abc@nlm',
-        },
-        isFetching: false,
-        isSubmitting: false,
-        hasFetched: false,
-        fetchFailCount: 0,
-      },
-    });
+    store = mockStore(state);
   });
 
   afterEach(() => {
@@ -174,26 +147,10 @@ describe('Test fetchWithTimeout method', () => {
 });
 
 describe('Test Async actionCreators', () => {
-  let store;
+  let store, initialState;
   beforeEach(() => {
-    store = mockStore({
-      error: null,
-      serverStatus: {
-        licensingInfo: {
-          type: 'NLM',
-          connectionString: 'abc@nlm',
-        },
-        isFetching: false,
-        isSubmitting: false,
-        hasFetched: false,
-        fetchFailCount: 0,
-      },
-      authInfo: {
-        authEnabled: false,
-        authStatus: false,
-        authToken: null,
-      },
-    });
+    initialState = _.cloneDeep(state)
+    store = mockStore(initialState);
   });
 
   afterEach(() => {
@@ -236,15 +193,17 @@ describe('Test Async actionCreators', () => {
     });
   });
 
-
-
   it('dispatches REQUEST_SERVER_STATUS, RECEIVE_SERVER_STATUS when fetching status', () => {
     fetchMock.getOnce('/get_status', {
       body: {
         matlab: {
           status: 'down',
+          version: 'R2023a'
         },
-        licensing: {},
+        licensing: null,
+        loadUrl: null,
+        error: null,
+        wsEnv: "",
       },
       headers: { 'content-type': 'application/json' },
     });

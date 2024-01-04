@@ -3,35 +3,16 @@
 import React from 'react';
 import LicenseGatherer from './index';
 import { render, fireEvent } from '../../test/utils/react-test';
+import state from '../../test/utils/state'; 
+import MHLM from './MHLM';
+
+const _ = require('lodash');
 
 describe('LicenseGatherer component', () => {
 
   let initialState;
   beforeEach(() => {
-
-    initialState = {
-      triggerPosition: { x: 539, y: 0 },
-      tutorialHidden: false,
-      overlayVisibility: false,
-
-      serverStatus: {
-        licensingInfo: { type: 'mhlm', emailAddress: 'abc@mathworks.com' },
-        matlabStatus: 'up',
-        isFetching: false,
-        hasFetched: true,
-        isSubmitting: false,
-        fetchFailCount: 0,
-        wsEnv: 'abcd',
-      },
-      loadUrl: null,
-      error: null,
-      authInfo: {
-        authEnabled: false,
-        authStatus: false,
-        authToken: null,
-      },
-    };
-
+    initialState =  _.cloneDeep(state)
   });
 
   afterEach(() => {
@@ -40,7 +21,6 @@ describe('LicenseGatherer component', () => {
 
 
   it('should throw error', () => {
-
     const errorMock = jest.spyOn(console, 'error').mockImplementation(() => { })
 
     try {
@@ -59,7 +39,6 @@ describe('LicenseGatherer component', () => {
 
 
   it('should render without crashing. Should have a subdomain for mhlmLoginHostName', () => {
-
     initialState.serverStatus.wsEnv = 'mw-integ'
 
     const { container } = render(<LicenseGatherer />, { initialState: initialState });
@@ -87,6 +66,21 @@ describe('LicenseGatherer component', () => {
     // Check if mhlm iframe is rendered.
     const mhlmTabContent = container.querySelector('#MHLM');
     expect(mhlmTabContent).toBeInTheDocument();
+  });
+
+  it('should have rendered mhlm tab with the drop down to choose matlab version and start MATLAB button', () => {
+    // Set matlab version to null for the matlab version drop-down to render
+    initialState.matlab.versionOnPath = null;
+    initialState.matlab.supportedVersions = ["R2020b", "R2021a"]
+    const fetchedMhlmLicensingInfo = {dummyValue: "yes"}
+
+    const { container } = render(<MHLM mhlmLicensingInfo={fetchedMhlmLicensingInfo}/>, { initialState: initialState });
+
+    let startMatlabBtn = container.querySelector('#startMatlabBtn')
+    
+    expect(startMatlabBtn).toBeInTheDocument()
+
+    fireEvent.click(startMatlabBtn)
   });
 
   it('should have rendered nlm tab content without crashing', () => {

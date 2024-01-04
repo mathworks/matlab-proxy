@@ -5,49 +5,42 @@ import App from '../App'
 import Help from './index';
 import { render, fireEvent } from '../../test/utils/react-test';
 
+import state from '../../test/utils/state'
+
+const _ = require("lodash")
+
 describe('Help Component', () => {
   let closeHandler, initialState;
   beforeEach(() => {
     closeHandler = jest.fn().mockImplementation(() => { });
-    initialState = {
-      triggerPosition: { x: 539, y: 0 },
-      tutorialHidden: false,
-      overlayVisibility: false,
-      serverStatus: {
-        licensingInfo: { type: 'MHLM', emailAddress: 'abc@mathworks.com' },
-        matlabStatus: 'up',
-        isFetching: false,
-        hasFetched: true,
-        isSubmitting: false,
-        fetchFailCount: 0,
-      },
-      loadUrl: null,
-      error: null,
-      authInfo: {
-        authEnabled: false,
-        authStatus: false,
-        authToken: null,
-      },
-    };
+    initialState = _.cloneDeep(state)
+    initialState.serverStatus.licensingInfo.entitlements = [initialState.serverStatus.licensingInfo.entitlements[0]];
+    initialState.serverStatus.licensingInfo.entitlementId = initialState.serverStatus.licensingInfo.entitlements[0].id;
   });
   afterEach(() => {
     jest.clearAllMocks();
   });
+
   it('should throw console.error for not passing in prop types', () => {
     const errorMock = jest.spyOn(console, 'error').mockImplementation(() => { });
 
-    render(<Help />);
+    render(<Help />, {
+            initialState: initialState
+        });
     expect(errorMock).toHaveBeenCalledTimes(1);
   });
 
   it('should render without crashing', () => {
-    render(<Help closeHandler={closeHandler} />);
+    render(<Help closeHandler={closeHandler} />, {
+            initialState: initialState
+        });
   });
 
   it('should fire onClose event of Help modal when Back button is clicked', () => {
     const { getByTestId } = render(
-      <Help closeHandler={closeHandler} />
-    );
+      <Help closeHandler={closeHandler} />, {
+        initialState: initialState
+      });
 
     const backButton = getByTestId('backBtn');
 
@@ -56,9 +49,7 @@ describe('Help Component', () => {
     expect(closeHandler).toHaveBeenCalledTimes(1);
   });
 
-
   it('should close the Help Modal and display Information component when Back button is clicked', () => {
-
     // Hide the tutorial and make the overlay visible.
     initialState.tutorialHidden = true;
     initialState.overlayVisibility = true;
@@ -85,13 +76,12 @@ describe('Help Component', () => {
 
     //The Help dialog should disappear
     expect(helpComponent).not.toBeInTheDocument();
-
-
   });
 
   it('should call onClick function', () => {
     const { getByRole } = render(
-      <Help closeHandler={closeHandler} dismissAllHandler={closeHandler} />,
+      // pass mock function to dismissAllHandler for testing onClick
+      <Help closeHandler={() => {}} dismissAllHandler={closeHandler} />,
       { initialState: initialState }
     );
 

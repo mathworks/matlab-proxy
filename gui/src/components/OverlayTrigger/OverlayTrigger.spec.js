@@ -7,33 +7,13 @@ import configureMockStore from "redux-mock-store";
 
 import * as actions from "../../actions";
 import * as actionCreators from "../../actionCreators";
+import state from '../../test/utils/state' 
 
 describe("OverlayTrigger Component", () => {
-  let initialState, mockStore;
+  let  mockStore;
   beforeEach(() => {
 
     mockStore = configureMockStore();
-
-    initialState = {
-      triggerPosition: { x: 12, y: 12 },
-      tutorialHidden: false,
-      overlayVisibility: false,
-      serverStatus: {
-        licensingInfo: { type: "MHLM", emailAddress: "abc@mathworks.com" },
-        matlabStatus: "up",
-        isFetching: false,
-        hasFetched: true,
-        isSubmitting: false,
-        fetchFailCount: 0,
-      },
-      loadUrl: null,
-      error: null,
-      authInfo: {
-        authEnabled: false,
-        authStatus: false,
-        authToken: null,
-      },
-    };
 
     const mockIntersectionObserver = jest.fn();
     mockIntersectionObserver.mockReturnValue({
@@ -67,7 +47,7 @@ describe("OverlayTrigger Component", () => {
   });
 
   it("should dispatch SET_TRIGGER_POSITION when overlay trigger is moved", async () => {
-    const store = mockStore(initialState);
+    const store = mockStore(state);
     // dispatching an action to setTriggerPosition to (22, 22) in the mockstore
     store.dispatch(actionCreators.setTriggerPosition(22, 22));
 

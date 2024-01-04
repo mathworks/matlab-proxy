@@ -198,7 +198,7 @@ export function fetchServerStatus() {
 
         dispatch(requestServerStatus());
         const response = await fetchWithTimeout(dispatch, './get_status', {}, 10000);
-        const data = await response.json();
+        const data = await response.json();        
         dispatch(receiveServerStatus(data));
 
     }

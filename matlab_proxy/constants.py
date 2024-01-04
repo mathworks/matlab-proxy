@@ -1,5 +1,5 @@
 # Copyright 2023 The MathWorks, Inc.
-from typing import Final
+from typing import Final, List
 
 """This module defines project-level constants"""
 
@@ -12,3 +12,13 @@ MATLAB_LOGS_FILE_NAME: Final[str] = "matlab_logs.txt"
 # This constant is meant for internal use within matlab-proxy
 # Clients of this package should use settings.py::get_process_startup_timeout() function
 DEFAULT_PROCESS_START_TIMEOUT: Final[int] = 600
+
+SUPPORTED_MATLAB_VERSIONS: Final[List[str]] = [
+    "R2020b",
+    "R2021a",
+    "R2021b",
+    "R2022a",
+    "R2022b",
+    "R2023a",
+    "R2023b",
+]

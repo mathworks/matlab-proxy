@@ -189,14 +189,14 @@ def test_persist_licensing_when_licensing_info_is_not_set(tmp_path):
     app_state = AppState(settings=settings)
 
     # Act
-    app_state.persist_licensing()
+    app_state.persist_config_data()
 
     # Assert
     assert os.path.exists(tmp_file) is False
 
 
 @pytest.mark.parametrize(
-    "data",
+    "licensing_data",
     [
         ({"type": "nlm", "conn_str": "123@host"}),
         (
@@ -212,7 +212,7 @@ def test_persist_licensing_when_licensing_info_is_not_set(tmp_path):
     ],
     ids=["nlm type", "mhlm type", "existing license type"],
 )
-def test_persist_licensing(data: dict, tmp_path):
+def test_persist_config_data(licensing_data: dict, tmp_path):
     """Test to check if persist_licensing() writes data to the file system
 
     Args:
@@ -221,17 +221,19 @@ def test_persist_licensing(data: dict, tmp_path):
     """
     # Arrange
     tmp_file = tmp_path / "parent_1" / "parent_2" / "tmp_file.json"
-    settings = {"matlab_config_file": tmp_file, "error": None}
+    settings = {"matlab_config_file": tmp_file, "error": None, "matlab_version": None}
     app_state = AppState(settings=settings)
-    app_state.licensing = data
+    app_state.licensing = licensing_data
+
+    cached_data = {"licensing": licensing_data, "matlab": {"version": None}}
 
     # Act
-    app_state.persist_licensing()
+    app_state.persist_config_data()
     with open(tmp_file, "r") as file:
         got = file.read()
 
     # Assert
-    assert json.loads(got) == data
+    assert json.loads(got) == cached_data
 
 
 validate_required_processes_test_data = [

@@ -17,7 +17,6 @@ from matlab_proxy.settings import (
 from matlab_proxy.constants import (
     CONNECTOR_SECUREPORT_FILENAME,
     MATLAB_LOGS_FILE_NAME,
-    VERSION_INFO_FILE_NAME,
 )
 from matlab_proxy.util import mw, mwi, system, windows
 from matlab_proxy.util.mwi import environment_variables as mwi_env
@@ -100,40 +99,40 @@ class AppState:
         # This variable can be either "up" or "down"
         self.embedded_connector_state = "down"
 
-    def __get_cached_licensing_file(self):
-        """Get the cached licensing file
+    def __get_cached_config_file(self):
+        """Get the cached config file
 
         Returns:
-            Path : Path object to cached licensing file
+            Path : Path object to cached config file
         """
         return self.settings["matlab_config_file"]
 
-    def __delete_cached_licensing_file(self):
-        """Deletes the cached licensing file"""
+    def __delete_cached_config_file(self):
+        """Deletes the cached config file"""
         try:
-            logger.info(f"Deleting any cached licensing files!")
-            os.remove(self.__get_cached_licensing_file())
+            logger.info(f"Deleting any cached config files!")
+            os.remove(self.__get_cached_config_file())
         except FileNotFoundError:
             # The file being absent is acceptable.
             pass
 
-    def __reset_and_delete_cached_licensing(self):
-        """Reset licensing variable of the class and removes the cached licensing file."""
-        logger.info(f"Resetting cached licensing information...")
+    def __reset_and_delete_cached_config(self):
+        """Reset licensing variable of the class and removes the cached config file."""
+        logger.info(f"Resetting cached config information...")
         self.licensing = None
-        self.__delete_cached_licensing_file()
+        self.__delete_cached_config_file()
 
     async def __update_and_persist_licensing(self):
-        """Update entitlements from mhlm servers and persist licensing
+        """Update entitlements from mhlm servers and persist config data
 
         Returns:
             Boolean: True when entitlements were updated and persisted successfully. False otherwise.
         """
         successful_update = await self.update_entitlements()
         if successful_update:
-            self.persist_licensing()
+            self.persist_config_data()
         else:
-            self.__reset_and_delete_cached_licensing()
+            self.__reset_and_delete_cached_config()
         return successful_update
 
     async def init_licensing(self):
@@ -158,8 +157,8 @@ class AppState:
                 f"!!! Launching MATLAB without providing any additional licensing information. This requires MATLAB to have been activated on the machine from which its being launched !!!"
             )
 
-            # Delete old licensing mode info from cache to ensure its wiped out first before persisting new info.
-            self.__delete_cached_licensing_file()
+            # Delete old config info from cache to ensure its wiped out first before persisting new info.
+            self.__delete_cached_config_file()
 
         # NLM Connection String set in environment
         elif self.settings.get("nlm_conn_str", None) is not None:
@@ -171,17 +170,25 @@ class AppState:
                 "conn_str": nlm_licensing_str,
             }
 
-            # Delete old licensing mode info from cache to ensure its wiped out first before persisting new info.
-            self.__delete_cached_licensing_file()
+            # Delete old config info from cache to ensure its wiped out first before persisting new info.
+            self.__delete_cached_config_file()
 
         # If NLM connection string is not present or if an existing license is not being used,
         # then look for persistent LNU info
-        elif self.__get_cached_licensing_file().exists():
-            with open(self.__get_cached_licensing_file(), "r") as f:
+        elif self.__get_cached_config_file().exists():
+            with open(self.__get_cached_config_file(), "r") as f:
                 logger.debug("Found cached licensing information...")
                 try:
-                    # Load can throw if the file is empty for some reason.
-                    licensing = json.loads(f.read())
+                    # Load can throw if the file is empty or expected fields in the json object are missing.
+                    cached_data = json.loads(f.read())
+                    licensing = cached_data["licensing"]
+                    matlab = cached_data["matlab"]
+
+                    # If Matlab version could not be determined on startup and 'version' is available in
+                    # cached config, update it.
+                    if not self.settings["matlab_version"]:
+                        self.settings["matlab_version"] = matlab["version"]
+
                     if licensing["type"] == "nlm":
                         # Note: Only NLM settings entered in browser were cached.
                         self.licensing = {
@@ -219,15 +226,15 @@ class AppState:
                                     "Using cached Online Licensing to launch MATLAB."
                                 )
                         else:
-                            self.__reset_and_delete_cached_licensing()
+                            self.__reset_and_delete_cached_config()
                     elif licensing["type"] == "existing_license":
                         logger.info("Using cached existing license to launch MATLAB")
                         self.licensing = licensing
                     else:
                         # Somethings wrong, licensing is neither NLM or MHLM
-                        self.__reset_and_delete_cached_licensing()
+                        self.__reset_and_delete_cached_config()
                 except Exception as e:
-                    self.__reset_and_delete_cached_licensing()
+                    self.__reset_and_delete_cached_config()
 
     async def get_matlab_state(self):
         """Determine the state of MATLAB to be down/starting/up.
@@ -355,12 +362,12 @@ class AppState:
 
         # TODO Validate connection string
         self.licensing = {"type": "nlm", "conn_str": conn_str}
-        self.persist_licensing()
+        self.persist_config_data()
 
     def set_licensing_existing_license(self):
         """Set the licensing type to NLM and the connection string."""
         self.licensing = {"type": "existing_license"}
-        self.persist_licensing()
+        self.persist_config_data()
 
     async def set_licensing_mhlm(
         self,
@@ -461,17 +468,6 @@ class AppState:
                 "MHLM licensing must be configured to update entitlements!"
             )
 
-        # TODO: Updating entitlements requires the matlab version. If it
-        # could not be determined at server startup, take input from the user
-        # for the MATLAB version they intend to start and update settings.
-
-        # As MHLM licensing requires matlab version to update entitlements, if it couldn't be determined
-        # for now show an error to the user to set MWI_CUSTOM_MATLAB_ROOT env var.
-        if self.settings["matlab_version"] is None:
-            raise UIVisibleFatalError(
-                f"Could not find {VERSION_INFO_FILE_NAME} file at MATLAB root. Set {mwi_env.get_env_name_custom_matlab_root()} to a valid MATLAB root path"
-            )
-
         try:
             # Fetch an access token
             access_token_data = await mw.fetch_access_token(
@@ -532,19 +528,23 @@ class AppState:
     async def update_user_selected_entitlement_info(self, entitlement_id):
         self.licensing["entitlement_id"] = entitlement_id
         logger.debug(f"Successfully set {entitlement_id} as the entitlement_id")
-        self.persist_licensing()
+        self.persist_config_data()
 
-    def persist_licensing(self):
-        """Saves licensing information to file"""
+    def persist_config_data(self):
+        """Saves config information to file"""
         if self.licensing is None:
-            self.__delete_cached_licensing_file()
+            self.__delete_cached_config_file()
 
         elif self.licensing["type"] in ["mhlm", "nlm", "existing_license"]:
             logger.debug("Saving licensing information...")
-            cached_licensing_file = self.__get_cached_licensing_file()
-            cached_licensing_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(cached_licensing_file, "w") as f:
-                f.write(json.dumps(self.licensing))
+            cached_config_file = self.__get_cached_config_file()
+            cached_config_file.parent.mkdir(parents=True, exist_ok=True)
+            config = {
+                "licensing": self.licensing,
+                "matlab": {"version": self.settings["matlab_version"]},
+            }
+            with open(cached_config_file, "w") as f:
+                f.write(json.dumps(config))
 
     def create_logs_dir_for_MATLAB(self):
         """Creates the root folder where MATLAB writes the ready file and updates attibutes on self."""

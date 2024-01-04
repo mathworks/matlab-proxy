@@ -4,11 +4,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
     selectLicensingMhlmUsername,
-    selectWsEnv
+    selectWsEnv,
+    selectMatlabVersionOnPath,
+    selectSupportedMatlabVersions,
 } from '../../selectors';
 import {
     fetchSetLicensing,
 } from '../../actionCreators';
+
 
 // Send a generated nonce to the login iframe
 function setLoginNonce(username) {
@@ -63,11 +66,19 @@ function initLogin(clientNonce, serverNonce, sourceId) {
     loginFrame.postMessage(JSON.stringify(initPayload), "*");
 }
 
-function MHLM() {
+// Adding a child prop with null as default for improved testability.
+function MHLM({mhlmLicensingInfo = null}) {
     const dispatch = useDispatch();
-    const [iFrameLoaded, setIFrameLoaded] = useState(false);
     const username = useSelector(selectLicensingMhlmUsername);
     const wsEnv = useSelector(selectWsEnv);
+    const matlabVersionOnPath = useSelector(selectMatlabVersionOnPath);
+    const supportedMatlabVersions = useSelector(selectSupportedMatlabVersions);
+
+    const [iFrameLoaded, setIFrameLoaded] = useState(false);
+    // useState variable to store response from mhlm after authentication
+    const [fetchedMhlmLicensingInfo, setFetchedMhlmLicensingInfo] = useState(mhlmLicensingInfo)
+    const [selectedMatlabVersion, setSelectedMatlabVersion] = useState(supportedMatlabVersions[supportedMatlabVersions.length - 1]); 
+    
     const mhlmLoginHostname = useMemo(
         () => {
             let subdomain = 'login';
@@ -88,7 +99,6 @@ function MHLM() {
     useEffect(() => {
 
         const handler = event => {
-
             // Only process events that are related to the iframe setup
             if (event.origin === mhlmLoginHostname) {
                 const data = JSON.parse(event.data);
@@ -99,14 +109,21 @@ function MHLM() {
                         sourceId
                     );
                 } else if (data.event === 'login') {
-                    // Persist credentials to serverside
-                    dispatch(fetchSetLicensing({
+                    const mhlmLicensingInfo = {
                         type: 'mhlm',
                         token: data.token,
                         profileId: data.profileId,
                         emailAddress: data.emailAddress,
                         sourceId
-                    }));
+                    }
+                    // matlab version is required in subsequent steps on the server side.
+                    // If matlab version is available, persist licensing on the server side.
+                    // Else, store response from mhlm and render drop down to choose matlab version.
+                    if(matlabVersionOnPath){                        
+                        dispatch(fetchSetLicensing({...mhlmLicensingInfo, "matlabVersion": matlabVersionOnPath}));   
+                    } else {
+                        setFetchedMhlmLicensingInfo(mhlmLicensingInfo);
+                    }
                 }
             }
         };
@@ -117,7 +134,7 @@ function MHLM() {
         return () => {
             window.removeEventListener("message", handler);
         };
-    }, [dispatch, sourceId, mhlmLoginHostname]);
+    }, [dispatch, sourceId, mhlmLoginHostname, fetchedMhlmLicensingInfo, matlabVersionOnPath]);
 
     useEffect(() => {
         if (iFrameLoaded === true) {
@@ -128,8 +145,7 @@ function MHLM() {
     const handleIFrameLoaded = () => setIFrameLoaded(true);
 
     const embeddedLoginUrl = `${mhlmLoginHostname}/embedded-login/v2/login.html`;
-
-    return (
+    const mhlmIframe = (
         <div id="MHLM">
             <iframe
                 id="loginframe"
@@ -144,7 +160,43 @@ function MHLM() {
                 Sorry your browser does not support inline frames.
             </iframe>
         </div>
+    )
+
+    const submitForm = (event) => {
+        event.preventDefault();
+        dispatch(fetchSetLicensing({...fetchedMhlmLicensingInfo, "matlabVersion": selectedMatlabVersion}))
+    };
+
+    const chooseMatlabVersionDropDown = (
+    <div id="ChooseMatlabVersion">
+            <form onSubmit={submitForm}>
+                <div className='form-group'>                     
+                    <p>
+                        <b>Note</b>: The version of MATLAB could not be determined. Choose the version of MATLAB you are attempting to start.
+                    </p>
+                    <br/>
+                    <select value={selectedMatlabVersion} onChange={(e) => setSelectedMatlabVersion(e.target.value)}>
+                        {supportedMatlabVersions.map((matlabVersion, index) => (
+                            <option key={index} value={matlabVersion}>
+                                {matlabVersion}
+                            </option>
+                        ))}
+                    </select>
+
+                    <br/><br/>
+
+                    <input type="submit" id="startMatlabBtn" value="Start MATLAB" className="btn btn_color_blue" />
+                </div>
+            </form>
+    </div>            
     );
+
+    // Render MHLM iFrame if not authenticated and matlab version couldn't be determined
+    if(fetchedMhlmLicensingInfo && !matlabVersionOnPath){       
+        return chooseMatlabVersionDropDown;
+    } else {
+        return mhlmIframe;
+    }
 }
 
 export default MHLM;

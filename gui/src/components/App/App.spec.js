@@ -4,31 +4,28 @@ import React from 'react';
 import { render, fireEvent } from '../../test/utils/react-test';
 import App from './index';
 import * as actionCreators from '../../actionCreators';
+import state from '../../test/utils/state';
+
+const _ = require("lodash");
 
 describe('App Component', () => {
   let initialState;
   beforeEach(() => {
-    initialState = {
-      triggerPosition: { x: 539, y: 0 },
-      tutorialHidden: false,
-      overlayVisibility: false,
-      serverStatus: {
-        licensingInfo: { type: 'MHLM', emailAddress: 'abc@mathworks.com' },
-        matlabStatus: 'up',
-        isFetching: false,
-        hasFetched: true,
-        isSubmitting: false,
-        fetchFailCount: 0,
-        wsEnv: 'mw'
-      },
-      loadUrl: null,
-      error: null,
-      authInfo: {
-        authEnabled: false,
-        authStatus: false,
-        authToken: null,
-      },
-    };
+    initialState = _.cloneDeep(state);
+
+    // As the tests are run in a NodeJS environment whereas the correct values for document.URL and window.location.href
+    // are set by the browser, for tests, set the appropriate values for document.URL, window.location.href and window.location.origin
+    // for the component to render without errors
+    // Delete and redefine 'origin' and 'href' properties as they are read-only. 
+    delete window.location;
+    window.location = {      
+      origin: "/",
+      href : "http://127.0.0.1/"
+    }
+
+    initialState.serverStatus.licensingInfo.entitlements = [{ id: "1234567", label: null, license_number: "7654321" }];
+    initialState.serverStatus.licensingInfo.entitlementId = "1234567";
+  
     const mockIntersectionObserver = jest.fn();
     mockIntersectionObserver.mockReturnValue({
       observe: () => null,
@@ -42,17 +39,15 @@ describe('App Component', () => {
     jest.clearAllMocks();
   });
 
-  // it('renders app without crashing', () => {
-  //   const { getByTestId } = render(<App />);
-  //   expect(getByTestId('app')).toBeInTheDocument();
-  // });
+  it('renders app without crashing', () => {
+    const { getByTestId } = render(<App />);
+    expect(getByTestId('app')).toBeInTheDocument();
+  });
 
   it('should render overlayTrigger (after closing the tutorial)', () => {
-
     // Hide the tutorial before rendering the component.
-    initialState.tutorialHidden = true;
-    initialState.authInfo.authEnabled = true;
-    initialState.authInfo.authStatus = true;
+    initialState.tutorialHidden = true; 
+    initialState.overlayVisibility = false; 
 
     const { getByTestId } = render(<App />, {
       initialState: initialState,
@@ -67,12 +62,11 @@ describe('App Component', () => {
   });
 
   it('should render LicensingGatherer component within the App component when no licensing is provided and user is authenticated', () => {
-
     //Set lincensingInfo to empty object.
     initialState.overlayVisibility = true;
     initialState.serverStatus.licensingInfo = {};
-    initialState.authInfo.authEnabled = true;
-    initialState.authInfo.authStatus = true;
+    initialState.authentication.enabled = true;
+    initialState.authentication.status = true;
     
     const { getByRole } = render(<App />, { initialState: initialState });
 
@@ -83,28 +77,26 @@ describe('App Component', () => {
   });
 
   it('should render LicensingGatherer component within the App component when no licensing is provided and authentication is disabled', () => {
-
     //Set lincensingInfo to empty object.
     initialState.overlayVisibility = true;
     initialState.serverStatus.licensingInfo = {};
-    initialState.authInfo.authEnabled = false;
+    initialState.authentication.enabled = false;
     
     const { getByRole } = render(<App />, { initialState: initialState });
 
     const licensingGathererComponent = getByRole(
       'dialog', { description: "licensing-dialog" });
-  
+
     expect(licensingGathererComponent).toBeInTheDocument();
   });
 
   it('should render Information Component within App Component after licensing is provided and user is authenticated', () => {
-
     // Hide the tutorial and make the overlay visible.
     initialState.tutorialHidden = true;
     initialState.overlayVisibility = true;
 
-    initialState.authInfo.authEnabled = true;
-    initialState.authInfo.authStatus = true;
+    initialState.authentication.enabled = true;
+    initialState.authentication.status = true;
 
     //Rendering the App component with the above changes to the initial
     // state should render the Information Component.
@@ -118,12 +110,11 @@ describe('App Component', () => {
   });
 
   it('should render Information Component within App Component after licensing is provided and auth is not enabled', () => {
-
     // Hide the tutorial and make the overlay visible.
     initialState.tutorialHidden = true;
     initialState.overlayVisibility = true;
 
-    initialState.authInfo.authEnabled = false;
+    initialState.authentication.enabled = false;
 
     //Rendering the App component with the above changes to the initial
     // state should render the Information Component.
@@ -138,7 +129,6 @@ describe('App Component', () => {
   });
 
   it('should display integration terminated error', () => {
-
     //Hide the tutorial, make the overlay visible and set fetchFailCount to 10
     initialState.tutorialHidden = true;
     initialState.overlayVisibility = true;
@@ -183,7 +173,6 @@ describe('App Component', () => {
   });
 
   it('should display Confirmation component ', () => {
-
     //Hide the tutorial and make the overlay visible
     initialState.tutorialHidden = true;
     initialState.overlayVisibility = true;
@@ -208,15 +197,13 @@ describe('App Component', () => {
   });
 
   it('should display Help Component', () => {
-
     //Hide the tutorial and make the overlay visible
     initialState.tutorialHidden = true;
     initialState.overlayVisibility = true;
 
-    const { getByTestId, container, getByRole } = render(<App />, {
+    const { getByTestId, container } = render(<App />, {
       initialState: initialState,
     });
-
 
     // Grab the help button and click it.
     const helpBtn = getByTestId('helpBtn');
@@ -231,18 +218,8 @@ describe('App Component', () => {
     const url = 'http://localhost.com:5555/matlab/index.html'  
     
     // define new complete url for document.URL for baseUrl variable to evaluate correctly
-    // As the tests are run in a NodeJS environment where as the correct values for document.URL and window.location.href
-    // are set by the browser, set the appropriate values for document.URL, window.location.href and window.location.origin
-    // for the component to render without errors
     delete document.URL;
     document = {URL: url}
-
-    // Delete and redefine 'origin' and 'href' properties as they are read-only. 
-    delete window.location;
-    window.location = {      
-      origin: "/",
-      href : "http://127.0.0.1/"
-    }
 
     initialState.loadUrl =  url;
     render(<App />, { initialState: initialState });  
@@ -259,7 +236,6 @@ describe('App Component', () => {
     ("should pick the token correctly when the query parameters are '%s'", (queryParams, expectedToken) => {
     const url = `http://localhost.com:5555`
     const mockUpdateAuthStatus = jest.spyOn(actionCreators, 'updateAuthStatus');
-    delete window.location;
     window.location = {
       origin: '/',
       href: url,

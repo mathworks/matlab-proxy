@@ -380,6 +380,7 @@ def get_matlab_settings():
     return {
         "matlab_path": matlab_root_path,
         "matlab_version": matlab_version,
+        "matlab_version_determined_on_startup": True if matlab_version else False,
         "matlab_cmd": [
             matlab_executable_path,
             "-nosplash",

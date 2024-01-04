@@ -6,45 +6,16 @@ import App from "../App";
 import { render, fireEvent } from "../../test/utils/react-test";
 import userEvent from "@testing-library/user-event";
 import { filterAndFormatEntitlements, defaultLicenseUnavailableMsg } from "./index";
+import state from "../../test/utils/state";
+
+const _ = require("lodash")
 
 describe("EntitlementSelector Component", () => {
   let initialState;
 
 
   beforeEach(() => {
-    initialState = {
-      triggerPosition: { x: 539, y: 0 },
-      tutorialHidden: false,
-      overlayVisibility: false,
-      serverStatus: {
-        licensingInfo: {
-          type: "mhlm",
-          emailAddress: "abc@mathworks.com",
-          entitlements: [
-            { id: "1234567", label: null, license_number: "7654321" },
-            {
-              id: "2345678",
-              label: "MATLAB - Staff Use",
-              license_number: "87654432",
-            },
-          ],
-          entitlementId: null,
-        },
-        matlabStatus: "down",
-        isFetching: false,
-        hasFetched: true,
-        isSubmitting: false,
-        fetchFailCount: 0,
-        wsEnv: "mw",
-      },
-      loadUrl: null,
-      error: null,
-      authInfo: {
-        authEnabled: false,
-        authStatus: false,
-        authToken: null,
-      },
-    };
+    initialState = _.cloneDeep(state);
   });
 
   const options = [

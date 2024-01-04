@@ -1,41 +1,18 @@
 // Copyright 2020-2023 The MathWorks, Inc.
 
 import * as selectors from './index';
+import state from '../test/utils/state'
 const _ = require('lodash');
 
 describe('selectors', () => {
   let modifiedState;
-  let state = {
-    overlayVisibility: true,
-    triggerPosition: {
-      x: 12,
-      y: 12,
-    },
-    tutorialHidden: true,
-    loadUrl: '/',
-    error: null,
-    serverStatus: {
-      matlabStatus: 'up',
-      isSubmitting: true,
-      hasFetched: false,
-      licensingInfo: {
-        type: 'mhlm',
-        emailAddress: 'abc@mathworks.com',
-      },
-      fetchFailCount: 2,
-    },
-    authInfo: {
-      authEnabled: false,
-      authStatus: false,
-      authToken: null,
-    },
-  };
 
-  const { tutorialHidden,
+  const { 
+    tutorialHidden,
     serverStatus,
     loadUrl,
     error,
-    authInfo,
+    authentication,
   } = state;
 
   const {
@@ -43,14 +20,19 @@ describe('selectors', () => {
     hasFetched,
     licensingInfo,
     fetchFailCount,
-    matlabStatus,
     fetchAbortController,
   } = state.serverStatus;
 
-  const { authEnabled,
-    authStatus,
-    authToken,
-  } = authInfo;
+  const {
+    status: matlabStatus, 
+    versionOnPath: matlabVersionOnPath
+  } = state.matlab
+
+  const { 
+    enabled: authEnabled,
+    status: authStatus,
+    token: authToken,
+  } = authentication;
 
   const {
     selectTutorialHidden,
@@ -58,7 +40,7 @@ describe('selectors', () => {
     selectLoadUrl,
     selectError,
     selectMatlabStatus,
-    selectMatlabVersion,
+    selectMatlabVersionOnPath,
     selectSubmittingServerStatus,
     selectHasFetchedServerStatus,
     selectLicensingInfo,
@@ -88,6 +70,7 @@ describe('selectors', () => {
     [selectLoadUrl, loadUrl],
     [selectError, error],
     [selectMatlabStatus, matlabStatus],
+    [selectMatlabVersionOnPath, matlabVersionOnPath],
     [selectSubmittingServerStatus, isSubmitting],
     [selectHasFetchedServerStatus, hasFetched],
     [selectLicensingInfo, licensingInfo],
@@ -105,11 +88,7 @@ describe('selectors', () => {
       }
     );
 
-
-
-
   describe('Test derived selectors', () => {
-
     test('selectTriggerPosition return position for valid trigger position', () => {
       expect(selectTriggerPosition(state)).toEqual(state.triggerPosition);
 
@@ -155,7 +134,7 @@ describe('selectors', () => {
     test('selectMatlabUp should false when Matlab status is not up', () => {
 
       modifiedState = _.cloneDeep(state);
-      modifiedState.serverStatus.matlabStatus = 'down';
+      modifiedState.matlab.status = 'down';
       expect(selectMatlabUp(modifiedState)).toBe(false);
     });
 
@@ -163,54 +142,54 @@ describe('selectors', () => {
     test('selectMatlabUp should return true when Matlab is up', () => {
       expect(selectMatlabUp(state)).toBe(true);
       modifiedState = _.cloneDeep(state);
-      modifiedState.serverStatus.matlabStatus = 'starting';
+      modifiedState.matlab.status = 'starting';
       expect(selectMatlabUp(modifiedState)).toBe(false);
     });
 
     test('selectMatlabUp should false when Matlab status is not up', () => {
       modifiedState = _.cloneDeep(state);
-      modifiedState.serverStatus.matlabStatus = 'down';
+      modifiedState.matlab.status = 'down';
       expect(selectMatlabUp(modifiedState)).toBe(false);
     });
 
     test('selectMatlabStopping should true when Matlab status is stopping', () => {
       modifiedState = _.cloneDeep(state);
-      modifiedState.serverStatus.matlabStatus = 'stopping';
+      modifiedState.matlab.status = 'stopping';
       expect(selectors.selectMatlabStopping(modifiedState)).toBe(true);
     });
 
     test('selectMatlabStopping should false when Matlab status is not stopping', () => {
       modifiedState = _.cloneDeep(state);
-      modifiedState.serverStatus.matlabStatus = 'up';
+      modifiedState.matlab.status = 'up';
       expect(selectors.selectMatlabStopping(modifiedState)).toBe(false);
     });
 
     test('selectMatlabStarting should true when Matlab status is starting', () => {
       modifiedState = _.cloneDeep(state);
-      modifiedState.serverStatus.matlabStatus = 'starting';
+      modifiedState.matlab.status = 'starting';
       expect(selectors.selectMatlabStarting(modifiedState)).toBe(true);
     });
 
     test('selectMatlabStarting should false when Matlab status is not starting', () => {
       modifiedState = _.cloneDeep(state);
-      modifiedState.serverStatus.matlabStatus = 'up';
+      modifiedState.matlab.status = 'up';
       expect(selectors.selectMatlabStopping(modifiedState)).toBe(false);
     });
 
     test('selectOverlayHidable should return true when matlab is up and there is no error and user is authenticated or auth is not enabled', () => {
       modifiedState = _.cloneDeep(state);
-      modifiedState.authInfo.authEnabled = true;
-      modifiedState.authInfo.authStatus =  true;
+      modifiedState.authentication.enabled = true;
+      modifiedState.authentication.status =  true;
       expect(selectOverlayHidable(modifiedState)).toBe(true);
 
       modifiedState = _.cloneDeep(state);
-      modifiedState.authInfo.authEnabled = false;
+      modifiedState.authentication.enabled = false;
       expect(selectOverlayHidable(modifiedState)).toBe(true);
     });
 
     test('selectOverlayHidable should return false when matlab is not up or there is an error or the user is not authenticated', () => {
       modifiedState = _.cloneDeep(state);
-      modifiedState.serverStatus.matlabStatus = 'down';
+      modifiedState.matlab.status = 'down';
       expect(selectOverlayHidable(modifiedState)).toBe(false);
 
       modifiedState = _.cloneDeep(state);
@@ -218,8 +197,8 @@ describe('selectors', () => {
       expect(selectOverlayHidable(modifiedState)).toBe(false);
 
       modifiedState = _.cloneDeep(state);
-      modifiedState.authInfo.authEnabled = true;
-      modifiedState.authInfo.authStatus =  false;
+      modifiedState.authentication.enabled = true;
+      modifiedState.authentication.status =  false;
       expect(selectOverlayHidable(modifiedState)).toBe(false);
     });
 
@@ -230,21 +209,21 @@ describe('selectors', () => {
 
       //should return true based on matlabStatus
       modifiedState = _.cloneDeep(state);
-      modifiedState.serverStatus.matlabStatus = 'down';
+      modifiedState.matlab.status = 'down';
       modifiedState.overlayVisibility = false;
       expect(selectOverlayVisibility(modifiedState)).toBe(true);
 
       //should return true based on error
       modifiedState = _.cloneDeep(state);
-      modifiedState.serverStatus.matlabStatus = 'down';
+      modifiedState.matlab.status = 'down';
       modifiedState.overlayVisibility = false;
       modifiedState.error = {};
       expect(selectOverlayVisibility(modifiedState)).toBe(true);
 
       modifiedState = _.cloneDeep(state);
       modifiedState.overlayVisibility = false;
-      modifiedState.authInfo.authEnabled = true;
-      modifiedState.authInfo.authStatus =  false;
+      modifiedState.authentication.enabled = true;
+      modifiedState.authentication.status =  false;
       expect(selectOverlayVisibility(modifiedState)).toBe(true);
     });
 
@@ -256,8 +235,8 @@ describe('selectors', () => {
 
       modifiedState = _.cloneDeep(state);
       modifiedState.overlayVisibility = false;
-      modifiedState.authInfo.authEnabled = true;
-      modifiedState.authInfo.authStatus =  true;
+      modifiedState.authentication.enabled = true;
+      modifiedState.authentication.status =  true;
       expect(selectOverlayVisibility(modifiedState)).toBe(false);
     });
 
@@ -280,7 +259,7 @@ describe('selectors', () => {
 
         modifiedState = _.cloneDeep(state);
         modifiedState.serverStatus.isSubmitting = false;
-        modifiedState.serverStatus.matlabStatus = input;
+        modifiedState.matlab.status = input;
 
         expect(selectFetchStatusPeriod(modifiedState)).toBe(5000);
       }
@@ -326,7 +305,7 @@ describe('selectors', () => {
       expect(selectMatlabPending(state)).toBe(false);
 
       modifiedState = _.cloneDeep(state);
-      modifiedState.serverStatus.matlabStatus = 'starting';
+      modifiedState.matlab.status = 'starting';
       expect(selectMatlabPending(modifiedState)).toBe(true);
     });
 
@@ -355,7 +334,7 @@ describe('selectors', () => {
 
     test('For any other MatlabStatus  selectInformationDetails should throw an error', () => {
       modifiedState = _.cloneDeep(state);
-      modifiedState.serverStatus.matlabStatus = 'defaultCase';
+      modifiedState.matlab.status = 'defaultCase';
 
       expect(() => selectInformationDetails(modifiedState)).toThrow(Error);
     })
@@ -364,9 +343,9 @@ describe('selectors', () => {
       modifiedState = _.cloneDeep(state);
       // we are triggering the auth error by setting error to empty object here
       modifiedState.error = {};
-      modifiedState.serverStatus.matlabStatus = 'down';
-      modifiedState.authInfo.authEnabled = true;
-      modifiedState.authInfo.authStatus = true;
+      modifiedState.matlab.status = 'down';
+      modifiedState.authentication.enabled = true;
+      modifiedState.authentication.status = true;
       expect(selectInformationDetails(modifiedState).icon.toLowerCase()).toContain('error');
     })
 
@@ -388,7 +367,7 @@ describe('selectors', () => {
 
         beforeAll(() => {
           modifiedState = _.cloneDeep(state);
-          modifiedState.serverStatus.matlabStatus = input;
+          modifiedState.matlab.status = input;
         });
         test(`For MatlabStatus ${input}, selectInformationDetails should return object with label which contains: ${expected}`, () => {
           expect(selectInformationDetails(modifiedState).label.toLowerCase()).toContain(expected);

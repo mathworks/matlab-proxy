@@ -2,7 +2,6 @@
 
 import * as reducers from './index';
 import * as actions from '../actions';
-import { receiveTerminateIntegration } from '../actionCreators';
 
 const _ = require('lodash');
 
@@ -30,10 +29,10 @@ describe('reducers', () => {
           type: 'MHLM',
         },
       },
-      authInfo: {
-        authEnabled: false,
-        authStatus: false,
-        authToken: null,
+      authentication: {
+        enabled: false,
+        status: false,
+        token: null,
       }
     };
 
@@ -116,14 +115,19 @@ describe('reducers', () => {
       action = _.cloneDeep(genericAction);
       action.type = actions.RECEIVE_ENV_CONFIG;
       action['config'] = {
-        "authEnabled" : false
+        authentication : {
+          enabled: false
+        }
       }
       expect(reducers.authEnabled(undefined, action)).toBe(false);
+
 
       // expect authEnabled to be true      
       action = _.cloneDeep(genericAction);
       action['config'] = {
-        "authEnabled" : true
+        authentication : {
+          enabled: true
+        }
       }
       action.type = actions.RECEIVE_ENV_CONFIG;
       expect(reducers.authEnabled(undefined, action)).toBe(true);
@@ -136,14 +140,13 @@ describe('reducers', () => {
       // expect authStatus to be false
       action = _.cloneDeep(genericAction);
       action.type = actions.SET_AUTH_STATUS;
-      action.authInfo.authEnabled = true;
-      action.config = true
+      action.authInfo = {status: false};
       expect(reducers.authStatus(undefined, action)).toBe(false);
 
       // expect authStatus to be true
       action = _.cloneDeep(genericAction);
       action.type = actions.SET_AUTH_STATUS;
-      action.authInfo.authStatus = true;
+      action.authInfo = {status: true};
       
       expect(reducers.authStatus(undefined, action)).toBe(true);
 
@@ -166,7 +169,7 @@ describe('reducers', () => {
       // expect authToken to be a string
       action = _.cloneDeep(genericAction);
       action.type = actions.SET_AUTH_TOKEN;
-      action.authInfo.authToken = 'string';
+      action.authentication.token = 'string';
       expect(reducers.authToken(undefined, action)).toBe('string');
 
       // default case
@@ -218,7 +221,6 @@ describe('reducers', () => {
   });
 
   describe('licensingInfo', () => {
-
     it('should return licensing info for actions defined in receiveActions array', () => {
       for (let i = 0; i < receiveActions.length; i++) {
         action = _.cloneDeep(genericAction);
@@ -237,7 +239,6 @@ describe('reducers', () => {
   });
 
   describe('matlabStatus', () => {
-
     it('should return matlab status for actions defined in receiveActions', () => {
       for (let i = 0; i < receiveActions.length; i++) {
 
@@ -257,7 +258,6 @@ describe('reducers', () => {
   });
 
   describe('wsEnv', () => {
-
     it('should return wsEnv value for action type defined in receiveActions', () => {
       for (let i = 0; i < receiveActions.length; i++) {
         action = _.cloneDeep(genericAction);
@@ -275,10 +275,7 @@ describe('reducers', () => {
     });
   });
 
-
-
   describe('isFetching', () => {
-
     it('should return True for actions in requestActions and False for receiveActions', () => {
       for (let i = 0; i < requestActions.length; i++) {
         action = _.cloneDeep(genericAction);
@@ -306,7 +303,6 @@ describe('reducers', () => {
   });
 
   describe('hasFetched', () => {
-
     it('should return true for actions defined in receiveActions', () => {
       for (let i = 0; i < receiveActions.length; i++) {
         action = _.cloneDeep(genericAction);
@@ -323,8 +319,6 @@ describe('reducers', () => {
   });
 
   describe('isSubmitting', () => {
-
-
     it('should return true for action types in requestActions except REQUEST_SERVER_STATUS and false for action types in receiveActions', () => {
       for (let i = 0; i < requestActions.length; i++) {
 
@@ -351,7 +345,6 @@ describe('reducers', () => {
   });
 
   describe('fetchFailCount', () => {
-
     it('should maintain state value at 0 for action types in receiveActions', () => {
       for (let i = 0; i < receiveActions.length; i++) {
         action = _.cloneDeep(genericAction);
@@ -377,7 +370,6 @@ describe('reducers', () => {
   });
 
   describe('loadUrl', () => {
-
     it('should by default return null', () => {
       action = _.cloneDeep(genericAction);
       expect(reducers.loadUrl(undefined, action)).toBeNull();

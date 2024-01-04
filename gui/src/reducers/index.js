@@ -29,7 +29,7 @@ import {
 export function authEnabled(state = false, action) {
     switch (action.type) {
         case RECEIVE_ENV_CONFIG:
-            return action.config.authEnabled;
+            return action.config.authentication.enabled;
         default:
             return state;
     }
@@ -59,9 +59,9 @@ export function useMRE(state = false, action) {
 export function authStatus(state = false, action) {
     switch (action.type) {
         case RECEIVE_ENV_CONFIG:
-            return action.config.authStatus;
+            return action.config.authentication.status;
         case SET_AUTH_STATUS:
-            return action.authInfo.authStatus;
+            return action.authInfo.status;
         default:
             return state;
     }
@@ -71,7 +71,7 @@ export function authStatus(state = false, action) {
 export function authToken(state = null, action) {
     switch (action.type) {
         case SET_AUTH_TOKEN:
-            return action.authInfo.authToken;
+            return action.authentication.token;
         default:
             return state;
     }
@@ -141,6 +141,26 @@ export function matlabStatus(state = 'down', action) {
     }
 }
 
+export function matlabVersionOnPath(state = null, action) {
+    switch (action.type) {       
+        case RECEIVE_SERVER_STATUS:
+        case RECEIVE_SET_LICENSING:
+            return action.status.matlab.version
+        case RECEIVE_ENV_CONFIG:
+            return action.config.matlab.version
+        default:
+            return state;
+    }
+}
+
+export function supportedMatlabVersions(state = null, action) {
+    switch (action.type) {       
+        case RECEIVE_ENV_CONFIG:
+            return action.config.matlab.supported_versions
+        default:
+            return state;
+    }
+}
 
 export function wsEnv(state = null, action) {
     switch (action.type) {
@@ -269,24 +289,30 @@ export function error(state = null, action) {
 export function envConfig(state = null, action) {
     switch (action.type) {
         case RECEIVE_ENV_CONFIG:
-            // Token authentication info is also sent as a response to /get_env_config endpoint.
-            // As its already stored in 'authStatus', 'authEnabled' and 'authToken', ignoring it in envConfig.
-            const { authStatus, authEnabled, useMOS, useMRE, ...envConfig } = action.config
+            // Token authentication and matlab info is also sent as a response to /get_env_config endpoint.
+            // The authentication and matlab pieces of redux state are updated accordingly for the RECEIVE_ENV_CONFIG action type.
+            // Hence, storing the rest of the envConfig without authentication and matlab info. 
+            const { authentication, matlab,  ...envConfig } = action.config
             return envConfig
         default:
             return state;
     }
 }
 
-export const authInfo = combineReducers({
-    authEnabled,
-    authStatus,
-    authToken
+export const authentication = combineReducers({
+    enabled : authEnabled,
+    status : authStatus,
+    token : authToken,
+});
+
+export const matlab = combineReducers({
+    status : matlabStatus,
+    versionOnPath : matlabVersionOnPath, 
+    supportedVersions: supportedMatlabVersions,
 });
 
 export const serverStatus = combineReducers({
-    licensingInfo,
-    matlabStatus,
+    licensingInfo,   
     wsEnv,
     isFetching,
     hasFetched,
@@ -303,7 +329,8 @@ export default combineReducers({
     loadUrl,
     error,
     envConfig,
-    authInfo,
     useMOS,
     useMRE,
+    authentication,
+    matlab,
 });

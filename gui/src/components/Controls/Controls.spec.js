@@ -5,33 +5,19 @@ import Controls from './index';
 import App from '../App'
 import { render, fireEvent } from '../../test/utils/react-test';
 
+import state from '../../test/utils/state';
+
+const _ = require("lodash");
+
 describe('Controls Component', () => {
   let initialState, callbackFn;
 
   beforeEach(() => {
-    initialState = {
-      triggerPosition: { x: 539, y: 0 },
-      tutorialHidden: false,
-      overlayVisibility: false,
-      serverStatus: {
-        licensingInfo: { type: 'MHLM', emailAddress: 'abc@mathworks.com' },
-        matlabStatus: 'up',
-        isFetching: false,
-        hasFetched: true,
-        isSubmitting: false,
-        fetchFailCount: 0,
-      },
-      loadUrl: null,
-      error: null,
-      authInfo: {
-        authEnabled: false,
-        authStatus: false,
-        authToken: null,
-      },
-    };
-
-    callbackFn = jest.fn().mockImplementation((confirmationType) => { });
-  });
+    initialState = _.cloneDeep(state);
+    initialState.serverStatus.licensingInfo.entitlementId = initialState.serverStatus.licensingInfo.entitlements[0].id;
+    initialState.serverStatus.isSubmitting = false;
+    callbackFn = jest.fn().mockImplementation((_) => {});
+   });
 
   afterEach(() => {
     jest.clearAllMocks();
@@ -42,7 +28,7 @@ describe('Controls Component', () => {
   });
 
   it('should startMatlab on button click', () => {
-    const { debug, getByTestId } = render(<Controls callback={callbackFn} />, {
+    const { getByTestId } = render(<Controls callback={callbackFn} />, {
       initialState: initialState,
     });
 
@@ -53,7 +39,7 @@ describe('Controls Component', () => {
   });
 
   it('should stopMatlab on button click', () => {
-    const { debug, getByTestId } = render(<Controls callback={callbackFn} />, {
+    const { getByTestId } = render(<Controls callback={callbackFn} />, {
       initialState: initialState,
     });
 
@@ -64,7 +50,7 @@ describe('Controls Component', () => {
   });
 
   it('should unsetLicensing on button click', () => {
-    const { debug, getByTestId } = render(<Controls callback={callbackFn} />, {
+    const { getByTestId } = render(<Controls callback={callbackFn} />, {
       initialState: initialState,
     });
 
@@ -73,8 +59,9 @@ describe('Controls Component', () => {
 
     expect(callbackFn).toHaveBeenCalledTimes(1);
   });
+
   it('should open Help on button click', () => {
-    const { debug, getByTestId } = render(<Controls callback={callbackFn} />, {
+    const { getByTestId } = render(<Controls callback={callbackFn} />, {
       initialState: initialState,
     });
 
@@ -118,5 +105,4 @@ describe('Controls Component', () => {
     let tableData = container.querySelector('.details');
     expect(tableData.innerHTML).toContain('Starting. This may take several minutes');
   });
-
 });
