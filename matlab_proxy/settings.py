@@ -1,6 +1,5 @@
-# Copyright 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2024 The MathWorks, Inc.
 
-from pathlib import Path
 import os
 import shutil
 import socket
@@ -8,6 +7,7 @@ import ssl
 import tempfile
 import uuid
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 import matlab_proxy
 from matlab_proxy import constants
@@ -350,11 +350,9 @@ def get_matlab_settings():
     )
     matlab_lic_mode = ["-licmode", "file"] if nlm_conn_str else ""
     # flag to hide MATLAB Window
-    flag_to_hide_desktop = (
-        ["-noDisplayDesktop", "-wait", "-log"]
-        if system.is_windows()
-        else ["-nodesktop"]
-    )
+    flag_to_hide_desktop = ["-nodesktop"]
+    if system.is_windows():
+        flag_to_hide_desktop.extend(["-noDisplayDesktop", "-wait", "-log"])
     matlab_startup_file = str(Path(__file__).resolve().parent / "matlab" / "startup.m")
 
     matlab_version = get_matlab_version(matlab_root_path)
