@@ -1,4 +1,4 @@
-// Copyright 2023 The MathWorks, Inc.
+// Copyright 2023-2024 The MathWorks, Inc.
 
 // A common state variable meant to represent redux state to be used by different tests.
 const state = {
@@ -43,6 +43,13 @@ const state = {
       enabled: false,
       status: false,
       token: null,
+    },
+    sessionStatus: {
+      isActiveClient: true,
+      hasClientInitialized: false, 
+      wasEverActive: false,
+      isConcurrencyEnabled: false,
+      clientId: null,
     },
   };
 export default state;

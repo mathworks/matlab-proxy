@@ -1,9 +1,10 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import React from 'react';
 import PropTypes from 'prop-types';
 
-function Confirmation({ confirm, cancel, children }) {
+// Made the Confirmation component more scalable where one can customize all the messages which are to be displayed.
+function Confirmation({ confirm, cancel, title = 'Confirmation', cancelButton = 'Cancel', confirmButton = 'Confirm', children }) {
     return (
         <div className="modal show"
             id="confirmation"
@@ -14,14 +15,14 @@ function Confirmation({ confirm, cancel, children }) {
                 role="document">
                 <div className="modal-content">
                     <div className="modal-header">
-                        <h4 className="modal-title" id="confirmation-dialog-title">Confirmation</h4>
+                        <h4 className="modal-title" id="confirmation-dialog-title">{title}</h4>
                     </div>
                     <div className="modal-body">
                         {children}
                     </div>
                     <div className="modal-footer">
-                        <button onClick={cancel} data-testid='cancelButton' className="btn companion_btn btn_color_blue">Cancel</button>
-                        <button onClick={confirm} data-testid='confirmButton' className="btn btn_color_blue">Confirm</button>
+                        <button onClick={cancel} data-testid='cancelButton' className="btn companion_btn btn_color_blue">{cancelButton}</button>
+                        <button onClick={confirm} data-testid='confirmButton' className="btn btn_color_blue">{confirmButton}</button>
                     </div>
                 </div>
             </div>

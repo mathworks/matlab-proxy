@@ -1,4 +1,4 @@
-// Copyright 2020-2023 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
@@ -30,6 +30,9 @@ import {
     selectLicensingInfo,
     selectUseMOS,
     selectUseMRE,
+    selectIsConcurrent,
+    selectWasEverActive,
+    selectIsConcurrencyEnabled,
 } from "../../selectors";
 
 import {
@@ -55,11 +58,14 @@ function App() {
     const error = useSelector(selectError);
     const loadUrl = useSelector(selectLoadUrl);
     const isConnectionError = useSelector(selectIsConnectionError);
-    const isAuthenticated = useSelector(selectIsAuthenticated)
+    const isAuthenticated = useSelector(selectIsAuthenticated);
     const authEnabled = useSelector(selectAuthEnabled);
     const licensingInfo = useSelector(selectLicensingInfo);
     const useMOS = useSelector(selectUseMOS);
     const useMRE = useSelector(selectUseMRE);
+    const isSessionConcurrent = useSelector(selectIsConcurrent);
+    const isConcurrencyEnabled = useSelector(selectIsConcurrencyEnabled);
+    const wasEverActive = useSelector(selectWasEverActive);
 
     const baseUrl = useMemo(() => {
         const url = document.URL
@@ -92,7 +98,10 @@ function App() {
     );
 
     const [dialogModel, setDialogModel] = useState(null);
+    const [isTerminated, setIsTerminated] = useState(false);
 
+    // sessionDialog stores the state of concurrent session based on which either matlab gets rendered or the concurrent session dialog gets rendered 
+    let sessionDialog = null;
     let dialog;
     if (dialogModel) {
         const closeHandler = () => setDialogModel(null);
@@ -135,6 +144,35 @@ function App() {
         );
     } else if (error && error.type === "MatlabInstallError") {
         dialog = <Error message={error.message} />;
+    } 
+    // check the user authentication before giving them the option to transfer the session.
+    else if ((!authEnabled || isAuthenticated) && isSessionConcurrent && isConcurrencyEnabled) {
+        // Transfer the session to this tab 
+        // setting the query parameter of requestTransferSession to true
+        const transferSessionOnClick= () => {
+            dispatch(fetchServerStatus(true));
+            sessionDialog=null;
+        }
+        const endSession = () => {
+            setIsTerminated(true);
+        }
+        if(isTerminated) {
+            sessionDialog = <Error message="Your session has been terminated. Refresh the page to restart the session." />;
+        }
+        else {
+            sessionDialog = (
+                <Confirmation
+                    confirm={transferSessionOnClick}
+                    cancel={endSession}
+                    title='MATLAB is currently open in another window'
+                    cancelButton={wasEverActive?('Cancel'):('Continue in existing window')}
+                    confirmButton = {wasEverActive?('Confirm'):('Continue in this window')}>
+                    {wasEverActive
+                        ? 'You have been disconnected because MATLAB is open in another window. Click on Confirm to continue using MATLAB here.'
+                        : <div>MATLAB is open in another window and cannot be opened in a second window or tab at the same time.<br></br>Would you like to continue in this window?</div> }
+                </Confirmation>
+            );
+        }
     }
 
     useEffect(() => {
@@ -147,11 +185,11 @@ function App() {
 
     useEffect(() => {
         // Initial fetch server status
-        if (!hasFetchedServerStatus) {
+        if (hasFetchedEnvConfig && !hasFetchedServerStatus) {
             dispatch(fetchServerStatus());
         }
 
-    }, [dispatch, hasFetchedServerStatus]);
+    }, [dispatch, hasFetchedServerStatus, hasFetchedEnvConfig]);
 
     // Periodic fetch server status
     useInterval(() => {
@@ -233,11 +271,22 @@ function App() {
     const overlayTrigger = overlayVisible ? null : <OverlayTrigger />;
 
     return (
-        <div data-testid="app" className="main">
-            {overlayTrigger}
-            {matlabJsd}
-            {overlay}
-        </div>
+        // If we use div instead of React.Fragment then the editor screen becomes white / doesn't fully render.
+        // Have noticed this behavior both in windows and Linux.
+        // If session dialog is not 'null' then render the transfer dialog or error dialog otherwise render the normal MATLAB.
+        <React.Fragment>
+            {sessionDialog?(
+                <Overlay>
+                    {sessionDialog}
+                </Overlay>
+            ):(
+                <div data-testid="app" className="main">
+                    {overlayTrigger}
+                    {matlabJsd}
+                    {overlay}
+                </div>
+            )}
+        </React.Fragment>
     );
 }
 

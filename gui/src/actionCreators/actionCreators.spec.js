@@ -1,4 +1,4 @@
-// Copyright 2020-2023 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import configureMockStore from 'redux-mock-store';
 import thunk from 'redux-thunk';
@@ -94,7 +94,7 @@ describe('Test fetchWithTimeout method', () => {
   });
 
   it('should fetch requested data without raising an exception or dispatching any action', async () => {
-    fetchMock.getOnce('/get_status', {
+    fetchMock.getOnce('/get_status?IS_DESKTOP=TRUE', {
       body: {
         matlab: {
           status: 'down',
@@ -104,7 +104,7 @@ describe('Test fetchWithTimeout method', () => {
       headers: { 'content-type': 'application/json' },
     });
 
-    const response = await actionCreators.fetchWithTimeout(store.dispatch, '/get_status', {}, 10000);
+    const response = await actionCreators.fetchWithTimeout(store.dispatch, '/get_status?IS_DESKTOP=TRUE', {}, 10000);
     const body = await response.json()
 
     expect(body).not.toBeNull();
@@ -116,7 +116,7 @@ describe('Test fetchWithTimeout method', () => {
     ];
 
     try {
-      const response = await actionCreators.fetchWithTimeout(store.dispatch, '/get_status', {}, 100);
+      const response = await actionCreators.fetchWithTimeout(store.dispatch, '/get_status?IS_DESKTOP=TRUE', {}, 100);
     } catch (error) {
       expect(error).toBeInstanceOf(TypeError)
       const received = store.getActions();
@@ -130,14 +130,14 @@ describe('Test fetchWithTimeout method', () => {
 
     // Send a delayed response, well after the timeout for the request has expired.
     // This should trigger the abort() method of the AbortController()
-    fetchMock.getOnce('/get_status', new Promise(resolve => setTimeout(() => resolve({ body: 'ok' }), 1000 + timeout)));
+    fetchMock.getOnce('/get_status?IS_DESKTOP=TRUE', new Promise(resolve => setTimeout(() => resolve({ body: 'ok' }), 1000 + timeout)));
 
     const abortSpy = jest.spyOn(global.AbortController.prototype, 'abort');
     const expectedActions = [
       actions.RECEIVE_ERROR,
     ];
 
-    await actionCreators.fetchWithTimeout(store.dispatch, '/get_status', {}, timeout);
+    await actionCreators.fetchWithTimeout(store.dispatch, '/get_status?IS_DESKTOP=TRUE', {}, timeout);
 
     expect(abortSpy).toBeCalledTimes(1);
     const received = store.getActions();
@@ -194,7 +194,7 @@ describe('Test Async actionCreators', () => {
   });
 
   it('dispatches REQUEST_SERVER_STATUS, RECEIVE_SERVER_STATUS when fetching status', () => {
-    fetchMock.getOnce('/get_status', {
+    fetchMock.getOnce('/get_status?IS_DESKTOP=TRUE', {
       body: {
         matlab: {
           status: 'down',

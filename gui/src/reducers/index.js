@@ -1,4 +1,4 @@
-// Copyright 2020-2023 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import { combineReducers } from 'redux';
 
@@ -14,6 +14,7 @@ import {
     REQUEST_STOP_MATLAB,
     REQUEST_START_MATLAB,
     REQUEST_ENV_CONFIG,
+    REQUEST_SERVER_INITIALIZATION,
     RECEIVE_SET_LICENSING,
     RECEIVE_TERMINATE_INTEGRATION,
     RECEIVE_STOP_MATLAB,
@@ -22,6 +23,11 @@ import {
     RECEIVE_ENV_CONFIG,
     SET_AUTH_STATUS,
     SET_AUTH_TOKEN,
+    SET_CLIENT_ID,
+    RECEIVE_SESSION_STATUS,
+    REQUEST_SESSION_STATUS,
+    RECEIVE_CONCURRENCY_CHECK,
+    WAS_EVER_ACTIVE,
 } from '../actions';
 
 // Stores info on whether token authentication enabled on the backend. 
@@ -72,6 +78,17 @@ export function authToken(state = null, action) {
     switch (action.type) {
         case SET_AUTH_TOKEN:
             return action.authentication.token;
+        default:
+            return state;
+    }
+}
+
+// Stores whether the concurrency is enabled or not
+export function isConcurrencyEnabled(state = false, action) {
+    switch(action.type){
+        case RECEIVE_ENV_CONFIG:
+        case RECEIVE_CONCURRENCY_CHECK:
+            return action.config.isConcurrencyEnabled;
         default:
             return state;
     }
@@ -161,6 +178,14 @@ export function supportedMatlabVersions(state = null, action) {
             return state;
     }
 }
+export function isActiveClient(state = true, action) {
+    switch (action.type) {
+        case RECEIVE_SESSION_STATUS:
+            return action.status.isActiveClient;
+        default:
+            return state;
+    }
+}
 
 export function wsEnv(state = null, action) {
     switch (action.type) {
@@ -183,6 +208,7 @@ export function isFetching(state = false, action) {
         case REQUEST_STOP_MATLAB:
         case REQUEST_START_MATLAB:
         case REQUEST_ENV_CONFIG:
+        case REQUEST_SESSION_STATUS:
             return true;
         case RECEIVE_SERVER_STATUS:
         case RECEIVE_SET_LICENSING:
@@ -190,7 +216,7 @@ export function isFetching(state = false, action) {
         case RECEIVE_STOP_MATLAB:
         case RECEIVE_START_MATLAB:
         case RECEIVE_ERROR:
-        case RECEIVE_ENV_CONFIG:
+        case RECEIVE_ENV_CONFIG: 
             return false;
         default:
             return state;
@@ -204,6 +230,24 @@ export function hasFetched(state = false, action) {
         case RECEIVE_TERMINATE_INTEGRATION:
         case RECEIVE_STOP_MATLAB:
         case RECEIVE_START_MATLAB:
+            return true;
+        default:
+            return state;
+    }
+}
+
+export function hasClientInitialized(state = false, action) {
+    switch(action.type) {
+        case REQUEST_SERVER_INITIALIZATION:
+            return true;
+        default:
+            return state;
+    }
+}
+
+export function wasEverActive(state = false, action) {
+    switch(action.type) {
+        case WAS_EVER_ACTIVE:
             return true;
         default:
             return state;
@@ -309,6 +353,15 @@ export function envConfig(state = null, action) {
     }
 }
 
+export function clientId(state = null, action) {
+    switch (action.type) {
+        case SET_CLIENT_ID:
+            return action.client_id
+        default:
+            return state;
+    }
+}
+
 export const authentication = combineReducers({
     enabled : authEnabled,
     status : authStatus,
@@ -327,15 +380,23 @@ export const serverStatus = combineReducers({
     isFetching,
     hasFetched,
     isSubmitting,
-    fetchFailCount
+    fetchFailCount,
 });
 
+export const sessionStatus = combineReducers({
+    isActiveClient,
+    hasClientInitialized,
+    wasEverActive,
+    isConcurrencyEnabled,
+    clientId,
+});
 
 export default combineReducers({
     triggerPosition,
     tutorialHidden,
     overlayVisibility,
     serverStatus,
+    sessionStatus,
     loadUrl,
     error,
     warnings,

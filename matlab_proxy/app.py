@@ -1,10 +1,11 @@
-# Copyright 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2024 The MathWorks, Inc.
 
 import asyncio
 import json
 import mimetypes
 import pkgutil
 import sys
+import uuid
 
 import aiohttp
 from aiohttp import client_exceptions, web
@@ -19,6 +20,7 @@ from matlab_proxy.util import mwi
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import token_auth
 from matlab_proxy.util.mwi.exceptions import AppError, InvalidTokenError, LicensingError
+from matlab_proxy.constants import IS_CONCURRENCY_CHECK_ENABLED
 
 
 mimetypes.add_type("font/woff", ".woff")
@@ -93,30 +95,45 @@ def marshal_error(error):
         return {"message": error.__str__, "logs": "", "type": error.__class__.__name__}
 
 
-async def create_status_response(app, loadUrl=None):
-    """Send a generic status response about the state of server,MATLAB and MATLAB Licensing
+async def create_status_response(
+    app, loadUrl=None, client_id=None, transfer_session=False, is_desktop=False
+):
+    """Send a generic status response about the state of server, MATLAB, MATLAB Licensing and the client session status.
 
     Args:
         app (aiohttp.web.Application): Web Server
         loadUrl (String, optional): Represents the root URL. Defaults to None.
+        client_id (String, optional): Represents the unique client_id when concurrency check is enabled. Defaults to None.
+        transfer_session (Boolean, optional): Represents whether the connection should be transfered or not when concurrency check is enabled. Defaults to False.
+        is_desktop (Boolean, optional): Represents whether the request is made by the desktop app or some other kernel. Defaults to False.
 
     Returns:
-        JSONResponse: A JSONResponse object containing the generic state of the server, MATLAB and MATLAB Licensing.
+        JSONResponse: A JSONResponse object containing the generic state of the server, MATLAB, MATLAB Licensing and the client session status.
     """
     state = app["state"]
-    return web.json_response(
-        {
-            "matlab": {
-                "status": await state.get_matlab_state(),
-                "version": state.settings["matlab_version"],
-            },
-            "licensing": marshal_licensing_info(state.licensing),
-            "loadUrl": loadUrl,
-            "error": marshal_error(state.error),
-            "warnings": state.warnings,
-            "wsEnv": state.settings.get("ws_env", ""),
-        }
-    )
+    status = {
+        "matlab": {
+            "status": await state.get_matlab_state(),
+            "version": state.settings["matlab_version"],
+        },
+        "licensing": marshal_licensing_info(state.licensing),
+        "loadUrl": loadUrl,
+        "error": marshal_error(state.error),
+        "warnings": state.warnings,
+        "wsEnv": state.settings.get("ws_env", ""),
+    }
+
+    if IS_CONCURRENCY_CHECK_ENABLED and is_desktop:
+        if not client_id:
+            client_id = str(uuid.uuid4())
+            status["clientId"] = client_id
+
+        if not state.active_client or transfer_session:
+            state.active_client = client_id
+
+        status["isActiveClient"] = True if state.active_client == client_id else False
+
+    return web.json_response(status)
 
 
 @token_auth.authenticate_access_decorator
@@ -155,7 +172,7 @@ async def get_env_config(req):
 
     config["useMOS"] = mwi_env.Experimental.should_use_mos_html()
     config["useMRE"] = mwi_env.Experimental.should_use_mre_html()
-
+    config["isConcurrencyEnabled"] = IS_CONCURRENCY_CHECK_ENABLED
     # In a previously authenticated session, if the url is accessed without the token(using session cookie), send the token as well.
     config["authentication"] = {
         "enabled": state.settings["mwi_is_token_auth_enabled"],
@@ -182,7 +199,17 @@ async def get_status(req):
     Returns:
         JSONResponse: JSONResponse object containing information about the server, MATLAB and MATLAB Licensing.
     """
-    return await create_status_response(req.app)
+    # The client sends the CLIENT_ID as a query parameter if the concurrency check has been set to true.
+    client_id = req.query.get("MWI_CLIENT_ID", None)
+    transfer_session = json.loads(req.query.get("TRANSFER_SESSION", "false"))
+    is_desktop = req.query.get("IS_DESKTOP", False)
+
+    return await create_status_response(
+        req.app,
+        client_id=client_id,
+        transfer_session=transfer_session,
+        is_desktop=is_desktop,
+    )
 
 
 # @token_auth.authenticate_access_decorator

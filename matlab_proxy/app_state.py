@@ -1,4 +1,4 @@
-# Copyright 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2024 The MathWorks, Inc.
 
 import asyncio
 import contextlib
@@ -99,6 +99,10 @@ class AppState:
         # the state of MATLAB process in app_state will continue to be in a 'starting' indefinitely.
         # This variable can be either "up" or "down"
         self.embedded_connector_state = "down"
+
+        # Specific to concurrent session and is used to track the active client/s that are currently
+        # connected to the backend
+        self.active_client = None
 
     def __get_cached_config_file(self):
         """Get the cached config file

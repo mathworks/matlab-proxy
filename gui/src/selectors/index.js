@@ -1,9 +1,10 @@
-// Copyright 2020-2023 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import { createSelector } from 'reselect';
 
 export const selectTutorialHidden = state => state.tutorialHidden;
 export const selectServerStatus = state => state.serverStatus;
+export const selectSessionStatus = state => state.sessionStatus;
 export const selectMatlabStatus = state => state.matlab.status;
 export const selectMatlabVersionOnPath = state => state.matlab.versionOnPath;
 export const selectSupportedMatlabVersions = state => state.matlab.supportedVersions;
@@ -21,6 +22,10 @@ export const selectUseMRE = state => state.useMRE === true;
 export const selectAuthEnabled = state => state.authentication.enabled;
 export const selectAuthToken = state => state.authentication.token;
 export const selectIsAuthenticated = state => state.authentication.status === true;
+export const selectIsActiveClient = state => state.sessionStatus.isActiveClient;
+export const selectIsConcurrencyEnabled = state => state.sessionStatus.isConcurrencyEnabled; 
+export const selectWasEverActive = state => state.sessionStatus.wasEverActive;
+export const selectClientId = state => state.sessionStatus.clientId;
 
 export const selectTriggerPosition = createSelector(
     state => state.triggerPosition,
@@ -37,9 +42,22 @@ export const selectIsError = createSelector(
     error => error !== null
 );
 
+// If the client is not active then the session is a concurrent session.
+export const selectIsConcurrent = createSelector(
+    selectIsActiveClient,
+    isActiveClient => !isActiveClient
+);
+
 export const selectIsConnectionError = createSelector(
     selectServerStatusFetchFailCount,
-    fails => fails >= 5
+    selectIsConcurrencyEnabled,
+    selectIsConcurrent,
+    (fails, isConcurrencyEnabled, isConcurrent) => {
+        if (isConcurrencyEnabled && isConcurrent) {
+            return fails >= 1
+        }
+        return fails >= 5
+    }
 );
 
 export const selectMatlabUp = createSelector(
@@ -86,11 +104,14 @@ export const getFetchAbortController = createSelector(
     serverStatus => serverStatus.fetchAbortController
 );
 
+// If the session is concurrent or if there is a connection error then disable the fetching of data such as get_status.
 export const selectFetchStatusPeriod = createSelector(
     selectMatlabStatus,
     selectSubmittingServerStatus,
-    (matlabStatus, isSubmitting) => {
-        if (isSubmitting) {
+    selectIsConcurrencyEnabled,
+    selectIsConcurrent,
+    (matlabStatus, isSubmitting, isConcurrencyEnabled, isConcurrent) => {
+        if (isSubmitting || (isConcurrencyEnabled && isConcurrent)) {
             return null;
         } else if (matlabStatus === 'up') {
             return 10000;

@@ -1,4 +1,4 @@
-# Copyright 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2024 The MathWorks, Inc.
 
 import asyncio
 import datetime
@@ -251,6 +251,7 @@ async def test_get_env_config(test_server):
         "doc_url": "foo",
         "extension_name": "bar",
         "extension_name_short_description": "foobar",
+        "isConcurrencyEnabled": "foobar",
     }
     resp = await test_server.get("/get_env_config")
     assert resp.status == HTTPStatus.OK
@@ -990,3 +991,72 @@ async def test_get_auth_token_route(test_server, monkeypatch):
     # Testing the default dev configuration where the auth is disabled
     assert res_json["authToken"] == None
     assert resp.status == HTTPStatus.OK
+
+
+async def test_check_for_concurrency(test_server):
+    """Test to check the response from endpoint : "/get_status" with different query parameters
+
+    Test requests the "/get_status" endpoint with different query parameters to check
+    how the server responds.
+
+    Args:
+        test_server (aiohttp_client): A aiohttp_client server to send GET request to.
+    """
+    # Request server to check if concurrency check is enabled.
+
+    env_resp = await test_server.get("/get_env_config")
+    assert env_resp.status == HTTPStatus.OK
+    env_resp_json = json.loads(await env_resp.text())
+    if env_resp_json["isConcurrencyEnabled"]:
+        # A normal request should not repond with client id or active status
+        status_resp = await test_server.get("/get_status")
+        assert status_resp.status == HTTPStatus.OK
+        status_resp_json = json.loads(await status_resp.text())
+        assert "clientId" not in status_resp_json
+        assert "isActiveClient" not in status_resp_json
+
+        # When the request comes from the desktop app the server should respond with client id and active status
+        status_resp = await test_server.get('/get_status?IS_DESKTOP="true"')
+        assert status_resp.status == HTTPStatus.OK
+        status_resp_json = json.loads(await status_resp.text())
+        assert "clientId" in status_resp_json
+        assert "isActiveClient" in status_resp_json
+
+        # When the desktop client requests for a session transfer without client id respond with cliend id and active status should be true
+        status_resp = await test_server.get(
+            '/get_status?IS_DESKTOP="true"&TRANSFER_SESSION="true"'
+        )
+        assert status_resp.status == HTTPStatus.OK
+        status_resp_json = json.loads(await status_resp.text())
+        assert "clientId" in status_resp_json
+        assert status_resp_json["isActiveClient"] == True
+
+        # When transfering the session is requested by a client whihc is not a desktop client it should be ignored
+        status_resp = await test_server.get('/get_status?TRANSFER_SESSION="true"')
+        assert status_resp.status == HTTPStatus.OK
+        status_resp_json = json.loads(await status_resp.text())
+        assert "clientId" not in status_resp_json
+        assert "isActiveClient" not in status_resp_json
+
+        # When the desktop client requests for a session transfer with a client id then respond only with active status
+        status_resp = await test_server.get(
+            '/get_status?IS_DESKTOP="true"&MWI_CLIENT_ID="foobar"&TRANSFER_SESSION="true"'
+        )
+        assert status_resp.status == HTTPStatus.OK
+        status_resp_json = json.loads(await status_resp.text())
+        assert "clientId" not in status_resp_json
+        assert status_resp_json["isActiveClient"] == True
+    else:
+        # When Concurrency check is disabled the response should not contain client id or active status
+        status_resp = await test_server.get("/get_status")
+        assert status_resp.status == HTTPStatus.OK
+        status_resp_json = json.loads(await status_resp.text())
+        assert "clientId" not in status_resp_json
+        assert "isActiveClient" not in status_resp_json
+        status_resp = await test_server.get(
+            '/get_status?IS_DESKTOP="true"&MWI_CLIENT_ID="foobar"&TRANSFER_SESSION="true"'
+        )
+        assert status_resp.status == HTTPStatus.OK
+        status_resp_json = json.loads(await status_resp.text())
+        assert "clientId" not in status_resp_json
+        assert "isActiveClient" not in status_resp_json

@@ -1,4 +1,4 @@
-// Copyright 2020-2023 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import * as selectors from './index';
 import state from '../test/utils/state'
@@ -48,6 +48,7 @@ describe('selectors', () => {
     selectAuthEnabled,
     selectIsAuthenticated,
     selectAuthToken,
+    selectIsActiveClient,
     selectTriggerPosition,
     selectIsError,
     selectIsConnectionError,
@@ -62,6 +63,7 @@ describe('selectors', () => {
     selectMatlabPending,
     selectOverlayVisible,
     selectInformationDetails,
+    selectIsConcurrent,
   } = selectors;
 
   describe.each([
@@ -126,6 +128,16 @@ describe('selectors', () => {
       modifiedState.serverStatus.fetchFailCount = 10;
       expect(selectIsConnectionError(modifiedState)).toBe(true);
     });
+
+    test('selectIsConcurrent should return false when the Client is the active client', () => {
+      expect(selectIsConcurrent(state)).toBe(false);
+    })
+
+    test('selectIsConcurrent should return true when the Client is no longer the active client',() => {
+      modifiedState = _.cloneDeep(state);
+      modifiedState.sessionStatus.isActiveClient = false;
+      expect(selectIsConcurrent(modifiedState)).toBe(true);
+    })
 
     test('selectMatlabUp should return true when Matlab is up', () => {
       expect(selectMatlabUp(state)).toBe(true);
@@ -247,6 +259,7 @@ describe('selectors', () => {
     test('selectFetchStatusPeriod should return 10000ms when matlab is up ', () => {
       modifiedState = _.cloneDeep(state);
       modifiedState.serverStatus.isSubmitting = false;
+      modifiedState.isConcurrent = false;
       expect(selectFetchStatusPeriod(modifiedState)).toBe(10000);
     })
 
@@ -254,11 +267,13 @@ describe('selectors', () => {
       ['starting'],
       ['down']
     ])(
-      'selectFetchStatusPeriod should return 500ms when matlab %s (ie. not up)',
+      'selectFetchStatusPeriod should return 5000ms when matlab %s (ie. not up)',
       (input) => {
 
         modifiedState = _.cloneDeep(state);
         modifiedState.serverStatus.isSubmitting = false;
+        modifiedState.isConcurrent = false;
+        modifiedState.isConnectionError = false;
         modifiedState.matlab.status = input;
 
         expect(selectFetchStatusPeriod(modifiedState)).toBe(5000);

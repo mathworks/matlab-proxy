@@ -1,4 +1,4 @@
-// Copyright 2020-2023 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import {
     SET_TRIGGER_POSITION,
@@ -19,10 +19,19 @@ import {
     RECEIVE_START_MATLAB,
     RECEIVE_ERROR,
     RECEIVE_ENV_CONFIG,
+    RECEIVE_CONCURRENCY_CHECK,
     SET_AUTH_STATUS,
-    SET_AUTH_TOKEN
+    SET_AUTH_TOKEN,
+    RECEIVE_SESSION_STATUS,
+    WAS_EVER_ACTIVE,
+    REQUEST_SESSION_STATUS,
+    SET_CLIENT_ID,
 } from '../actions';
-import { selectMatlabPending } from '../selectors';
+import { 
+    selectMatlabPending, 
+    selectIsConcurrencyEnabled, 
+    selectClientId,
+} from '../selectors';
 import sha256 from 'crypto-js/sha256';
 
 export function setAuthStatus(authInfo) {
@@ -61,10 +70,23 @@ export function setOverlayVisibility(visibility) {
     };
 }
 
+export function setClientId(client_id) {
+    return {
+        type: SET_CLIENT_ID,
+        client_id
+    };
+}
+
 export function requestServerStatus() {
     return {
         type: REQUEST_SERVER_STATUS,
     };
+}
+
+export function wasEverActive() {
+    return {
+        type: WAS_EVER_ACTIVE,
+    }
 }
 
 export function receiveServerStatus(status) {
@@ -74,6 +96,20 @@ export function receiveServerStatus(status) {
             status,
             previousMatlabPending: selectMatlabPending(getState())
         });
+    }
+}
+export function requestSessionStatus() {
+    return {
+        type: REQUEST_SESSION_STATUS,
+    };
+}
+
+export function receiveSessionStatus(status) {
+    return function (dispatch, getState) {
+        return dispatch({
+            type: RECEIVE_SESSION_STATUS,
+            status,
+        })
     }
 }
 
@@ -88,6 +124,13 @@ export function receiveEnvConfig(config) {
         type: RECEIVE_ENV_CONFIG,
         config,
     };
+}
+
+export function receiveConcurrencyCheck(config) {
+    return {
+        type: RECEIVE_CONCURRENCY_CHECK,
+        config,
+    }
 }
 
 export function requestSetLicensing() {
@@ -193,14 +236,43 @@ export async function fetchWithTimeout(dispatch, resource, options = {}, timeout
     }
 }
 
-export function fetchServerStatus() {
+export function fetchServerStatus(requestTransferSession = false) {
     return async function (dispatch, getState) {
+        const isConcurrencyEnabled = selectIsConcurrencyEnabled(getState());
+        const clientIdInState = selectClientId(getState());
+        const clientId = clientIdInState ? clientIdInState : sessionStorage.getItem("MWI_CLIENT_ID");
 
         dispatch(requestServerStatus());
-        const response = await fetchWithTimeout(dispatch, './get_status', {}, 10000);
-        const data = await response.json();        
+
+        let url = './get_status?IS_DESKTOP=TRUE'
+
+        if (isConcurrencyEnabled && clientId) {
+            let params = new URLSearchParams();     
+            params.append("MWI_CLIENT_ID",encodeURIComponent(clientId))
+
+            if (requestTransferSession){
+params.append("TRANSFER_SESSION",encodeURIComponent(requestTransferSession))
+            }
+
+            url = url + '&' + params.toString();   
+
+        }
+
+        const response = await fetchWithTimeout(dispatch, url, {}, 10000);
+        
+        const data = await response.json();
         dispatch(receiveServerStatus(data));
 
+        if (clientId == null && data["clientId"]) {
+            sessionStorage.setItem("MWI_CLIENT_ID", data["clientId"]);
+            dispatch(setClientId(data["clientId"]));
+        }
+        if ("isActiveClient" in data) { 
+            dispatch(receiveSessionStatus(data))
+            if (data["isActiveClient"] === true) {
+                dispatch(wasEverActive())
+            }
+        }
     }
 }
 

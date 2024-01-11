@@ -1,4 +1,4 @@
-# Copyright 2023 The MathWorks, Inc.
+# Copyright 2023-2024 The MathWorks, Inc.
 from typing import Final, List
 
 """This module defines project-level constants"""
@@ -22,3 +22,6 @@ SUPPORTED_MATLAB_VERSIONS: Final[List[str]] = [
     "R2023a",
     "R2023b",
 ]
+
+# This constant when set to True restricts the number of active sessions to one
+IS_CONCURRENCY_CHECK_ENABLED: Final[bool] = True
