@@ -253,6 +253,16 @@ export function loadUrl(state = null, action) {
     }
 }
 
+export function warnings(state = null, action) {
+    switch (action.type) {
+        case RECEIVE_SERVER_STATUS:
+            const warnings = action.status.warnings;                             
+            return warnings.length > 0 ? warnings : null;
+        default:
+            return state;
+    }
+}
+
 export function error(state = null, action) {
     switch (action.type) {
         case SET_AUTH_STATUS:
@@ -328,6 +338,7 @@ export default combineReducers({
     serverStatus,
     loadUrl,
     error,
+    warnings,
     envConfig,
     useMOS,
     useMRE,

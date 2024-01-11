@@ -1,6 +1,6 @@
 /* Copyright (c) 2020-2022 The MathWorks, Inc. */
 
-#information .alert:not(.error-container) {
+#information .alert:not(.error-container, .warnings-container) {
     padding: 0;
     margin-bottom: 0;
     background: white;
@@ -24,37 +24,39 @@
     margin-bottom: 0;
 }
 
-#information .error-msg {
+#information .error-msg, .warnings-msg {
     white-space: pre;
     font: 10pt monospace;
 }
 
-#information .error-container.alert {
+#information .error-container.alert, .warnings-container.alert {
     border-radius: 0;
     margin: 5px 20px;
     padding: 10px;
 }
 
-#information .error-container.alert p {
+#information .error-container.alert p, .warnings-container.alert p {
     margin: 0;
 }
 
-#information .error-container.alert .error-text {
+#information .error-container.alert .error-text,
+.warnings-container.alert .warnings-text {
     margin-left: 30px;
 }
 
-#information .error-logs-container .error-container.alert {
+#information .error-logs-container .error-container.alert, 
+.warnings-container .warnings-container.alert {
     padding: 0;
     /* if this is inside an expand-collapse, padding just gets in the way */
 }
 
-#information .error-msg {
+#information .error-msg, .warnings-msg {
     padding: 10px;
     max-height: 200px;
     overflow: auto;
 }
 
-#information .error-logs-container .expand_trigger {
+#information .error-logs-container .warnings-container .expand_trigger {
     padding: 10px 5px 5px 40px;
     font-size: 15px;
 }

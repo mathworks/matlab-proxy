@@ -113,6 +113,7 @@ async def create_status_response(app, loadUrl=None):
             "licensing": marshal_licensing_info(state.licensing),
             "loadUrl": loadUrl,
             "error": marshal_error(state.error),
+            "warnings": state.warnings,
             "wsEnv": state.settings.get("ws_env", ""),
         }
     )

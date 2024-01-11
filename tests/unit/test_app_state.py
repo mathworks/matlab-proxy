@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Optional
 
 import pytest
+from matlab_proxy import settings
 
 from matlab_proxy.app_state import AppState
 from matlab_proxy.util.mwi.exceptions import LicensingError, MatlabError
@@ -14,14 +15,41 @@ from tests.unit.util import MockResponse
 
 
 @pytest.fixture
-def app_state_fixture():
+def sample_settings_fixture(tmp_path):
+    """A pytest fixture which returns a dict containing sample settings for the AppState class.
+
+    Args:
+        tmp_path : Builtin pytest fixture
+
+    Returns:
+        dict: A dictionary of sample settings
+    """
+    tmp_file = tmp_path / "parent_1" / "parent_2" / "tmp_file.json"
+    return {
+        "error": None,
+        "warnings": [],
+        "matlab_config_file": tmp_file,
+        "is_xvfb_available": True,
+        "mwi_server_url": "dummy",
+        "mwi_logs_root_dir": Path(settings.get_mwi_config_folder(dev=True)),
+        "app_port": 12345,
+        "mwapikey": "asdf",
+    }
+
+
+@pytest.fixture
+def app_state_fixture(sample_settings_fixture):
     """A pytest fixture which returns an instance of AppState class with no errors.
+
+    Args:
+        sample_settings_fixture (dict): A dictionary of sample settings to be used by
 
     Returns:
         AppState: An object of the AppState class
     """
-    settings = {"error": None}
-    app_state = AppState(settings=settings)
+    app_state = AppState(settings=sample_settings_fixture)
+    app_state.processes = {"matlab": None, "xvfb": None}
+    app_state.licensing = {"type": "existing_license"}
     return app_state
 
 
@@ -91,6 +119,7 @@ class Mock_xvfb:
     """An immutable dataclass representing a mocked Xvfb process"""
 
     returncode: Optional[int]
+    pid: Optional[int]
 
 
 @dataclass(frozen=True)
@@ -98,6 +127,7 @@ class Mock_matlab:
     """An immutable dataclass representing a mocked MATLAB process"""
 
     returncode: Optional[int]
+    pid: Optional[int]
 
 
 @pytest.mark.parametrize(
@@ -156,7 +186,7 @@ def test_is_licensed(app_state_fixture, licensing, expected):
     ],
     ids=["Any error except licensing error", "licensing error"],
 )
-def test_unset_licensing(err, expected_err):
+def test_unset_licensing(err, app_state_fixture, expected_err):
     """Test to check unset_liecnsing removes licensing from the AppState object
 
     Args:
@@ -165,34 +195,32 @@ def test_unset_licensing(err, expected_err):
         expected_err (Exception): Expected exception
     """
     # Arrange
-    settings = {"error": err}
-    app_state = AppState(settings=settings)
+    app_state_fixture.error = err
 
     # Act
-    app_state.unset_licensing()
+    app_state_fixture.unset_licensing()
 
     # Assert
-    assert app_state.licensing == None
-    assert type(app_state.error) is type(expected_err)
+    assert app_state_fixture.licensing == None
+    assert type(app_state_fixture.error) is type(expected_err)
 
 
 # config file is deleted when licensing info is not set i.e. set to None
-def test_persist_licensing_when_licensing_info_is_not_set(tmp_path):
+def test_persist_licensing_when_licensing_info_is_not_set(app_state_fixture):
     """Test to check if data is not persisted to a file if licensing info is not present
 
     Args:
         tmp_path (Path): Built in pytest fixture
     """
     # Arrange
-    tmp_file = tmp_path / "tmp_file.json"
-    settings = {"matlab_config_file": tmp_file, "error": None}
-    app_state = AppState(settings=settings)
+    # Nothing to arrange
+    app_state_fixture.licensing = None
 
     # Act
-    app_state.persist_config_data()
+    app_state_fixture.persist_config_data()
 
     # Assert
-    assert os.path.exists(tmp_file) is False
+    assert os.path.exists(app_state_fixture.settings["matlab_config_file"]) is False
 
 
 @pytest.mark.parametrize(
@@ -221,7 +249,12 @@ def test_persist_config_data(licensing_data: dict, tmp_path):
     """
     # Arrange
     tmp_file = tmp_path / "parent_1" / "parent_2" / "tmp_file.json"
-    settings = {"matlab_config_file": tmp_file, "error": None, "matlab_version": None}
+    settings = {
+        "matlab_config_file": tmp_file,
+        "error": None,
+        "matlab_version": None,
+        "warnings": [],
+    }
     app_state = AppState(settings=settings)
     app_state.licensing = licensing_data
 
@@ -238,25 +271,31 @@ def test_persist_config_data(licensing_data: dict, tmp_path):
 
 validate_required_processes_test_data = [
     (None, None, "linux", False),  # xvfb is None == True
-    (None, Mock_xvfb(None), "linux", False),  # matlab is None == True
+    (None, Mock_xvfb(None, 1), "linux", False),  # matlab is None == True
     (
-        Mock_matlab(None),
-        Mock_xvfb(None),
+        Mock_matlab(None, 1),
+        Mock_xvfb(None, 1),
         "linux",
         True,
     ),  # All branches are skipped and nothing returned
     (
-        Mock_matlab(None),
-        Mock_xvfb(123),
+        Mock_matlab(None, 1),
+        Mock_xvfb(123, 2),
         "linux",
         False,
     ),  # xvfb.returncode is not None == True
     (
-        Mock_matlab(123),
-        Mock_xvfb(None),
+        Mock_matlab(123, 1),
+        Mock_xvfb(None, 2),
         "linux",
         False,
     ),  # matlab.returncode is not None == True
+    (
+        Mock_matlab(None, 1),
+        None,
+        "linux",
+        True,
+    ),  # Xvfb not found on path
 ]
 
 
@@ -269,6 +308,7 @@ validate_required_processes_test_data = [
         "All_required_processes_running",
         "All_processes_running_with_xvfb_returning_non_zero_code",
         "All_processes_running_with_matlab_returning_non_zero_code",
+        "xvfb_is_optional_matlab_starts_without_it",
     ],
 )
 def test_are_required_processes_ready(
@@ -284,10 +324,12 @@ def test_are_required_processes_ready(
         expected (bool): Expected return value based on process return code
     """
     # Arrange
-    # Nothing to arrange
+    app_state_fixture.processes = {"matlab": matlab, "xvfb": xvfb}
+    if not xvfb:
+        app_state_fixture.settings["is_xvfb_available"] = False
 
     # Act
-    actual = app_state_fixture._are_required_processes_ready(matlab, xvfb)
+    actual = app_state_fixture._are_required_processes_ready()
 
     # Assert
     assert actual == expected
@@ -306,7 +348,7 @@ get_matlab_status_based_on_connector_status_test_data = [
     ids=["connector_up", "connector_down", "connector_up_ready_file_not_present"],
 )
 async def test_get_matlab_status_based_on_connector_status(
-    mocker, connector_status, ready_file_present, matlab_status
+    mocker, app_state_fixture, connector_status, ready_file_present, matlab_status
 ):
     """Test to check matlab status based on connector status
 
@@ -322,16 +364,11 @@ async def test_get_matlab_status_based_on_connector_status(
         return_value=connector_status,
     )
     mocker.patch.object(Path, "exists", return_value=ready_file_present)
-    settings = {
-        "error": None,
-        "mwi_server_url": "dummy",
-        "mwi_is_token_auth_enabled": False,
-    }
-    app_state = AppState(settings=settings)
-    app_state.matlab_session_files["matlab_ready_file"] = Path("dummy")
+    app_state_fixture.settings["mwi_is_token_auth_enabled"] = False
+    app_state_fixture.matlab_session_files["matlab_ready_file"] = Path("dummy")
 
     # Act
-    actual_matlab_status = await app_state._get_matlab_connector_status()
+    actual_matlab_status = await app_state_fixture._get_matlab_connector_status()
 
     # Assert
     assert actual_matlab_status == matlab_status
@@ -510,3 +547,36 @@ async def test_requests_sent_by_matlab_proxy_have_headers(
         "headers"
     ]
     assert sample_token_headers_fixture == connector_status_request_headers
+
+
+async def test_start_matlab_without_xvfb(app_state_fixture, mocker):
+    """Test to check if Matlab process starts without throwing errors when Xvfb is not present
+
+    Args:
+        app_state_fixture (AppState): Object of AppState class with defaults set
+        mocker : Built-in pytest fixture
+    """
+    # Arrange
+    app_state_fixture.settings["is_xvfb_available"] = False
+    mock_matlab = Mock_matlab(None, 1)
+
+    # Starting asyncio tasks related to matlab is not required here as only Xvfb check is required.
+    mocker.patch.object(
+        AppState, "_AppState__start_matlab_process", return_value=mock_matlab
+    )
+    mocker.patch.object(
+        AppState, "_AppState__matlab_stderr_reader_posix", return_value=None
+    )
+    mocker.patch.object(
+        AppState, "_AppState__track_embedded_connector_state", return_value=None
+    )
+    mocker.patch.object(AppState, "_AppState__update_matlab_port", return_value=None)
+
+    # Act
+    await app_state_fixture.start_matlab()
+
+    # Assert
+    # Check if Xvfb has not started
+    assert app_state_fixture.processes["xvfb"] is None
+    # Check if Matlab started
+    assert app_state_fixture.processes["matlab"] is mock_matlab

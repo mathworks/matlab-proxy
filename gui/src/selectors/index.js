@@ -15,6 +15,7 @@ export const selectLicensingInfo = state => state.serverStatus.licensingInfo;
 export const selectServerStatusFetchFailCount = state => state.serverStatus.fetchFailCount;
 export const selectLoadUrl = state => state.loadUrl;
 export const selectError = state => state.error;
+export const selectWarnings = state => state.warnings;
 export const selectUseMOS = state => state.useMOS === true;
 export const selectUseMRE = state => state.useMRE === true;
 export const selectAuthEnabled = state => state.authentication.enabled;

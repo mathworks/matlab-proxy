@@ -525,10 +525,11 @@ async def test_create_xvfb_process(loop):
     Creates 2 xvfb processes with '-displayfd' flag and  checks if the processes are
     running on unique display ports
     """
-
-    # Get command to launch xvfb with -displayfd flag.
     settings_1 = settings.get(dev=True)
-    settings_2 = settings.get(dev=True)
+
+    # Return if Xvfb is not available
+    if not settings_1["is_xvfb_available"]:
+        return
 
     xvfb_cmd_1, pipe_1 = settings.create_xvfb_cmd()
     xvfb_cmd_2, pipe_2 = settings.create_xvfb_cmd()

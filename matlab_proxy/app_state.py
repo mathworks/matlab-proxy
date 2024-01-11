@@ -84,6 +84,7 @@ class AppState:
 
         # Initialize with the error state from the initialization of settings
         self.error = settings["error"]
+        self.warnings = settings["warnings"]
 
         if self.error is not None:
             self.logs["matlab"].clear()
@@ -262,7 +263,10 @@ class AppState:
             xvfb_process = self.processes["xvfb"]
 
         if system.is_linux():
-            if xvfb_process is None or xvfb_process.returncode is not None:
+            # If Xvfb is on system PATH, check if it up and running.
+            if self.settings["is_xvfb_available"] and (
+                xvfb_process is None or xvfb_process.returncode is not None
+            ):
                 logger.debug(
                     "Xvfb has not started"
                     if xvfb_process is None
@@ -671,9 +675,22 @@ class AppState:
         # DDUX info for MATLAB
         matlab_env["MW_CONTEXT_TAGS"] = self.settings.get("mw_context_tags")
 
+        # Update DISPLAY env variable for MATLAB only if it was supplied by Xvfb.
         if system.is_linux():
-            # Adding DISPLAY key which is only available after starting Xvfb successfully.
-            matlab_env["DISPLAY"] = self.settings["matlab_display"]
+            if self.settings.get("matlab_display", None):
+                matlab_env["DISPLAY"] = self.settings["matlab_display"]
+                logger.info(
+                    f"Using the display number supplied by Xvfb process:{matlab_env['DISPLAY']} for launching MATLAB"
+                )
+            else:
+                if "DISPLAY" in matlab_env:
+                    logger.info(
+                        f"Using the existing DISPLAY environment variable with value:{matlab_env['DISPLAY']} for launching MATLAB"
+                    )
+                else:
+                    logger.info(
+                        "No DISPLAY environment variable found. Launching MATLAB without it."
+                    )
 
         # The matlab ready file is written into this location(self.mwi_logs_dir) by MATLAB
         # The mwi_logs_dir is where MATLAB will write any subsequent logs
@@ -968,8 +985,8 @@ class AppState:
         self.error = None
         self.logs["matlab"].clear()
 
-        # Start Xvfb process if in a posix system
-        if system.is_linux():
+        # Start Xvfb process on linux if possible
+        if system.is_linux() and self.settings["is_xvfb_available"]:
             xvfb = await self.__start_xvfb_process()
 
             # xvfb variable would be None if creation of the process failed.
