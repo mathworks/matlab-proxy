@@ -150,7 +150,7 @@ async def get_auth_token(req):
 
     return web.json_response(
         {
-            "authToken": auth_token,
+            "token": auth_token,
         }
     )
 

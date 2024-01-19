@@ -989,7 +989,7 @@ async def test_get_auth_token_route(test_server, monkeypatch):
     resp = await test_server.get("/get_auth_token")
     res_json = await resp.json()
     # Testing the default dev configuration where the auth is disabled
-    assert res_json["authToken"] == None
+    assert res_json["token"] == None
     assert resp.status == HTTPStatus.OK
 
 

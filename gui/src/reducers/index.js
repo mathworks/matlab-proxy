@@ -67,7 +67,7 @@ export function authStatus(state = false, action) {
         case RECEIVE_ENV_CONFIG:
             return action.config.authentication.status;
         case SET_AUTH_STATUS:
-            return action.authInfo.status;
+            return action.authentication.status;
         default:
             return state;
     }
@@ -310,8 +310,8 @@ export function warnings(state = null, action) {
 export function error(state = null, action) {
     switch (action.type) {
         case SET_AUTH_STATUS:
-            if (action?.authInfo?.error !== null) {
-                const { message, type } = action.authInfo.error
+            if (action?.authentication?.error !== null) {
+                const { message, type } = action.authentication.error
                 return {
                     message: message,
                     type: type,

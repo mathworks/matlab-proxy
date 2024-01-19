@@ -140,13 +140,13 @@ describe('reducers', () => {
       // expect authStatus to be false
       action = _.cloneDeep(genericAction);
       action.type = actions.SET_AUTH_STATUS;
-      action.authInfo = {status: false};
+      action.authentication = {status: false};
       expect(reducers.authStatus(undefined, action)).toBe(false);
 
       // expect authStatus to be true
       action = _.cloneDeep(genericAction);
       action.type = actions.SET_AUTH_STATUS;
-      action.authInfo = {status: true};
+      action.authentication = {status: true};
       
       expect(reducers.authStatus(undefined, action)).toBe(true);
 

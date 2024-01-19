@@ -21,10 +21,10 @@ describe.each([
   [actionCreators.setOverlayVisibility, [false], { type: actions.SET_OVERLAY_VISIBILITY, visibility: false }],
   [actionCreators.setTriggerPosition, [12, 12], { type: actions.SET_TRIGGER_POSITION, x: 12, y: 12 }],
   [actionCreators.setTriggerPosition, [52, 112], { type: actions.SET_TRIGGER_POSITION, x: 52, y: 112 }],
-  [actionCreators.setAuthStatus, [true], { type: actions.SET_AUTH_STATUS, authInfo: true }],
-  [actionCreators.setAuthStatus, [false], { type: actions.SET_AUTH_STATUS, authInfo: false }],
-  [actionCreators.setAuthToken, ['string'], { type: actions.SET_AUTH_TOKEN, authInfo: 'string' }],
-  [actionCreators.setAuthToken, [null], { type: actions.SET_AUTH_TOKEN, authInfo: null }]
+  [actionCreators.setAuthStatus, [true], { type: actions.SET_AUTH_STATUS, authentication: true }],
+  [actionCreators.setAuthStatus, [false], { type: actions.SET_AUTH_STATUS, authentication: false }],
+  [actionCreators.setAuthToken, ['string'], { type: actions.SET_AUTH_TOKEN, authentication: 'string' }],
+  [actionCreators.setAuthToken, [null], { type: actions.SET_AUTH_TOKEN, authentication: null }]
 ])('Test Set actionCreators', (method, input, expectedAction) => {
   test(`check if an action of type  ${expectedAction.type} is returned when method actionCreator.${method.name}() is called`, () => {
     expect(method(...input)).toEqual(expectedAction);
