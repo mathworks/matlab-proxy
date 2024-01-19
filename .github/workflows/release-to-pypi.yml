@@ -1,4 +1,4 @@
-# Copyright 2020-2023 The MathWorks, Inc
+# Copyright 2020-2024 The MathWorks, Inc
 
 # Workflow to test MATLAB-Proxy while releasing to PyPi
 name: Release to PyPI
@@ -30,6 +30,12 @@ jobs:
     if: success()
     # windows container is not required here
     runs-on: ubuntu-latest
+    # Specifying a GitHub environment is optional, but strongly encouraged
+    environment: release
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -38,5 +44,3 @@ jobs:
 
       - name: Build and Publish in PyPi
         uses: ./.github/actions/build_and_publish_pypi
-        with:
-          pypi_token: ${{ secrets.PYPI_TOKEN }}

@@ -1,11 +1,7 @@
-# Copyright 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2024 The MathWorks, Inc.
 
 # Composite Action to Build and Publish in PyPi
 name: Build and Publish in PyPi
-inputs:
-  pypi_token:
-    description: 'PyPi API Token'
-    required: true
 runs:
   using: "composite"
   steps:
@@ -26,8 +22,3 @@ runs:
 
     - name: Publish to PyPI.
       uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        user: __token__
-        verbose: true
-        password: ${{ inputs.pypi_token }}
-        repository_url: https://upload.pypi.org/legacy/

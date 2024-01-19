@@ -11,3 +11,5 @@ htmlcov/
 *.pem
 .python-version
 coverage.xml
+.ipynb_checkpoints/
+*.ipynb
