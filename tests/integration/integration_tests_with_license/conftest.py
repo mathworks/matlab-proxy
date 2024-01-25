@@ -1,7 +1,6 @@
-# Copyright 2023 The MathWorks, Inc.
+# Copyright 2023-2024 The MathWorks, Inc.
 
 import os
-import sys
 from integration import integration_tests_utils as utils
 import pytest
 import requests
@@ -67,6 +66,7 @@ def matlab_proxy_fixture(module_monkeypatch, request):
     the module scope, and tears it down after all the tests are executed.
     """
     import matlab_proxy.util
+    from urllib.parse import urlparse
 
     utils.perform_basic_checks()
 
@@ -75,10 +75,6 @@ def matlab_proxy_fixture(module_monkeypatch, request):
     mwi_base_url = "/matlab-test"
     module_monkeypatch.setenv(mwi_env.get_env_name_testing(), "false")
     module_monkeypatch.setenv(mwi_env.get_env_name_development(), "false")
-
-    # '127.0.0.1' is used instead 'localhost' for testing since Windows machines consume
-    # some time to resolve 'localhost' hostname
-    matlab_proxy_url = f"http://127.0.0.1:{mwi_app_port}{mwi_base_url}"
 
     # Start matlab-proxy-app for testing
     input_env = {
@@ -92,6 +88,11 @@ def matlab_proxy_fixture(module_monkeypatch, request):
     # Run matlab-proxy in the background in an event loop
     proc = loop.run_until_complete(utils.start_matlab_proxy_app(input_env=input_env))
 
+    utils.wait_server_info_ready(mwi_app_port)
+    print("Server file is available")
+
+    matlab_proxy_url = utils.get_connection_string(mwi_app_port)
+
     # Poll for matlab-proxy URL to respond
     utils.poll_web_service(
         matlab_proxy_url,
@@ -102,8 +103,11 @@ def matlab_proxy_fixture(module_monkeypatch, request):
             requests.exceptions.SSLError,
         ),
     )
+    print("In matlab_proxy_fixture MATLAB proxy URL responded")
+
     # License matlab-proxy using playwright UI automation
     utils.license_matlab_proxy(matlab_proxy_url)
+    print("In matlab_proxy_fixture Proxy is licensed")
 
     # Wait for matlab-proxy to be up and running
     utils.wait_matlab_proxy_ready(matlab_proxy_url)

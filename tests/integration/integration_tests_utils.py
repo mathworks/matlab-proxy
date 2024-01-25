@@ -1,4 +1,4 @@
-# Copyright 2023 The MathWorks, Inc.
+# Copyright 2023-2024 The MathWorks, Inc.
 # Utility functions for integration testing of matlab-proxy
 
 import asyncio
@@ -73,12 +73,19 @@ async def start_matlab_proxy_app(out=asyncio.subprocess.PIPE, input_env={}):
 
 
 def send_http_request(
-    mwi_app_port, mwi_base_url="", http_endpoint="", method="GET", headers={}
+    connection_scheme,
+    mwi_app_port,
+    mwi_base_url="",
+    http_endpoint="",
+    method="GET",
+    headers={},
 ):
     """Send HTTP request to matlab-proxy server.
     Returns HTTP response JSON"""
 
-    uri = f"http://localhost:{mwi_app_port}{mwi_base_url}/{http_endpoint}"
+    uri = (
+        f"{connection_scheme}://localhost:{mwi_app_port}{mwi_base_url}/{http_endpoint}"
+    )
 
     with urllib3.PoolManager(
         retries=urllib3.Retry(backoff_factor=0.1, backoff_max=300)
@@ -96,9 +103,10 @@ def wait_matlab_proxy_ready(matlab_proxy_url):
     """
 
     from matlab_proxy.util import system
+    import matlab_proxy.settings as settings
 
     # Wait until the matlab config file is created
-    MAX_TIMEOUT = 120 if system.is_linux() else 300
+    MAX_TIMEOUT = settings.get_process_startup_timeout()
     start_time = time.time()
 
     while not os.path.exists(str(get_matlab_config_file())) and (
@@ -130,6 +138,30 @@ def get_random_free_port() -> str:
     return port
 
 
+def wait_server_info_ready(port_number):
+    """
+    Waits for server file to be available on the disk
+    """
+
+    import matlab_proxy.settings as settings
+
+    # timeout_value is in seconds
+    timeout_value = 60
+    start_time = time.time()
+    config_folder = settings.get_mwi_config_folder()
+    _path = config_folder / "ports" / port_number / "mwi_server.info"
+
+    print("_path in wait_server_info_ready ", _path)
+
+    while time.time() - start_time < timeout_value:
+        if _path.exists():
+            return True
+
+        time.sleep(1)
+
+    raise FileNotFoundError("mwi_server.info file does not exist")
+
+
 def license_matlab_proxy(matlab_proxy_url):
     """
     Use Playwright UI automation to license matlab-proxy.
@@ -147,7 +179,10 @@ def license_matlab_proxy(matlab_proxy_url):
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
-        page = browser.new_page()
+        context = browser.new_context(ignore_https_errors=True)
+
+        page = context.new_page()
+
         page.goto(matlab_proxy_url)
 
         # Find the MHLM licensing windows in matlab-proxy
@@ -183,6 +218,7 @@ def license_matlab_proxy(matlab_proxy_url):
             status_info,
             "Verify if Licensing is successful. This might fail if incorrect credentials are provided",
         ).to_be_visible(timeout=60000)
+
         browser.close()
 
 
@@ -231,6 +267,31 @@ def unlicense_matlab_proxy(matlab_proxy_url):
         raise error
 
 
+def get_connection_string(port_number):
+    """Returns the scheme on which matlab proxy starts (http or https)
+
+    Args:
+        port_number (string): Port on which MATLAB proxy starts
+
+    Returns:
+        scheme: String representing the scheme
+    """
+    import matlab_proxy.settings as settings
+
+    config_folder = settings.get_mwi_config_folder()
+    _path = config_folder / "ports" / port_number / "mwi_server.info"
+    conn_string = None
+
+    try:
+        with open(_path, "r") as _file:
+            conn_string = _file.readline().rstrip()
+
+    except FileNotFoundError:
+        print(f"{_path} does not exist")
+
+    return conn_string
+
+
 def poll_web_service(url, step=1, timeout=60, ignore_exceptions=None):
     """Poll a web service for a 200 response
 
@@ -249,6 +310,10 @@ def poll_web_service(url, step=1, timeout=60, ignore_exceptions=None):
     """
     start_time = time.time()
     end_time = start_time + timeout
+
+    import matlab_proxy.settings as settings
+
+    config_folder = settings.get_mwi_config_folder()
 
     while time.time() < end_time:
         try:

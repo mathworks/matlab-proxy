@@ -1,30 +1,34 @@
-# Copyright 2023 The MathWorks, Inc.
+# Copyright 2023-2024 The MathWorks, Inc.
 
 import os
 import json
 import requests
 from requests.adapters import HTTPAdapter, Retry
+from integration import integration_tests_utils as utils
+from urllib.parse import urlparse
 
 
 def test_matlab_down():
-    """Test that matlab is down and no license is picked up
-
-    Args:
-        start_matlab_proxy_fixture : A pytest fixture to start the matlab proxy
-    """
+    """Test that matlab is down and no license is picked up"""
 
     mwi_app_port = os.environ["MWI_APP_PORT"]
-    mwi_base_url = os.environ["MWI_BASE_URL"]
-    http_endpoint = "get_status"
+    http_endpoint = "/get_status"
 
-    uri = f"http://127.0.0.1:{mwi_app_port}{mwi_base_url}/{http_endpoint}"
+    parsed_url = urlparse(utils.get_connection_string(mwi_app_port))
+
+    connection_scheme = parsed_url.scheme
+    uri = (
+        connection_scheme + "://" + parsed_url.netloc + parsed_url.path + http_endpoint
+    )
 
     json_response = None
+
     with requests.Session() as s:
         retries = Retry(total=10, backoff_factor=0.1)
-        s.mount("http://", HTTPAdapter(max_retries=retries))
-        response = s.get(uri)
+        s.mount(f"{connection_scheme}://", HTTPAdapter(max_retries=retries))
+        response = s.get(uri, verify=False)
         json_response = json.loads(response.text)
+
     matlab_status = json_response["matlab"]["status"]
     assert matlab_status == "down"
 

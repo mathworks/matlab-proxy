@@ -1,21 +1,21 @@
-# Copyright 2023 The MathWorks, Inc.
+# Copyright 2023-2024 The MathWorks, Inc.
 
 import json
 import os
-import shutil
 import time
-from contextlib import nullcontext as does_not_raise
+import matlab_proxy.settings as settings
 from integration import integration_tests_utils as utils
 import pytest
 from matlab_proxy.util import system
 import requests
 import re
 from requests.adapters import HTTPAdapter, Retry
+from urllib.parse import urlparse
 
 # Timeout for polling the matlab-proxy http endpoints
 # matlab proxy in Mac machines takes more time to be 'up'
 
-MAX_TIMEOUT = 120 if system.is_linux() else 300
+MAX_TIMEOUT = settings.get_process_startup_timeout()
 
 
 class RealMATLABServer:
@@ -59,6 +59,10 @@ class RealMATLABServer:
             os.path.dirname(self.matlab_config_file_path),
         )
 
+        utils.wait_server_info_ready(self.mwi_app_port)
+        parsed_url = urlparse(utils.get_connection_string(self.mwi_app_port))
+        self.connection_scheme = parsed_url.scheme
+        self.url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
@@ -79,32 +83,30 @@ def _move(source, destination):
         print(f"Error in moving {source}", err)
 
 
-def _send_http_get_request(mwi_app_port, mwi_base_url="", http_endpoint=""):
+def _send_http_get_request(uri, connection_scheme, http_endpoint=""):
     """Send HTTP request to matlab-proxy server.
     Returns HTTP response JSON"""
 
-    uri = f"http://127.0.0.1:{mwi_app_port}{mwi_base_url}/{http_endpoint}"
+    request_uri = uri + http_endpoint
 
     json_response = None
     with requests.Session() as s:
         retries = Retry(total=10, backoff_factor=0.1)
-        s.mount("http://", HTTPAdapter(max_retries=retries))
-        response = s.get(uri)
+        s.mount(f"{connection_scheme}://", HTTPAdapter(max_retries=retries))
+        response = s.get(request_uri, verify=False)
         json_response = json.loads(response.text)
 
     return json_response
 
 
-def _check_matlab_status(mwi_app_port, status, mwi_base_url=""):
+def _check_matlab_status(connection_scheme, status, uri):
     matlab_status = None
 
     start_time = time.time()
     while matlab_status != status and (time.time() - start_time < MAX_TIMEOUT):
         time.sleep(1)
         res = _send_http_get_request(
-            mwi_app_port=mwi_app_port,
-            mwi_base_url=mwi_base_url,
-            http_endpoint="get_status",
+            uri, connection_scheme, http_endpoint="/get_status"
         )
         matlab_status = res["matlab"]["status"]
 
@@ -139,9 +141,9 @@ def test_matlab_is_up(matlab_proxy_app_fixture):
     """
 
     status = _check_matlab_status(
-        matlab_proxy_app_fixture.mwi_app_port,
+        matlab_proxy_app_fixture.connection_scheme,
         "up",
-        matlab_proxy_app_fixture.mwi_base_url,
+        matlab_proxy_app_fixture.url,
     )
     assert status == "up"
 
@@ -154,23 +156,29 @@ def test_stop_matlab(matlab_proxy_app_fixture):
         matlab_proxy_app_fixture: A pytest fixture which yields a real matlab server to be used by tests.
     """
 
-    mwi_app_port = matlab_proxy_app_fixture.mwi_app_port
-    mwi_base_url = matlab_proxy_app_fixture.mwi_base_url
-
-    status = _check_matlab_status(mwi_app_port, "up", mwi_base_url)
+    status = _check_matlab_status(
+        matlab_proxy_app_fixture.connection_scheme,
+        "up",
+        matlab_proxy_app_fixture.url,
+    )
     assert status == "up"
 
-    http_endpoint = "stop_matlab"
-    uri = f"http://localhost:{mwi_app_port}{mwi_base_url}/{http_endpoint}"
+    http_endpoint_to_test = "/stop_matlab"
+    stop_url = matlab_proxy_app_fixture.url + http_endpoint_to_test
 
-    json_response = None
     with requests.Session() as s:
         retries = Retry(total=10, backoff_factor=0.1)
-        s.mount("http://", HTTPAdapter(max_retries=retries))
-        response = s.delete(uri)
-        json_response = json.loads(response.text)
+        s.mount(
+            f"{matlab_proxy_app_fixture.connection_scheme}://",
+            HTTPAdapter(max_retries=retries),
+        )
+        s.delete(stop_url, verify=False)
 
-    status = _check_matlab_status(mwi_app_port, "down", mwi_base_url)
+    status = _check_matlab_status(
+        matlab_proxy_app_fixture.connection_scheme,
+        "down",
+        matlab_proxy_app_fixture.url,
+    )
     assert status == "down"
 
 
@@ -181,16 +189,13 @@ async def test_print_message(matlab_proxy_app_fixture):
         matlab_proxy_app_fixture: A pytest fixture which yields a real matlab server to be used by tests.
 
     """
-    # Wait for matlab proxy to be in 'up' state
-
-    mwi_app_port = matlab_proxy_app_fixture.mwi_app_port
-    mwi_base_url = matlab_proxy_app_fixture.mwi_base_url
-
     # Checks if matlab proxy is in "up" state or not
-    status = _check_matlab_status(mwi_app_port, "up", mwi_base_url)
+    status = _check_matlab_status(
+        matlab_proxy_app_fixture.connection_scheme, "up", matlab_proxy_app_fixture.url
+    )
     assert status == "up"
 
-    uri_regex = f"http://[a-zA-Z0-9\-_.]+:{mwi_app_port}{mwi_base_url}"
+    uri_regex = f"{matlab_proxy_app_fixture.connection_scheme}://[a-zA-Z0-9\-_.]+:{matlab_proxy_app_fixture.mwi_app_port}{matlab_proxy_app_fixture.mwi_base_url}"
 
     read_descriptor, write_descriptor = matlab_proxy_app_fixture.dpipe
     number_of_bytes = 600

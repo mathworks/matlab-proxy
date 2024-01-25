@@ -1,4 +1,4 @@
-# Copyright 2023 The MathWorks, Inc
+# Copyright 2023-2024 The MathWorks, Inc.
 
 # Workflow to run MATLAB-Proxy integration tests
 name: Integration testing for MATLAB Proxy
@@ -18,8 +18,8 @@ jobs:
       fail-fast: false
 
       matrix:
-        os: [ubuntu-latest]
-        matlab-release: [R2020b, R2023a]
+        os: [ubuntu-latest, windows-latest]
+        matlab-release: [R2020b, latest]
         python-version: ['3.8', '3.11']
 
     runs-on: ${{ matrix.os }}
@@ -30,6 +30,8 @@ jobs:
 
       - name: Setup MATLAB ${{ matrix.matlab-release }}
         uses: matlab-actions/setup-matlab@v2-beta
+        with:
+          release: ${{ matrix.matlab-release }}
 
       - name: Setup nodejs
         uses: actions/setup-node@v3

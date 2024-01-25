@@ -1,3 +1,5 @@
+# Copyright 2023-2024 The MathWorks, Inc.
+
 import pytest
 from integration import integration_tests_utils as utils
 import requests
@@ -31,16 +33,21 @@ def start_matlab_proxy_fixture(module_monkeypatch):
     input_env = {
         "MWI_APP_PORT": mwi_app_port,
         "MWI_BASE_URL": mwi_base_url,
+        "MWI_ENABLE_TOKEN_AUTH": "True",
     }
 
     import matlab_proxy
-
-    matlab_proxy_url = f"http://127.0.0.1:{mwi_app_port}{mwi_base_url}"
 
     loop = matlab_proxy.util.get_event_loop()
 
     # Run matlab-proxy in the background in an event loop
     proc = loop.run_until_complete(utils.start_matlab_proxy_app(input_env=input_env))
+
+    # Wait for mwi_server.info file to be ready
+    utils.wait_server_info_ready(mwi_app_port)
+
+    # Get the scheme on which MATLAB Proxy connection string
+    matlab_proxy_url = utils.get_connection_string(mwi_app_port)
 
     utils.poll_web_service(
         matlab_proxy_url,
