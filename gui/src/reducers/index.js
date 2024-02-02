@@ -223,6 +223,18 @@ export function isFetching(state = false, action) {
     }
 }
 
+export function isFetchingServerStatus(state = false, action) {
+    switch (action.type) {
+        case REQUEST_SERVER_STATUS:
+            return true;
+        case RECEIVE_SERVER_STATUS:
+        case RECEIVE_ERROR:
+            return false;
+        default:
+            return state;
+    }
+}
+
 export function hasFetched(state = false, action) {
     switch (action.type) {
         case RECEIVE_SERVER_STATUS:
@@ -377,7 +389,7 @@ export const matlab = combineReducers({
 export const serverStatus = combineReducers({
     licensingInfo,   
     wsEnv,
-    isFetching,
+    isFetchingServerStatus,
     hasFetched,
     isSubmitting,
     fetchFailCount,

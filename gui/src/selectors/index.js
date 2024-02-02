@@ -1,6 +1,7 @@
 // Copyright 2020-2024 The MathWorks, Inc.
 
 import { createSelector } from 'reselect';
+import { STATUS_REQUEST_INTERVAL_MS, MAX_REQUEST_FAIL_COUNT } from '../constants';
 
 export const selectTutorialHidden = state => state.tutorialHidden;
 export const selectServerStatus = state => state.serverStatus;
@@ -12,6 +13,7 @@ export const selectEnvConfig = state => state.envConfig;
 export const selectWsEnv = state => state.serverStatus.wsEnv;
 export const selectSubmittingServerStatus = state => state.serverStatus.isSubmitting;
 export const selectHasFetchedServerStatus = state => state.serverStatus.hasFetched;
+export const selectIsFetchingServerStatus = state => state.serverStatus.isFetchingServerStatus;
 export const selectLicensingInfo = state => state.serverStatus.licensingInfo;
 export const selectServerStatusFetchFailCount = state => state.serverStatus.fetchFailCount;
 export const selectLoadUrl = state => state.loadUrl;
@@ -56,7 +58,7 @@ export const selectIsConnectionError = createSelector(
         if (isConcurrencyEnabled && isConcurrent) {
             return fails >= 1
         }
-        return fails >= 5
+        return fails >= MAX_REQUEST_FAIL_COUNT
     }
 );
 
@@ -106,17 +108,15 @@ export const getFetchAbortController = createSelector(
 
 // If the session is concurrent or if there is a connection error then disable the fetching of data such as get_status.
 export const selectFetchStatusPeriod = createSelector(
-    selectMatlabStatus,
     selectSubmittingServerStatus,
+    selectIsFetchingServerStatus,
     selectIsConcurrencyEnabled,
     selectIsConcurrent,
-    (matlabStatus, isSubmitting, isConcurrencyEnabled, isConcurrent) => {
-        if (isSubmitting || (isConcurrencyEnabled && isConcurrent)) {
+    (isSubmitting, isFetchingServerStatus, isConcurrencyEnabled, isConcurrent) => {
+        if (isSubmitting || isFetchingServerStatus || (isConcurrencyEnabled && isConcurrent)) {
             return null;
-        } else if (matlabStatus === 'up') {
-            return 10000;
         }
-        return 5000;
+        return STATUS_REQUEST_INTERVAL_MS; // milliseconds
     }
 );
 

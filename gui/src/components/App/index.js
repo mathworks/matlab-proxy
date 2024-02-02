@@ -193,7 +193,10 @@ function App() {
 
     // Periodic fetch server status
     useInterval(() => {
-        dispatch(fetchServerStatus());
+        if(hasFetchedServerStatus)
+        {
+            dispatch(fetchServerStatus());
+        }
     }, fetchStatusPeriod);
 
     // Load URL

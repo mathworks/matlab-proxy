@@ -1,10 +1,11 @@
-// Copyright 2020-2023 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import React from 'react';
 import { render, fireEvent } from '../../test/utils/react-test';
 import App from './index';
 import * as actionCreators from '../../actionCreators';
 import state from '../../test/utils/state';
+import { MAX_REQUEST_FAIL_COUNT } from '../../constants';
 
 const _ = require("lodash");
 
@@ -129,10 +130,10 @@ describe('App Component', () => {
   });
 
   it('should display integration terminated error', () => {
-    //Hide the tutorial, make the overlay visible and set fetchFailCount to 10
+    //Hide the tutorial, make the overlay visible and set fetchFailCount to MAX_REQUEST_FAIL_COUNT
     initialState.tutorialHidden = true;
     initialState.overlayVisibility = true;
-    initialState.serverStatus.fetchFailCount = 10;
+    initialState.serverStatus.fetchFailCount = MAX_REQUEST_FAIL_COUNT;
 
     //Rendering the App component with above changes to the initial state
     // will terminate the integration.

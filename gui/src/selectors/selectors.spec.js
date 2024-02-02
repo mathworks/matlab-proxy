@@ -1,7 +1,8 @@
 // Copyright 2020-2024 The MathWorks, Inc.
 
 import * as selectors from './index';
-import state from '../test/utils/state'
+import state from '../test/utils/state';
+import { STATUS_REQUEST_INTERVAL_MS, MAX_REQUEST_FAIL_COUNT } from '../constants';
 const _ = require('lodash');
 
 describe('selectors', () => {
@@ -118,26 +119,34 @@ describe('selectors', () => {
       expect(selectIsError(modifiedState)).toBe(true);
     });
 
-    test('selectIsConnectionError should return false when fetch fail count is < 5', () => {
+    test(`selectIsConnectionError should return false when fetch fail count is less than ${MAX_REQUEST_FAIL_COUNT}`, () => {
       expect(selectIsConnectionError(state)).toBe(false);
-    })
+    });
 
-    test('selectIsConnectionError should return true when fetch fail count is >= 5', () => {
+    test(`selectIsConnectionError should return true when fetch fail count exceeds or becomes equal to ${MAX_REQUEST_FAIL_COUNT}`, () => {
 
       modifiedState = _.cloneDeep(state);
-      modifiedState.serverStatus.fetchFailCount = 10;
+      modifiedState.serverStatus.fetchFailCount = MAX_REQUEST_FAIL_COUNT;
+      expect(selectIsConnectionError(modifiedState)).toBe(true);
+    });
+
+    test('selectIsConnectionError should return true when fetch request fails even once if the current session is a concurrent session', () => {
+      modifiedState = _.cloneDeep(state);
+      modifiedState.sessionStatus.isActiveClient = false;
+      modifiedState.sessionStatus.isConcurrencyEnabled = true;
+      modifiedState.serverStatus.fetchFailCount = 1;
       expect(selectIsConnectionError(modifiedState)).toBe(true);
     });
 
     test('selectIsConcurrent should return false when the Client is the active client', () => {
       expect(selectIsConcurrent(state)).toBe(false);
-    })
+    });
 
     test('selectIsConcurrent should return true when the Client is no longer the active client',() => {
       modifiedState = _.cloneDeep(state);
       modifiedState.sessionStatus.isActiveClient = false;
       expect(selectIsConcurrent(modifiedState)).toBe(true);
-    })
+    });
 
     test('selectMatlabUp should return true when Matlab is up', () => {
       expect(selectMatlabUp(state)).toBe(true);
@@ -256,29 +265,25 @@ describe('selectors', () => {
       expect(selectFetchStatusPeriod(state)).toBeNull();
     });
 
-    test('selectFetchStatusPeriod should return 10000ms when matlab is up ', () => {
+    test('selectFetchStatusPeriod should return null if the server is fetching any kind server status', () => {
+      modifiedState = _.cloneDeep(state);
+      modifiedState.serverStatus.isFetchingServerStatus = true;
+      expect(selectFetchStatusPeriod(modifiedState)).toBeNull();
+    });
+
+    test('selectFetchStatusPeriod should return null if concurrency check is enabled and there is a concurrent session', () => {
+      modifiedState = _.cloneDeep(state);
+      modifiedState.sessionStatus.isActiveClient = true;
+      modifiedState.sessionStatus.isConcurrencyEnabled = true;
+      expect(selectFetchStatusPeriod(modifiedState)).toBeNull();
+    });
+
+    test(`selectFetchStatusPeriod should return ${STATUS_REQUEST_INTERVAL_MS} when matlab is up `, () => {
       modifiedState = _.cloneDeep(state);
       modifiedState.serverStatus.isSubmitting = false;
-      modifiedState.isConcurrent = false;
-      expect(selectFetchStatusPeriod(modifiedState)).toBe(10000);
-    })
-
-    test.each([
-      ['starting'],
-      ['down']
-    ])(
-      'selectFetchStatusPeriod should return 5000ms when matlab %s (ie. not up)',
-      (input) => {
-
-        modifiedState = _.cloneDeep(state);
-        modifiedState.serverStatus.isSubmitting = false;
-        modifiedState.isConcurrent = false;
-        modifiedState.isConnectionError = false;
-        modifiedState.matlab.status = input;
-
-        expect(selectFetchStatusPeriod(modifiedState)).toBe(5000);
-      }
-    );
+      modifiedState.sessionStatus.isActiveClient = true;
+      expect(selectFetchStatusPeriod(modifiedState)).toBe(STATUS_REQUEST_INTERVAL_MS);
+    });
 
     test('selectLicensingProvided should return true if licensingInfo has property type else false', () => {
       expect(selectLicensingProvided(state)).toBe(true);
@@ -352,7 +357,7 @@ describe('selectors', () => {
       modifiedState.matlab.status = 'defaultCase';
 
       expect(() => selectInformationDetails(modifiedState)).toThrow(Error);
-    })
+    });
 
     test('For MatlabStatus down and with an error, selectInformationDetails should return object with icon error', () => {
       modifiedState = _.cloneDeep(state);
@@ -362,7 +367,7 @@ describe('selectors', () => {
       modifiedState.authentication.enabled = true;
       modifiedState.authentication.status = true;
       expect(selectInformationDetails(modifiedState).icon.toLowerCase()).toContain('error');
-    })
+    });
 
     test('When backend is not reachable, selectInformationDetails should return object with icon warning and label unknown', () => {
       modifiedState = _.cloneDeep(state);
@@ -370,7 +375,7 @@ describe('selectors', () => {
 
       expect(selectInformationDetails(modifiedState).icon.toLowerCase()).toContain('warning');
       expect(selectInformationDetails(modifiedState).label.toLowerCase()).toContain('unknown');
-    })
+    });
 
     describe.each([
       ['up', 'running'],
