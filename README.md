@@ -1,8 +1,6 @@
 # MATLAB Proxy
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/mathworks/matlab-proxy/run-tests.yml?branch=main&logo=github)](https://github.com/mathworks/matlab-proxy/actions) &nbsp; [![PyPI badge](https://img.shields.io/pypi/v/matlab-proxy.svg?logo=pypi)](https://pypi.python.org/pypi/matlab-proxy) &nbsp;  [![codecov](https://codecov.io/gh/mathworks/matlab-proxy/branch/main/graph/badge.svg?token=ZW3SESKCSS)](https://codecov.io/gh/mathworks/matlab-proxy) &nbsp; [![Downloads](https://static.pepy.tech/personalized-badge/matlab-proxy?period=month&units=international_system&left_color=grey&right_color=blue&left_text=PyPI%20downloads/month)](https://pepy.tech/project/matlab-proxy)
 
-Copyright (c) 2020-2023 The MathWorks, Inc. All rights reserved.
-
 ----
 
 `matlab-proxy` is a Python® package which enables you to launch MATLAB® and access it from a web browser.
@@ -163,6 +161,10 @@ Install the version >=0.5.0 to use the package on MacOS.
 $ pip install --upgrade matlab-proxy>=0.5.0
 ```
 
+### Windows Subsystem for Linux (WSL 2)
+
+To install `matlab-proxy` in WSL 2, follow the steps mentioned in the [Installation Guide for WSL 2](./installation/wsl2/README.md).
+
 ## Using an already activated MATLAB with matlab-proxy
 `matlab-proxy` version `v0.7.0` introduces support for using an existing MATLAB license. Use the Existing License option only if you have an activated MATLAB. This allows you to start MATLAB without authenticating every time.
 
@@ -182,3 +184,9 @@ Using the latest version will provide the latest available security updates or p
 
 We encourage you to try this repository with your environment and provide feedback. 
 If you encounter a technical issue or have an enhancement request, create an issue [here](https://github.com/mathworks/matlab-proxy/issues)
+
+---
+
+Copyright 2020-2024 The MathWorks, Inc.
+
+---

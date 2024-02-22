@@ -735,9 +735,9 @@ class AppState:
             logger.info(
                 f"Writing MATLAB process logs to: {matlab_env['MW_DIAGNOSTIC_DEST']}"
             )
-            matlab_env[
-                "MW_DIAGNOSTIC_SPEC"
-            ] = "connector::http::server=all;connector::lifecycle=all"
+            matlab_env["MW_DIAGNOSTIC_SPEC"] = (
+                "connector::http::server=all;connector::lifecycle=all"
+            )
 
         # TODO Introduce a warmup flag to enable this?
         # matlab_env["CONNECTOR_CONFIGURABLE_WARMUP_TASKS"] = "warmup_hgweb"
