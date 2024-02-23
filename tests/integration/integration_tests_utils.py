@@ -10,7 +10,9 @@ import requests
 import json
 from logging_util import create_test_logger
 
-_logger = create_test_logger(__name__, log_file_path = os.getenv("MWI_INTEG_TESTS_LOG_FILE_PATH"))
+_logger = create_test_logger(
+    __name__, log_file_path=os.getenv("MWI_INTEG_TESTS_LOG_FILE_PATH")
+)
 
 
 def perform_basic_checks():

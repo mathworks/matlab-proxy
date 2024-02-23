@@ -13,7 +13,9 @@ from requests.adapters import HTTPAdapter, Retry
 from urllib.parse import urlparse
 from logging_util import create_test_logger
 
-_logger = create_test_logger(__name__, log_file_path = os.getenv("MWI_INTEG_TESTS_LOG_FILE_PATH"))
+_logger = create_test_logger(
+    __name__, log_file_path=os.getenv("MWI_INTEG_TESTS_LOG_FILE_PATH")
+)
 
 # Timeout for polling the matlab-proxy http endpoints
 # matlab proxy in Mac machines takes more time to be 'up'

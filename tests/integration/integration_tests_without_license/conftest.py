@@ -6,7 +6,9 @@ import requests
 from logging_util import create_test_logger
 import os
 
-_logger = create_test_logger(__name__, log_file_path = os.getenv("MWI_INTEG_TESTS_LOG_FILE_PATH"))
+_logger = create_test_logger(
+    __name__, log_file_path=os.getenv("MWI_INTEG_TESTS_LOG_FILE_PATH")
+)
 
 
 @pytest.fixture(scope="module", name="module_monkeypatch")
