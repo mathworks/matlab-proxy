@@ -7,6 +7,9 @@ import requests
 import shutil
 from matlab_proxy.util import system
 from matlab_proxy.util.mwi import environment_variables as mwi_env
+from logging_util import create_test_logger
+
+_logger = create_test_logger(__name__, log_file_path = os.getenv("MWI_INTEG_TESTS_LOG_FILE_PATH"))
 
 
 @pytest.fixture(scope="module", name="module_monkeypatch")
@@ -88,9 +91,10 @@ def matlab_proxy_fixture(module_monkeypatch, request):
 
     # Run matlab-proxy in the background in an event loop
     proc = loop.run_until_complete(utils.start_matlab_proxy_app(input_env=input_env))
+    _logger.info("Started MATLAB Proxy process")
 
     utils.wait_server_info_ready(mwi_app_port)
-    print("Server file is available")
+    _logger.info("Server file is available")
 
     matlab_proxy_url = utils.get_connection_string(mwi_app_port)
 
@@ -104,14 +108,15 @@ def matlab_proxy_fixture(module_monkeypatch, request):
             requests.exceptions.SSLError,
         ),
     )
-    print("In matlab_proxy_fixture MATLAB proxy URL responded")
+    _logger.info("MATLAB proxy URL responded")
 
     # License matlab-proxy using playwright UI automation
     utils.license_matlab_proxy(matlab_proxy_url)
-    print("In matlab_proxy_fixture Proxy is licensed")
+    _logger.info("Successfully licensed MATLAB Proxy")
 
     # Wait for matlab-proxy to be up and running
     utils.wait_matlab_proxy_ready(matlab_proxy_url)
+    _logger.info("MATLAB Proxy is ready")
 
     # Get the location of ".matlab"
     matlab_config_file = str(

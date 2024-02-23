@@ -8,6 +8,9 @@ import time
 import urllib3
 import requests
 import json
+from logging_util import create_test_logger
+
+_logger = create_test_logger(__name__, log_file_path = os.getenv("MWI_INTEG_TESTS_LOG_FILE_PATH"))
 
 
 def perform_basic_checks():
@@ -114,13 +117,13 @@ def wait_matlab_proxy_ready(matlab_proxy_url):
     ):
         time.sleep(1)
 
-    print("MATLAB PROXY IS READY...")
-
     try:
         if not os.path.exists(str(get_matlab_config_file())):
             raise FileNotFoundError("Config file is not present on the path")
-    except FileNotFoundError:
-        print("File does not exist")
+
+    except FileNotFoundError as e:
+        _logger.exception("Config file does not exist")
+        _logger.exception(e)
 
 
 def get_random_free_port() -> str:
@@ -150,8 +153,6 @@ def wait_server_info_ready(port_number):
     start_time = time.time()
     config_folder = settings.get_mwi_config_folder()
     _path = config_folder / "ports" / port_number / "mwi_server.info"
-
-    print("_path in wait_server_info_ready ", _path)
 
     while time.time() - start_time < timeout_value:
         if _path.exists():
@@ -287,7 +288,7 @@ def get_connection_string(port_number):
             conn_string = _file.readline().rstrip()
 
     except FileNotFoundError:
-        print(f"{_path} does not exist")
+        _logger.exception(f"{_path} does not exist")
 
     return conn_string
 

@@ -72,7 +72,16 @@ Python package.
         ```powershell
         $env:TEST_USERNAME="some-username"; $env:TEST_PASSWORD="some-password"
         ```
-
+* If you need the tests logs to be available in a file, set MWI_INTEG_TESTS_LOG_FILE_PATH
+  to the intended path of the log file.
+    - Bash (Linux/macOS):
+        ```bash
+        export MWI_INTEG_TESTS_LOG_FILE_PATH="Path intended"
+        ```
+    - Powershell (Windows):
+        ```powershell
+        $env:MWI_INTEG_TESTS_LOG_FILE_PATH="Path intended"
+        ```
 * Run the following command from the root directory of the project:
     ```
     python3 -m pytest tests/integration -vs

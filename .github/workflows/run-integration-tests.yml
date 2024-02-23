@@ -3,6 +3,9 @@
 # Workflow to run MATLAB-Proxy integration tests
 name: Integration testing for MATLAB Proxy
 
+env:
+  MWI_INTEG_TESTS_LOG_FILE_PATH: '${{ github.workspace }}/tests/integration/integ_test_logs.log'
+
 on:
   # Reusable workflow
   # Trigger on workflow call
@@ -26,20 +29,20 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup MATLAB ${{ matrix.matlab-release }}
-        uses: matlab-actions/setup-matlab@v2-beta
+        uses: matlab-actions/setup-matlab@v2
         with:
           release: ${{ matrix.matlab-release }}
 
       - name: Setup nodejs
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -57,3 +60,16 @@ jobs:
         env:
           TEST_USERNAME: ${{secrets.TEST_USERNAME}}
           TEST_PASSWORD: ${{secrets.TEST_PASSWORD}}
+
+      - name: Copy Log File
+        if: ${{ always() }}
+        run: |
+          cp ${{ github.workspace }}/tests/integration/integ_test_logs.log ${{ matrix.os }}${{ matrix.matlab-release }}${{ matrix.python-version }}.log
+
+      - name: Make logs files available for downloading
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: MATLAB Proxy Integration Tests Log File ${{ matrix.os }}${{ matrix.matlab-release }}${{ matrix.python-version }}
+          path: ${{ matrix.os }}${{ matrix.matlab-release }}${{ matrix.python-version }}.log
+          retention-days: 7

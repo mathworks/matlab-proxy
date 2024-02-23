@@ -11,6 +11,9 @@ import requests
 import re
 from requests.adapters import HTTPAdapter, Retry
 from urllib.parse import urlparse
+from logging_util import create_test_logger
+
+_logger = create_test_logger(__name__, log_file_path = os.getenv("MWI_INTEG_TESTS_LOG_FILE_PATH"))
 
 # Timeout for polling the matlab-proxy http endpoints
 # matlab proxy in Mac machines takes more time to be 'up'
@@ -80,7 +83,8 @@ def _move(source, destination):
     try:
         shutil.move(source, destination)
     except shutil.Error as err:
-        print(f"Error in moving {source}", err)
+        _logger.error(f"Error in moving {source}")
+        _logger.exception(err)
 
 
 def _send_http_get_request(uri, connection_scheme, http_endpoint=""):
@@ -156,6 +160,7 @@ def test_stop_matlab(matlab_proxy_app_fixture):
         matlab_proxy_app_fixture: A pytest fixture which yields a real matlab server to be used by tests.
     """
 
+    _logger.info("Testing stopping")
     status = _check_matlab_status(
         matlab_proxy_app_fixture.connection_scheme,
         "up",
@@ -180,6 +185,7 @@ def test_stop_matlab(matlab_proxy_app_fixture):
         matlab_proxy_app_fixture.url,
     )
     assert status == "down"
+    _logger.info("stop_matlab test passed")
 
 
 async def test_print_message(matlab_proxy_app_fixture):
