@@ -16,7 +16,7 @@ class InstallNpm(install):
         npm_path = which("npm")
         if not npm_path:
             raise Exception(
-                "npm must be installered and on the path during package install!"
+                "npm must be installed and on the path during package install!"
             )
 
         npm_install = [npm_path, "install"]
@@ -68,7 +68,7 @@ long_description = (HERE / "README.md").read_text()
 
 setuptools.setup(
     name="matlab-proxy",
-    version="0.12.1",
+    version="0.13.0",
     url=config["doc_url"],
     author="The MathWorks, Inc.",
     author_email="cloud@mathworks.com",
