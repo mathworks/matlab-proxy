@@ -1,4 +1,4 @@
-# Copyright 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2024 The MathWorks, Inc.
 """This file lists and exposes the environment variables which are used by the integration."""
 
 import os

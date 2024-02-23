@@ -33,7 +33,7 @@ def start_matlab_proxy_fixture(module_monkeypatch):
     input_env = {
         "MWI_APP_PORT": mwi_app_port,
         "MWI_BASE_URL": mwi_base_url,
-        "MWI_ENABLE_TOKEN_AUTH": "True",
+        "MWI_ENABLE_TOKEN_AUTH": "false",
     }
 
     import matlab_proxy

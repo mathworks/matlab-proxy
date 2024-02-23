@@ -1,5 +1,5 @@
-# Copyright 2020-2023 The MathWorks, Inc.
-"""This file contains validators for various runtime artefacts.
+# Copyright 2020-2024 The MathWorks, Inc.
+"""This file contains validators for various runtime artifacts.
 A validator is defined as a function which verifies the input and 
 returns it unchanged if validation passes. 
 Returning inputs allows validators to be used inline with the input.

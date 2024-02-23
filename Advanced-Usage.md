@@ -25,7 +25,7 @@ The following table describes all the environment variables that you can set to 
 | **TMPDIR** or **TMP** | string | `"/path/for/MATLAB/to/use/as/tmp"` | Set either one of these variables to control the temporary folder used by MATLAB. `TMPDIR` takes precedence over `TMP` and if neither variable is set, `/tmp` is the default value used by MATLAB. |
 | **MWI_SSL_CERT_FILE** | string | `"/path/to/certificate.pem"` | The certfile string must be the path to a single file in PEM format containing the certificate as well as any number of CA certificates needed to establish the certificate’s authenticity. See [SSL Support](./SECURITY.md#ssl-support) for more information.|
 | **MWI_SSL_KEY_FILE** | string | `"/path/to/keyfile.key"` | The keyfile string, if present, must point to a file containing the private key. Otherwise the private key will be taken from certfile as well. |
-| **MWI_ENABLE_TOKEN_AUTH** | string | `"True"` | When set to `True`, matlab-proxy will require users to provide the security token to access the proxy. One can optionally set the token using the environment variable `MWI_AUTH_TOKEN`. If `MWI_AUTH_TOKEN` is not specified, then a token will be generated for you. <br />The default value is `False` . See [Token-Based Authentication](./SECURITY.md#token-based-authentication) for more information.|
+| **MWI_ENABLE_TOKEN_AUTH** | string | `"True"` | When you set the variable to `True`, matlab-proxy requires users to provide the security token to access the proxy. Optionally, set the token using the environment variable `MWI_AUTH_TOKEN`. If you do not specify `MWI_AUTH_TOKEN`, the software generates a token for you. <br />For more information, see [Token-Based Authentication](./SECURITY.md#token-based-authentication) for more information.
 | **MWI_AUTH_TOKEN** | string (optional) | `"AnyURLSafeToken"` | Specify a custom `token` for matlab-proxy to use with [Token-Based Authentication](./SECURITY.md#token-based-authentication). A token can safely contain any combination of alpha numeric text along with the following permitted characters: `- .  _  ~`.<br />When absent matlab-proxy will generate a random URL safe token. |
 | **MWI_USE_EXISTING_LICENSE** | string (optional) | `"True"` | When set to True, matlab-proxy will not ask you for additional licensing information and will try to launch an already activated MATLAB on your system PATH.
 | **MWI_CUSTOM_MATLAB_ROOT** | string (optional) | `"/path/to/matlab/root/"` | Optionally, provide a custom path to MATLAB root. For more information see [Adding MATLAB to System Path](#adding-matlab-to-system-path) |
@@ -99,6 +99,6 @@ For more information about `Content-Security-Policy` header,  check the [Mozilla
 
 ----
 
-Copyright 2020-2023 The MathWorks, Inc.
+Copyright 2020-2024 The MathWorks, Inc.
 
 ----

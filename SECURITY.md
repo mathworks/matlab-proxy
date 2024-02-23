@@ -11,6 +11,7 @@
   - [**Token Recovery**](#token-recovery)
     - [**Recover tokens from the machine**](#recover-tokens-from-the-machine)
     - [**Recover token from a previously authenticated browser session**](#recover-token-from-a-previously-authenticated-browser-session)
+  - [**How to disable Token-Based Authentication**](#how-to-disable-token-based-authentication)
 - [Security Best Practices](#security-best-practices)
 
 ## Reporting Security Vulnerabilities
@@ -58,11 +59,9 @@ $ env MWI_SSL_CERT_FILE="/path/to/certificate.pem" MWI_SSL_KEY_FILE="/path/to/ke
 
 ## **Token-Based Authentication**
 
-`matlab-proxy` is a web server and that allows one to launch and access MATLAB on the machine the server is running on.
-By default anyone with access to the server can access MATLAB and thereby the machine on which its running.
+`matlab-proxy` is a web server and that allows one to launch and access MATLAB on the machine the server is running on. Anyone with access to the server can access MATLAB and thereby the machine on which its running.
 
-When `Token-Based Authentication` is enabled, the server will require a token to authenticate access.
-This token can be provided to the server in 2 ways:
+`Token-Based Authentication` is enabled by default and the server will require a token to authenticate access. This token can be provided to the server in a few ways:
 
 1. Through the [URL parameter](https://www.rfc-editor.org/rfc/rfc3986#section-3.4) : `mwi_auth_token`. Example:
     ```html
@@ -84,16 +83,14 @@ This token can be provided to the server in 2 ways:
 
 ### **Use with auto-generated tokens**
 
-Enable `Token-Based Authentication` by setting the environment variable `MWI_ENABLE_TOKEN_AUTH` to `True` on server launch.
-
 When enabled, `matlab-proxy` will require the URL to specify the access token using the [query component](https://www.rfc-editor.org/rfc/rfc3986#section-3.4) `mwi_auth_token`.
 
 Example:
 
 ```bash
 
-# Launch matlab-proxy with Token-Based Authentication enabled
-$ env MWI_ENABLE_TOKEN_AUTH=True matlab-proxy-app
+# Launch matlab-proxy with Token-Based Authentication enabled by default
+$ matlab-proxy-app
 
 # The access link is presented in the terminal upon startup like follows:
 ==================================================================================================
@@ -197,6 +194,24 @@ You can use them to gain access to your server as described in the [Introduction
       <img width="600" src="./img/retrieved_token.png">
     </p>
 
+### **How to disable Token-Based Authentication**
+
+Since `Token-Based Authentication` is enabled by default, one can set the environment variable `MWI_ENABLE_TOKEN_AUTH` to `False` on server startup to disable `Token-Based Authentication`.
+
+Example:
+
+```bash
+
+# Launch matlab-proxy with Token-Based Authentication disabled
+$ env MWI_ENABLE_TOKEN_AUTH="False" matlab-proxy-app
+
+# The access link is presented in the terminal upon startup like follows:
+==================================================================================================
+                                  MATLAB can be accessed at:                              
+                                    http://127.0.0.1:37110  
+==================================================================================================
+```
+
 ## Security Best Practices
 
 * Never share access to your server
@@ -206,6 +221,6 @@ You can use them to gain access to your server as described in the [Introduction
 
 ----
 
-Copyright 2020-2023 The MathWorks, Inc.
+Copyright 2020-2024 The MathWorks, Inc.
 
 ----

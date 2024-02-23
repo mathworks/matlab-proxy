@@ -75,6 +75,7 @@ def matlab_proxy_fixture(module_monkeypatch, request):
     mwi_base_url = "/matlab-test"
     module_monkeypatch.setenv(mwi_env.get_env_name_testing(), "false")
     module_monkeypatch.setenv(mwi_env.get_env_name_development(), "false")
+    module_monkeypatch.setenv(mwi_env.get_env_name_enable_mwi_auth_token(), "false")
 
     # Start matlab-proxy-app for testing
     input_env = {

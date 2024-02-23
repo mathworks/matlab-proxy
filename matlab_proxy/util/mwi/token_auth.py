@@ -1,4 +1,4 @@
-# Copyright 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2024 The MathWorks, Inc.
 
 # This file contains functions required to enable token based authentication in the server.
 
@@ -24,49 +24,36 @@ def generate_mwi_auth_token_and_hash():
     Generate the MWI Token and a hash for that token to be used by the server,
     based on the environment variables that control it.
 
-    If MWI_AUTH_TOKEN is set then assume that the user wants authentication
-    even if MWI_ENABLE_TOKEN_AUTH is not set. Unless, MWI_ENABLE_TOKEN_AUTH is
-    explicitly set to FALSE.
+    Token Auth is enabled by default, unless MWI_ENABLE_TOKEN_AUTH is explicitly set to False.
 
-    If MWI_ENABLE_TOKEN_AUTH is set, and MWI_AUTH_TOKEN is unset, then generate a token.
+    If MWI_ENABLE_TOKEN_AUTH is set, and MWI_AUTH_TOKEN is unset, then generate a token
+    else if MWI_AUTH_TOKEN is set, use that token for authentication.
 
     Returns the Token and its hash to be used for authentication if enabled.
     Returns None, if Token-Based Authentication is not enabled by user.
     """
-    mwi_enable_auth_token = os.getenv(
-        mwi_env.get_env_name_enable_mwi_auth_token(), None
-    )
+    env_name_enable_mwi_token_auth = mwi_env.get_env_name_enable_mwi_auth_token()
+    env_name_mwi_auth_token = mwi_env.get_env_name_mwi_auth_token()
+    enable_token_auth = os.getenv(env_name_enable_mwi_token_auth, "").lower()
+    auth_token = os.getenv(env_name_mwi_auth_token, "")
 
-    # Is set explicitly
-    is_auth_explicitly_disabled = (
-        mwi_enable_auth_token and mwi_enable_auth_token.lower() == "false"
-    )
-    is_auth_explicitly_enabled = (
-        mwi_enable_auth_token and mwi_enable_auth_token.lower() == "true"
-    )
-
-    mwi_auth_token = os.getenv(mwi_env.get_env_name_mwi_auth_token(), None)
-
-    if mwi_auth_token:
-        if is_auth_explicitly_disabled:
+    if enable_token_auth == "false":
+        if auth_token:
             logger.warn(
-                "Ignoring MWI_AUTH_TOKEN, as MWI_ENABLE_AUTH_TOKEN explicitly set to false"
+                f"Ignoring {env_name_mwi_auth_token}, as {env_name_enable_mwi_token_auth} explicitly set to false"
             )
-            return _format_token_as_dictionary(None)
-        else:
-            # Strip leading and trailing whitespaces if token is not None.
-            mwi_auth_token = mwi_auth_token.strip()
-            logger.debug(f"Using provided mwi_auth_token.")
-            return _format_token_as_dictionary(mwi_auth_token)
-    else:
-        if is_auth_explicitly_enabled:
-            # Generate a url safe token
-            generated_token = secrets.token_urlsafe()
-            logger.debug(f"Using auto generated token.")
-            return _format_token_as_dictionary(generated_token)
+        return _format_token_as_dictionary(None)
 
-    # Return none in all other cases
-    return _format_token_as_dictionary(None)
+    if auth_token:
+        auth_token = auth_token.strip()
+        logger.debug(f"Using provided {env_name_mwi_auth_token}.")
+        return _format_token_as_dictionary(auth_token)
+
+    # default catch-all for when the env variables are not set or above conditions are not met.
+    # This path will be executed if MWI_ENABLE_TOKEN_AUTH is set to true/Any value (default workflow)
+    generated_token = secrets.token_urlsafe()
+    logger.debug("Using auto-generated token.")
+    return _format_token_as_dictionary(generated_token)
 
 
 def get_mwi_auth_token_access_str(app_settings):

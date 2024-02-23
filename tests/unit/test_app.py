@@ -183,7 +183,7 @@ class FakeServer:
     """Context Manager class which returns a web server wrapped in aiohttp_client pytest fixture
     for testing.
 
-    The server setup and startup does not need to mimick the way it is being done in main() method in app.py.
+    The server setup and startup does not need to mimic the way it is being done in main() method in app.py.
     Setting up the server in the context of Pytest.
     """
 
@@ -205,6 +205,7 @@ class FakeServer:
 def test_server_fixture(
     loop,
     aiohttp_client,
+    monkeypatch,
 ):
     """A pytest fixture which yields a test server to be used by tests.
 
@@ -215,11 +216,18 @@ def test_server_fixture(
     Yields:
         aiohttp_client : A aiohttp_client server used by tests.
     """
+    # Disabling the authentication token mechanism explicitly
+    monkeypatch.setenv(mwi_env.get_env_name_enable_mwi_auth_token(), "False")
     try:
         with FakeServer(loop, aiohttp_client) as test_server:
             yield test_server
     except ProcessLookupError:
         pass
+    finally:
+        # Cleaning up the env variable related to auth token
+        monkeypatch.delenv(
+            mwi_env.get_env_name_enable_mwi_auth_token(), raising="False"
+        )
 
 
 async def test_get_status_route(test_server):
