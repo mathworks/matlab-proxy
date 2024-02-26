@@ -1,4 +1,5 @@
-# Copyright (c) 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2024 The MathWorks, Inc.
+
 import argparse
 import os
 import socket
@@ -30,9 +31,18 @@ def parse_cli_args():
         help="A json file which stores the config specific to the environment.",
         default=matlab_proxy.get_default_config_name(),
     )
+
+    parser.add_argument(
+        "-v",
+        "--version",
+        help="prints the version of matlab-proxy.",
+        action="store_true",
+    )
+
     args = parser.parse_args()
 
     parsed_args["config"] = args.config
+    parsed_args["version"] = args.version
 
     return parsed_args
 

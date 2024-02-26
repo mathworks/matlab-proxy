@@ -846,15 +846,9 @@ def create_app(config_name=matlab_proxy.get_default_config_name()):
     return app
 
 
-def main():
-    """Starting point of the integration. Creates the web app and runs indefinitely."""
-
-    # The integration needs to be called with --config flag.
-    # Parse the passed cli arguments.
-    desired_configuration_name = util.parse_cli_args()["config"]
-
+def create_and_start_app(config_name):
     # Create, configure and start the app.
-    app = create_app(config_name=desired_configuration_name)
+    app = create_app(config_name)
     app = configure_and_start(app)
 
     loop = util.get_event_loop()
@@ -884,3 +878,25 @@ def main():
     logger.info("Finished shutting down. Thank you for using the MATLAB proxy.")
     loop.close()
     sys.exit(0)
+
+
+def print_version_and_exit():
+    """prints the version of the package and exits"""
+    from importlib.metadata import version
+
+    matlab_proxy_version = version("matlab-proxy")
+    print(f"{matlab_proxy_version}")
+    sys.exit(0)
+
+
+def main():
+    """Starting point of the integration. Creates the web app and runs indefinitely."""
+
+    if util.parse_cli_args()["version"]:
+        print_version_and_exit()
+
+    # The integration needs to be called with --config flag.
+    # Parse the passed cli arguments.
+    desired_configuration_name = util.parse_cli_args()["config"]
+
+    create_and_start_app(config_name=desired_configuration_name)
