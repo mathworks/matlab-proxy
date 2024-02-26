@@ -5,6 +5,7 @@ from integration import integration_tests_utils as utils
 import requests
 from logging_util import create_test_logger
 import os
+from urllib.parse import urlparse, parse_qs
 
 _logger = create_test_logger(
     __name__, log_file_path=os.getenv("MWI_INTEG_TESTS_LOG_FILE_PATH")
@@ -26,6 +27,28 @@ def monkeypatch_module_scope_fixture():
         yield mp
 
 
+@pytest.fixture
+def parse_matlab_proxy_url():
+    # Get the base URL from a utility function or environment variable
+    mwi_app_port = os.environ["MWI_APP_PORT"]
+
+    # Construct the parameters dictionary
+    parsed_url = urlparse(utils.get_connection_string(mwi_app_port))
+
+    headers = {
+        "mwi_auth_token": (
+            ["mwi_auth_token"][0]
+            if "mwi_auth_token" in parse_qs(parsed_url.query)
+            else ""
+        )
+    }
+
+    connection_scheme = parsed_url.scheme
+
+    # Return the base URL and parameters as a tuple
+    return parsed_url, headers, connection_scheme
+
+
 @pytest.fixture(scope="module", autouse=True)
 def start_matlab_proxy_fixture(module_monkeypatch):
     """Starts the matlab proxy process"""
@@ -39,7 +62,6 @@ def start_matlab_proxy_fixture(module_monkeypatch):
     input_env = {
         "MWI_APP_PORT": mwi_app_port,
         "MWI_BASE_URL": mwi_base_url,
-        "MWI_ENABLE_TOKEN_AUTH": "false",
     }
 
     import matlab_proxy

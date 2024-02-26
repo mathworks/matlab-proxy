@@ -10,7 +10,7 @@ from matlab_proxy.util import system
 import requests
 import re
 from requests.adapters import HTTPAdapter, Retry
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 from logging_util import create_test_logger
 
 _logger = create_test_logger(
@@ -66,6 +66,14 @@ class RealMATLABServer:
 
         utils.wait_server_info_ready(self.mwi_app_port)
         parsed_url = urlparse(utils.get_connection_string(self.mwi_app_port))
+
+        self.headers = {
+            "mwi_auth_token": (
+                parse_qs(parsed_url.query)["mwi_auth_token"][0]
+                if "mwi_auth_token" in parse_qs(parsed_url.query)
+                else ""
+            )
+        }
         self.connection_scheme = parsed_url.scheme
         self.url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
         return self
@@ -89,7 +97,7 @@ def _move(source, destination):
         _logger.exception(err)
 
 
-def _send_http_get_request(uri, connection_scheme, http_endpoint=""):
+def _send_http_get_request(uri, connection_scheme, headers, http_endpoint=""):
     """Send HTTP request to matlab-proxy server.
     Returns HTTP response JSON"""
 
@@ -99,20 +107,24 @@ def _send_http_get_request(uri, connection_scheme, http_endpoint=""):
     with requests.Session() as s:
         retries = Retry(total=10, backoff_factor=0.1)
         s.mount(f"{connection_scheme}://", HTTPAdapter(max_retries=retries))
-        response = s.get(request_uri, verify=False)
+        response = s.get(request_uri, headers=headers, verify=False)
         json_response = json.loads(response.text)
 
     return json_response
 
 
-def _check_matlab_status(connection_scheme, status, uri):
+def _check_matlab_status(matlab_proxy_app_fixture, status):
+    uri = matlab_proxy_app_fixture.url
+    connection_scheme = matlab_proxy_app_fixture.connection_scheme
+    headers = matlab_proxy_app_fixture.headers
+
     matlab_status = None
 
     start_time = time.time()
     while matlab_status != status and (time.time() - start_time < MAX_TIMEOUT):
         time.sleep(1)
         res = _send_http_get_request(
-            uri, connection_scheme, http_endpoint="/get_status"
+            uri, connection_scheme, headers, http_endpoint="/get_status"
         )
         matlab_status = res["matlab"]["status"]
 
@@ -146,11 +158,7 @@ def test_matlab_is_up(matlab_proxy_app_fixture):
         matlab_proxy_app_fixture: A pytest fixture which yields a real matlab server to be used by tests.
     """
 
-    status = _check_matlab_status(
-        matlab_proxy_app_fixture.connection_scheme,
-        "up",
-        matlab_proxy_app_fixture.url,
-    )
+    status = _check_matlab_status(matlab_proxy_app_fixture, "up")
     assert status == "up"
 
 
@@ -162,12 +170,7 @@ def test_stop_matlab(matlab_proxy_app_fixture):
         matlab_proxy_app_fixture: A pytest fixture which yields a real matlab server to be used by tests.
     """
 
-    _logger.info("Testing stopping")
-    status = _check_matlab_status(
-        matlab_proxy_app_fixture.connection_scheme,
-        "up",
-        matlab_proxy_app_fixture.url,
-    )
+    status = _check_matlab_status(matlab_proxy_app_fixture, "up")
     assert status == "up"
 
     http_endpoint_to_test = "/stop_matlab"
@@ -179,15 +182,10 @@ def test_stop_matlab(matlab_proxy_app_fixture):
             f"{matlab_proxy_app_fixture.connection_scheme}://",
             HTTPAdapter(max_retries=retries),
         )
-        s.delete(stop_url, verify=False)
+        s.delete(stop_url, headers=matlab_proxy_app_fixture.headers, verify=False)
 
-    status = _check_matlab_status(
-        matlab_proxy_app_fixture.connection_scheme,
-        "down",
-        matlab_proxy_app_fixture.url,
-    )
+    status = _check_matlab_status(matlab_proxy_app_fixture, "down")
     assert status == "down"
-    _logger.info("stop_matlab test passed")
 
 
 async def test_print_message(matlab_proxy_app_fixture):
@@ -198,9 +196,7 @@ async def test_print_message(matlab_proxy_app_fixture):
 
     """
     # Checks if matlab proxy is in "up" state or not
-    status = _check_matlab_status(
-        matlab_proxy_app_fixture.connection_scheme, "up", matlab_proxy_app_fixture.url
-    )
+    status = _check_matlab_status(matlab_proxy_app_fixture, "up")
     assert status == "up"
 
     uri_regex = f"{matlab_proxy_app_fixture.connection_scheme}://[a-zA-Z0-9\-_.]+:{matlab_proxy_app_fixture.mwi_app_port}{matlab_proxy_app_fixture.mwi_base_url}"

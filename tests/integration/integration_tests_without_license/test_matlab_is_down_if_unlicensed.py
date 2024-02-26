@@ -8,15 +8,11 @@ from integration import integration_tests_utils as utils
 from urllib.parse import urlparse
 
 
-def test_matlab_down():
+def test_matlab_down(parse_matlab_proxy_url):
     """Test that matlab is down and no license is picked up"""
 
-    mwi_app_port = os.environ["MWI_APP_PORT"]
+    parsed_url, headers, connection_scheme = parse_matlab_proxy_url
     http_endpoint = "/get_status"
-
-    parsed_url = urlparse(utils.get_connection_string(mwi_app_port))
-
-    connection_scheme = parsed_url.scheme
     uri = (
         connection_scheme + "://" + parsed_url.netloc + parsed_url.path + http_endpoint
     )
@@ -26,7 +22,7 @@ def test_matlab_down():
     with requests.Session() as s:
         retries = Retry(total=10, backoff_factor=0.1)
         s.mount(f"{connection_scheme}://", HTTPAdapter(max_retries=retries))
-        response = s.get(uri, verify=False)
+        response = s.get(uri, headers=headers, verify=False)
         json_response = json.loads(response.text)
 
     matlab_status = json_response["matlab"]["status"]
