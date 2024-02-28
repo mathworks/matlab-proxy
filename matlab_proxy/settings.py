@@ -1,5 +1,6 @@
 # Copyright 2020-2024 The MathWorks, Inc.
 
+import datetime
 import os
 import shutil
 import socket
@@ -8,6 +9,11 @@ import tempfile
 import uuid
 import xml.etree.ElementTree as ET
 from pathlib import Path
+
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.x509.oid import NameOID
 
 import matlab_proxy
 from matlab_proxy import constants
@@ -289,10 +295,6 @@ def get_server_settings(config_name):
         mwi_auth_token_hash,
     ) = token_auth.generate_mwi_auth_token_and_hash().values()
     mwi_config_folder = get_mwi_config_folder()
-    ssl_key_file, ssl_cert_file = mwi.validators.validate_ssl_key_and_cert_file(
-        os.getenv(mwi_env.get_env_name_ssl_key_file(), None),
-        os.getenv(mwi_env.get_env_name_ssl_cert_file(), None),
-    )
 
     # log file validation check is already done in logger.py
     mwi_log_file = os.getenv(mwi_env.get_env_name_log_file(), None)
@@ -328,9 +330,7 @@ def get_server_settings(config_name):
         "mwi_use_existing_license": mwi.validators.validate_use_existing_licensing(
             os.getenv(mwi_env.get_env_name_mwi_use_existing_license(), "")
         ),
-        "ssl_context": get_ssl_context(
-            ssl_cert_file=ssl_cert_file, ssl_key_file=ssl_key_file
-        ),
+        "ssl_context": _validate_ssl_files_and_get_ssl_context(mwi_config_folder),
     }
 
 
@@ -478,31 +478,127 @@ def get_test_temp_dir():
     return test_temp_dir
 
 
-def get_ssl_context(ssl_cert_file, ssl_key_file):
-    """Creates an SSL CONTEXT for use with the TCP Site"""
+def _validate_ssl_files_and_get_ssl_context(mwi_config_folder):
+    """Creates an SSL CONTEXT for use with the TCP Site.
+    The certfile string must be the path to a single file in PEM format containing the
+    certificate as well as any number of CA certificates needed to establish the certificate’s authenticity.
+    The keyfile string, if present, must point to a file containing the private key in.
+    Otherwise the private key will be taken from certfile as well.
+    """
+    is_self_signed_certificates = False
+    env_name_enable_ssl = mwi_env.get_env_name_enable_ssl()
+    is_ssl_enabled = mwi_env._is_env_set_to_true(env_name_enable_ssl)
+    env_name_ssl_key_file = mwi_env.get_env_name_ssl_key_file()
+    env_name_ssl_cert_file = mwi_env.get_env_name_ssl_cert_file()
 
-    # The certfile string must be the path to a single file in PEM format containing the
-    # certificate as well as any number of CA certificates needed to establish the certificate’s authenticity.
-    # The keyfile string, if present, must point to a file containing the private key in.
-    # Otherwise the private key will be taken from certfile as well.
-    import traceback
+    ssl_key_file, ssl_cert_file = (
+        os.getenv(env_name_ssl_key_file, None),
+        os.getenv(env_name_ssl_cert_file, None),
+    )
 
-    if ssl_cert_file != None:
-        try:
-            ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-            ssl_context.load_cert_chain(ssl_cert_file, ssl_key_file)
-            logger.debug(f"Using SSL certification!")
-        except Exception as e:
-            # Something was wrong with the certificates provided
-            error_message = "SSL certificates provided are invalid. Aborting..."
-            logger.error(error_message)
-            traceback.print_exc()
-            logger.info("==== Fatal error : ===")
-            print(e)
-            # printing stack trace
-            logger.info("======================")
-            raise FatalError(error_message)
-    else:
+    # Don't use SSL if the user has explicitly disabled SSL communication or not set the respective env var
+    if not is_ssl_enabled:
+        if ssl_cert_file:
+            logger.warn(
+                f"Ignoring provided SSL files, as {env_name_enable_ssl} is either unset or set to false"
+            )
+        return None
+
+    # Validate that provided SSL files are valid files
+    ssl_key_file, ssl_cert_file = mwi.validators.validate_ssl_key_and_cert_file(
+        ssl_key_file, ssl_cert_file
+    )
+
+    if not ssl_cert_file and not ssl_key_file:
+        logger.debug("Using auto-generated self-signed certificates")
+
+        # certs dir under the MWI_CONFIG_FOLDER will hold the self-signed certificates
+        mwi_certs_dir = mwi_config_folder / "certs"
+        mwi_certs_dir.mkdir(parents=True, exist_ok=True)
+
+        # New certs are generated for every run leading to functionally reliable system, alternative is
+        # to check for existing certs and have error handling around expired/bad certs.
+        ssl_cert_file, ssl_key_file = generate_new_self_signed_certs(mwi_certs_dir)
+        is_self_signed_certificates = True
+    try:
+        ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        ssl_context.load_cert_chain(ssl_cert_file, ssl_key_file)
+        logger.debug("Certificate chain was correctly loaded")
+    except Exception as e:
+        logger.error(f"Unable to load certificates. Error: {e}")
+
+        # Setting to None to use http mode in the event of failing to setup self-signed certificates
         ssl_context = None
 
+        # Raise a fatal error only in the event of an exception while loading customer-supplied ssl files
+        if not is_self_signed_certificates:
+            raise FatalError(e)
+
     return ssl_context
+
+
+def generate_new_self_signed_certs(mwi_certs_dir):
+    """
+    Generates a new self-signed certificate and corresponding private key, saves them as PEM files in the specified directory.
+    The certificate is valid for 365 days from the time of creation.
+
+    Parameters:
+    - mwi_certs_dir (Path): A pathlib.Path object representing the directory where the certificate and key files will be saved.
+
+    Returns:
+    - tuple: A tuple containing the file paths (as strings) to the newly created certificate and private key PEM files.
+             The first element is the path to the certificate file (cert.pem), and the second is the path to the key file (key.pem).
+
+    Raises:
+    - FileNotFoundError: If the mwi_certs_dir does not exist.
+    - Any other exception that may occur during file writing or certificate generation.
+    """
+    cert_file = priv_key_file = None
+    try:
+        # Generate private key
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+
+        # Self-signed certificate
+        subject = issuer = x509.Name(
+            [
+                x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+                x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "Massachusetts"),
+                x509.NameAttribute(NameOID.LOCALITY_NAME, "Natick"),
+                x509.NameAttribute(NameOID.ORGANIZATION_NAME, "MathWorks Inc."),
+                x509.NameAttribute(NameOID.COMMON_NAME, "mathworks.com"),
+            ]
+        )
+        cert = (
+            x509.CertificateBuilder()
+            .subject_name(subject)
+            .issuer_name(issuer)
+            .public_key(private_key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(datetime.datetime.utcnow())
+            .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=365))
+            .sign(private_key, hashes.SHA256())
+        )
+
+        # Write private key to file
+        priv_key_file = mwi_certs_dir / "key.pem"
+        with open(priv_key_file, "wb") as f:
+            f.write(
+                private_key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.TraditionalOpenSSL,
+                    encryption_algorithm=serialization.NoEncryption(),
+                )
+            )
+
+        # Write certificate to file
+        cert_file = mwi_certs_dir / "cert.pem"
+        with open(cert_file, "wb") as f:
+            f.write(cert.public_bytes(serialization.Encoding.PEM))
+
+    except Exception as ex:
+        logger.warn(
+            f"Failed to generate self-signed certificates, proceeding with non-secure mode! Error: {ex}"
+        )
+        cert_file = priv_key_file = None
+
+    return cert_file, priv_key_file

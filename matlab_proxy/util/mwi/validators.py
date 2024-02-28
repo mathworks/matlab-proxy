@@ -222,55 +222,54 @@ def __get_configs():
     return configs
 
 
-def validate_ssl_cert_file(a_ssl_cert_file):
+def validate_ssl_file(ssl_file, env_name):
     """Ensures that its a valid readable file"""
 
     # Empty strings are valid inputs
-    if a_ssl_cert_file:
-        # String is not empty, check to see if the file exists
-        if not os.path.isfile(a_ssl_cert_file):
-            error_message = f"MWI_SSL_CERT_FILE is not a valid file: {a_ssl_cert_file}"
-            logger.error(error_message)
-            raise FatalError(error_message)
+    if not ssl_file:
+        return None
 
-    # string is either empty, or is a valid file on disk
-    return a_ssl_cert_file
-
-
-def validate_ssl_key_and_cert_file(a_ssl_key_file, a_ssl_cert_file):
-    """Ensures that its a valid readable file"""
-
-    if a_ssl_cert_file is None and a_ssl_key_file is None:
-        # Both values are None, this is acceptable.
-        return a_ssl_key_file, a_ssl_cert_file
-
-    # Implies atleast one value is not None.
-
-    # Cert file is either empty or valid file.
-    cert_file = validate_ssl_cert_file(a_ssl_cert_file=a_ssl_cert_file)
-
-    if cert_file is None and a_ssl_key_file is not None:
-        error_message = (
-            f"MWI_SSL_CERT_FILE must be provided to use the MWI_SSL_KEY_FILE"
-        )
+    # String is not empty, check to see if the file exists
+    if not os.path.isfile(ssl_file):
+        error_message = f"{env_name} is not a valid file: {ssl_file}"
         logger.error(error_message)
         raise FatalError(error_message)
 
-    if a_ssl_key_file is None and cert_file is not None:
+    # string is a valid file on disk
+    return ssl_file
+
+
+def validate_ssl_key_and_cert_file(ssl_key_file, ssl_cert_file):
+    """Validates that provided SSL files are valid readable files"""
+    env_name_ssl_cert_file = mwi_env.get_env_name_ssl_cert_file()
+    env_name_ssl_key_file = mwi_env.get_env_name_ssl_key_file()
+
+    if not ssl_cert_file and not ssl_key_file:
+        # Both values are falsy, this is acceptable and signify that HTTPS communication is disabled.
+        return None, None
+
+    # Implies at least one value is not falsy.
+
+    # Validating cert file- Cert file is either empty or valid file.
+    cert_file = validate_ssl_file(
+        ssl_file=ssl_cert_file, env_name=env_name_ssl_cert_file
+    )
+    if not cert_file:
+        error_message = f"{env_name_ssl_cert_file} must be provided to use the {env_name_ssl_key_file}"
+        logger.error(error_message)
+        raise FatalError(error_message)
+
+    # Validating key file
+    key_file = validate_ssl_file(ssl_file=ssl_key_file, env_name=env_name_ssl_key_file)
+    if not ssl_key_file:
         logger.info(
-            f"MWI_SSL_KEY_FILE is not provided, ensure that your MWI_SSL_CERT_FILE : '{cert_file}' contains a private key"
+            f"{env_name_ssl_key_file} is not provided, ensure that your {env_name_ssl_cert_file} : '{cert_file}' contains a private key"
         )
 
-    if a_ssl_key_file:
-        if not os.path.isfile(a_ssl_key_file):
-            error_message = f"MWI_SSL_KEY_FILE is not a valid file: {a_ssl_key_file}"
-            logger.error(error_message)
-            raise FatalError(error_message)
-
     logger.info(
-        f"SSL Keys provided were: MWI_SSL_CERT_FILE: {a_ssl_cert_file} & MWI_SSL_KEY_FILE: {a_ssl_key_file}"
+        f"SSL Keys provided were: {env_name_ssl_cert_file}: {cert_file} & {env_name_ssl_key_file}: {key_file}"
     )
-    return a_ssl_key_file, a_ssl_cert_file
+    return key_file, cert_file
 
 
 def validate_use_existing_licensing(use_existing_license):

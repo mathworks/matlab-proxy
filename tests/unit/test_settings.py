@@ -1,6 +1,7 @@
 # Copyright 2020-2024 The MathWorks, Inc.
 
 import os
+import ssl
 import time
 import tempfile
 
@@ -373,3 +374,87 @@ def test_get_mwi_config_folder(mocker, hostname, home, expected_mwi_config_dir):
 
     # Assert
     assert expected_mwi_config_dir == actual_config_dir
+
+
+def test_get_ssl_context_with_SSL_disabled(monkeypatch, tmpdir):
+    monkeypatch.setenv(mwi_env.get_env_name_enable_ssl(), "False")
+    mwi_certs_dir = Path(tmpdir)
+    ssl_context = settings._validate_ssl_files_and_get_ssl_context(mwi_certs_dir)
+    assert ssl_context is None
+
+
+def test_get_ssl_context_with_SSL_enabled_auto_generated_certs(
+    monkeypatch, mocker, tmpdir
+):
+    monkeypatch.setenv(mwi_env.get_env_name_enable_ssl(), "True")
+    mocker.patch(
+        "matlab_proxy.settings.generate_new_self_signed_certs",
+        return_value=("cert_path", "key_path"),
+    )
+    mock_ssl_context = mocker.patch("ssl.create_default_context")
+    mock_context = mocker.Mock()
+    mock_ssl_context.return_value = mock_context
+    mock_context.load_cert_chain.side_effect = None
+    mwi_certs_dir = Path(tmpdir)
+
+    ssl_context = settings._validate_ssl_files_and_get_ssl_context(mwi_certs_dir)
+    assert ssl_context is not None
+
+
+def test_get_ssl_context_with_invalid_self_signed_certs_returns_none(mocker, tmpdir):
+    mocker.patch(
+        "matlab_proxy.settings.generate_new_self_signed_certs",
+        return_value=("cert_path", "key_path"),
+    )
+    mock_ssl_context = mocker.patch("ssl.create_default_context")
+    mock_context = mocker.Mock()
+    mock_ssl_context.return_value = mock_context
+    exception_msg = "Invalid certificate!"
+    mock_context.load_cert_chain.side_effect = Exception(exception_msg)
+    mwi_certs_dir = Path(tmpdir)
+
+    assert settings._validate_ssl_files_and_get_ssl_context(mwi_certs_dir) is None
+
+
+def test_get_ssl_context_with_valid_custom_ssl_files(monkeypatch, mocker, tmpdir):
+    # Sets up the SUT
+    monkeypatch.setenv(mwi_env.get_env_name_enable_ssl(), "True")
+    monkeypatch.setenv(mwi_env.get_env_name_ssl_cert_file(), "test/cert.pem")
+    monkeypatch.setenv(mwi_env.get_env_name_ssl_key_file(), "test/key.pem")
+    mocker.patch(
+        "matlab_proxy.settings.mwi.validators.validate_ssl_key_and_cert_file",
+        return_value=("test/cert.pem", "test/key.pem"),
+    )
+    new_cert_fx = mocker.patch("matlab_proxy.settings.generate_new_self_signed_certs")
+    mock_ssl_context = mocker.patch("ssl.create_default_context")
+    mock_context = mocker.Mock()
+    mock_ssl_context.return_value = mock_context
+    mock_context.load_cert_chain.side_effect = None
+    mwi_certs_dir = Path(tmpdir)
+
+    ssl_context = settings._validate_ssl_files_and_get_ssl_context(mwi_certs_dir)
+    # Checks that self-signed certificate generation is not happening when user supplies valid ssl files
+    new_cert_fx.assert_not_called()
+    assert ssl_context is not None
+
+
+def test_get_ssl_context_with_invalid_custom_ssl_files_raises_exception(
+    monkeypatch, mocker, tmpdir
+):
+    # Sets up the SUT
+    monkeypatch.setenv(mwi_env.get_env_name_enable_ssl(), "True")
+    monkeypatch.setenv(mwi_env.get_env_name_ssl_cert_file(), "test/cert.pem")
+    monkeypatch.setenv(mwi_env.get_env_name_ssl_key_file(), "test/key.pem")
+    mocker.patch(
+        "matlab_proxy.settings.mwi.validators.validate_ssl_key_and_cert_file",
+        return_value=("test/cert.pem", "test/key.pem"),
+    )
+    mock_ssl_context = mocker.patch("ssl.create_default_context")
+    mock_context = mocker.Mock()
+    mock_ssl_context.return_value = mock_context
+    exception_msg = "Invalid certificate!"
+    mock_context.load_cert_chain.side_effect = Exception(exception_msg)
+    mwi_certs_dir = Path(tmpdir)
+
+    with pytest.raises(Exception, match=exception_msg):
+        settings._validate_ssl_files_and_get_ssl_context(mwi_certs_dir)

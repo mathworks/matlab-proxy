@@ -93,7 +93,7 @@ Once the `matlab-proxy` package is installed.
 
   Running the above command will print text out on your terminal, which will contain the URL to access MATLAB. For example:
   ```
-  MATLAB can be accessed on 
+  Access MATLAB at 
   http://localhost:44549/matlab/index.html
   ```
 

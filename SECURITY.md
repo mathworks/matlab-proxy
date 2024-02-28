@@ -30,24 +30,27 @@ The following features are available in `matlab-proxy` to provide secure access 
 ----
 
 ## **SSL Support**
-Configure `matlab-proxy` to use SSL by providing the desired SSL certificates using the following environment variables at server launch:
-The following environment variables must be set to enable `matlab-proxy` to run on SSL:
-1. *MWI_SSL_CERT_FILE*
+
+1. *MWI_ENABLE_SSL*
+
+    Use the environment variable `MWI_ENABLE_SSL` to configure SSL/TLS support for `matlab-proxy`. To enable SSL/TLS, set `MWI_ENABLE_SSL` to `True`. By default, this uses a self-signed certificate. To use custom SSL certificates instead, specify these files using the following environment variables when you start `matlab-proxy`.
+
+2. *MWI_SSL_CERT_FILE*
    
     A string with the full path to a single file in PEM format containing the certificate as well as any number of CA certificates needed to establish the certificate’s authenticity.
 
 2. *MWI_SSL_KEY_FILE*
    
-   A string with the full path to a file containing the private key. If absent, the private key must be present in the certfile provided with *MWI_SSL_CERT_FILE*.
+   A string with the full path to a file containing the private key. If absent, the private key must be present in the cert file provided using `MWI_SSL_CERT_FILE`.
 
 Example:
 ```bash
-# Launch matlab-proxy with SSL enabled
-$ env MWI_SSL_CERT_FILE="/path/to/certificate.pem" MWI_SSL_KEY_FILE="/path/to/keyfile.key" matlab-proxy-app
+# Start matlab-proxy with SSL enabled
+$ env MWI_ENABLE_SSL=True MWI_SSL_CERT_FILE="/path/to/certificate.pem" MWI_SSL_KEY_FILE="/path/to/keyfile.key" matlab-proxy-app
 
-# The access link is presented in the terminal upon startup like follows:
+# The access link appears in the terminal at startup:
 ==================================================================================================
-                                  MATLAB can be accessed at:                              
+                                       Access MATLAB at:                              
                                     https://127.0.0.1:37109   
 ==================================================================================================
 
@@ -55,11 +58,12 @@ $ env MWI_SSL_CERT_FILE="/path/to/certificate.pem" MWI_SSL_KEY_FILE="/path/to/ke
 
 ```
 
+
 ----
 
 ## **Token-Based Authentication**
 
-`matlab-proxy` is a web server and that allows one to launch and access MATLAB on the machine the server is running on. Anyone with access to the server can access MATLAB and thereby the machine on which its running.
+`matlab-proxy` is a web server and that allows one to start and access MATLAB on the machine the server is running on. Anyone with access to the server can access MATLAB and thereby the machine on which its running.
 
 `Token-Based Authentication` is enabled by default and the server will require a token to authenticate access. This token can be provided to the server in a few ways:
 
@@ -89,12 +93,12 @@ Example:
 
 ```bash
 
-# Launch matlab-proxy with Token-Based Authentication enabled by default
+# Start matlab-proxy with Token-Based Authentication enabled by default
 $ matlab-proxy-app
 
 # The access link is presented in the terminal upon startup like follows:
 ==================================================================================================
-                                  MATLAB can be accessed at:                              
+                                  Access MATLAB at:                              
     http://127.0.0.1:37109?mwi_auth_token=SY78vUw5qyf0JTJzGK4mKJlk_exkzL_SMFJyilbGtNI   
 ==================================================================================================
 ```
@@ -114,12 +118,12 @@ See [URI Specification RFC3986](https://www.ietf.org/rfc/rfc3986.txt) for more i
 Example:
 ```bash
 
-# Launch matlab-proxy with Token-Based Authentication enabled, and with custom token with a value of "MyCustomSecretToken"
+# Start matlab-proxy with Token-Based Authentication enabled, and with custom token with a value of "MyCustomSecretToken"
 $ env MWI_ENABLE_TOKEN_AUTH=True MWI_AUTH_TOKEN=MyCustomSecretToken matlab-proxy-app
 
 # The access link is presented in the terminal upon startup like follows:
 ==================================================================================================
-                                  MATLAB can be accessed at:                              
+                                  Access MATLAB at:                              
                 http://127.0.0.1:37109?mwi_auth_token=MyCustomSecretToken   
 ==================================================================================================
 ```
@@ -128,14 +132,14 @@ $ env MWI_ENABLE_TOKEN_AUTH=True MWI_AUTH_TOKEN=MyCustomSecretToken matlab-proxy
 
 It is recommended to enable both `Token-Based Authentication` and `SSL` to secure your access to MATLAB via matlab-proxy. As an example, the following command enables access to MATLAB using HTTPS and token-based authentication
 
-For example, the following command launches the server to deliver content on `HTTPS` along with Token-Based Authentication enabled:
+For example, the following command starts the server to deliver content on `HTTPS` along with Token-Based Authentication enabled:
 ```bash
-# Launch matlab-proxy with Token-Based Authentication & SSL enabled with custom token with a value of "asdf"
+# Start matlab-proxy with Token-Based Authentication & SSL enabled with custom token with a value of "asdf"
 $ env MWI_SSL_CERT_FILE="/path/to/certificate.pem" MWI_SSL_KEY_FILE="/path/to/keyfile.key" MWI_ENABLE_TOKEN_AUTH=True MWI_AUTH_TOKEN=asdf matlab-proxy-app
 
 # The access link is presented in the terminal upon startup like follows:
 ==================================================================================================
-                                  MATLAB can be accessed at:                              
+                                  Access MATLAB at:                              
                         https://127.0.0.1:37109?mwi_auth_token=asdf   
 ==================================================================================================
 
@@ -145,16 +149,16 @@ $ env MWI_SSL_CERT_FILE="/path/to/certificate.pem" MWI_SSL_KEY_FILE="/path/to/ke
 
 ### **Token Recovery**
 
-To recover tokens for a previously launched server, you will need access to either:
+To recover tokens for a previously started server, you will need access to either:
 
-1. The machine on which the server was launched, while being logged in as the user that launched the server.
-2. An authenticated browser session launched for the same user.
+1. The machine on which the server was started, while being logged in as the user that started the server.
+2. An authenticated browser session started for the same user.
 
 #### **Recover tokens from the machine**
 
-1. Login to the machine on which the servers are running, as the user that launched matlab-proxy.
-1. Activate the python environment from which the server was launched.
-    * This should be the same environment from which the server was launched.
+1. Login to the machine on which the servers are running, as the user that started matlab-proxy.
+1. Activate the python environment from which the server was started.
+    * This should be the same environment from which the server was started.
     * Run the executable `matlab-proxy-app-list-servers`
 
 Example:
@@ -202,12 +206,12 @@ Example:
 
 ```bash
 
-# Launch matlab-proxy with Token-Based Authentication disabled
+# Start matlab-proxy with Token-Based Authentication disabled
 $ env MWI_ENABLE_TOKEN_AUTH="False" matlab-proxy-app
 
 # The access link is presented in the terminal upon startup like follows:
 ==================================================================================================
-                                  MATLAB can be accessed at:                              
+                                       Access MATLAB at:                              
                                     http://127.0.0.1:37110  
 ==================================================================================================
 ```
@@ -217,7 +221,7 @@ $ env MWI_ENABLE_TOKEN_AUTH="False" matlab-proxy-app
 * Never share access to your server
   Never share URLs from `matlab-proxy` with others. Doing so is equivalent to sharing your user account.
   
-* System administrators who launch `matlab-proxy` for other users, must launch the proxy as the user for whom the server is intended.
+* System administrators who start `matlab-proxy` for other users, must start the proxy as the user for whom the server is intended.
 
 ----
 

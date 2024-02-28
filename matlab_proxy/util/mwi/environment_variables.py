@@ -16,6 +16,18 @@ def _is_env_set_to_true(env_name: str) -> bool:
     return os.environ.get(env_name, "false").lower() == "true"
 
 
+def _is_env_set_to_false(env_name: str) -> bool:
+    """Helper function that returns True if the environment variable specified is set to False.
+
+    Args:
+        env_name (str): Name of the environment variable to check the state for.
+
+    Returns:
+        bool: True if the value of the environment variable is a case insensitive match to the string "False"
+    """
+    return os.environ.get(env_name, "").lower() == "false"
+
+
 def get_env_name_network_license_manager():
     """Specifies the path to valid license file or address of a network license server"""
     return "MLM_LICENSE_FILE"
@@ -103,6 +115,11 @@ def is_testing_mode_enabled():
 def is_web_logging_enabled():
     """Returns true if the web logging is required to be enabled"""
     return _is_env_set_to_true(get_env_name_enable_web_logging())
+
+
+def get_env_name_enable_ssl():
+    """Returns the environment variable used for enabling/disabling SSL/TLS communication."""
+    return "MWI_ENABLE_SSL"
 
 
 def get_env_name_ssl_cert_file():

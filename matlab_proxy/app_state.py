@@ -606,7 +606,7 @@ class AppState:
             util.prettify(
                 boundary_filler="=",
                 text_arr=[
-                    f"MATLAB can be accessed at:",
+                    f"Access MATLAB at:",
                     self.settings["mwi_server_url"].replace("0.0.0.0", "localhost")
                     + mwi_auth_token_str,
                 ],
