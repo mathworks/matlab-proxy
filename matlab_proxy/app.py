@@ -884,7 +884,7 @@ def print_version_and_exit():
     """prints the version of the package and exits"""
     from importlib.metadata import version
 
-    matlab_proxy_version = version("matlab-proxy")
+    matlab_proxy_version = version(__name__.split(".")[0])
     print(f"{matlab_proxy_version}")
     sys.exit(0)
 

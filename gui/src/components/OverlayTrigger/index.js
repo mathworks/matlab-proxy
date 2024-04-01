@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
@@ -11,7 +11,7 @@ import {
     selectTriggerPosition,
     selectTutorialHidden,
     selectOverlayVisible,
-    selectHasFetchedEnvConfig
+    selectEnvConfig
 } from '../../selectors';
 import {
     setTriggerPosition,
@@ -23,7 +23,7 @@ import './OverlayTrigger.css';
 function OverlayTrigger() {
     const dispatch = useDispatch();
     const triggerPosition = useSelector(selectTriggerPosition);
-    const config = useSelector(selectHasFetchedEnvConfig);
+    const config = useSelector(selectEnvConfig);
     const [dragging, setDragging] = useState(false);
     const triggerRef = useRef();
 

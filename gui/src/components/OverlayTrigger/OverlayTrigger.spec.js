@@ -1,4 +1,4 @@
-// Copyright 2020-2023 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import { fireEvent, render } from "../../test/utils/react-test";
 import React from "react";
@@ -7,12 +7,15 @@ import configureMockStore from "redux-mock-store";
 
 import * as actions from "../../actions";
 import * as actionCreators from "../../actionCreators";
-import state from '../../test/utils/state' 
+import state from '../../test/utils/state'
+const _ = require("lodash")
 
 describe("OverlayTrigger Component", () => {
-  let  mockStore;
+  let mockStore, initialState;
   beforeEach(() => {
-
+    initialState = _.cloneDeep(state)
+    initialState.tutorialHidden = false;
+    initialState.overlayVisibility = true;
     mockStore = configureMockStore();
 
     const mockIntersectionObserver = jest.fn();
@@ -29,13 +32,17 @@ describe("OverlayTrigger Component", () => {
   });
 
   it("should render without crashing", () => {
-    const { getByTitle } = render(<OverlayTrigger />);
+    const { getByTitle } = render(<OverlayTrigger />, {
+      initialState: initialState
+    });
 
     expect(getByTitle("tools icon")).toBeInTheDocument();
   });
 
   it("should close tutorial on click", () => {
-    const { getByTestId, container } = render(<OverlayTrigger />);
+    const { getByTestId, container } = render(<OverlayTrigger />, {
+      initialState: initialState
+    });
 
     // grab the tutorial close button and click on it.
     const tutorialCloseBtn = getByTestId("tutorialCloseBtn");
@@ -61,4 +68,13 @@ describe("OverlayTrigger Component", () => {
     // Check if the action dispatched from mockstore is same as expected action
     expect(actionsFromStore).toEqual([expectedPayload]);
   });
+
+  it("should display correct text on the overlay trigger", async () => {
+    const { getByRole } = render(<OverlayTrigger />, {
+      initialState: initialState
+    });
+    const buttonElement = getByRole('button', { name: 'Menu' })
+    expect(buttonElement).toHaveAttribute('data-tip', 'Open the MATLAB Desktop - MATLAB Integration settings');
+  });
+
 });

@@ -1,20 +1,26 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import { fireEvent, render } from "../../test/utils/react-test";
 import { waitFor } from "@testing-library/react";
 import { renderHook, act } from "@testing-library/react-hooks";
 import React from "react";
 import OverlayTrigger from "./index";
+import state from "../../test/utils/state";
+
+const _ = require("lodash")
 
 describe("OverlayTrigger Component", () => {
-  let mockIntersectionObserver, observe, unobserve, disconnect;
+  let mockIntersectionObserver, observe, unobserve, disconnect, initialState;
 
   beforeEach(() => {
-    // creating a mock instersection observer to check whether the observe function will be called when resizing viewport
+    // creating a mock intersection observer to check whether the observe function will be called when resizing viewport
     mockIntersectionObserver = jest.fn();
     observe = jest.fn();
     unobserve = jest.fn();
     disconnect = jest.fn();
+    initialState = _.cloneDeep(state)
+    initialState.tutorialHidden = false;
+    initialState.overlayVisibility = true;
 
     mockIntersectionObserver.mockReturnValue({
       observe: observe,
@@ -53,7 +59,9 @@ describe("OverlayTrigger Component", () => {
   }
 
   it("should resize the viewport and call observe function", async () => {
-    render(<OverlayTrigger />);
+    render(<OverlayTrigger />, {
+      initialState: initialState
+    });
 
     const { result } = renderHook(() => useWindowDimensions());
 
@@ -68,9 +76,9 @@ describe("OverlayTrigger Component", () => {
       expect(result.current.width).toBe(200);
       expect(result.current.height).toBe(200);
 
-      // check that the observe instersection observer jest function has been called
-      // We conclude the working of interesction observer after resizing viewport because
-      // the observe jest function of our mock interesction observer has beed called
+      // check that the observe intersection observer jest function has been called
+      // We conclude the working of intersection observer after resizing viewport because
+      // the observe jest function of our mock intersection observer has been called
       expect(observe).toHaveBeenCalledTimes(1);
     });
   });
