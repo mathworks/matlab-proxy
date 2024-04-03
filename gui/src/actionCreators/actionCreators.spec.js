@@ -24,7 +24,9 @@ describe.each([
   [actionCreators.setAuthStatus, [true], { type: actions.SET_AUTH_STATUS, authentication: true }],
   [actionCreators.setAuthStatus, [false], { type: actions.SET_AUTH_STATUS, authentication: false }],
   [actionCreators.setAuthToken, ['string'], { type: actions.SET_AUTH_TOKEN, authentication: 'string' }],
-  [actionCreators.setAuthToken, [null], { type: actions.SET_AUTH_TOKEN, authentication: null }]
+  [actionCreators.setAuthToken, [null], { type: actions.SET_AUTH_TOKEN, authentication: null }],
+  [actionCreators.setClientId, ['string'], { type: actions.SET_CLIENT_ID, client_id: 'string'}],
+  [actionCreators.setClientId, [null], { type: actions.SET_CLIENT_ID, client_id: null}]
 ])('Test Set actionCreators', (method, input, expectedAction) => {
   test(`check if an action of type  ${expectedAction.type} is returned when method actionCreator.${method.name}() is called`, () => {
     expect(method(...input)).toEqual(expectedAction);
@@ -94,7 +96,7 @@ describe('Test fetchWithTimeout method', () => {
   });
 
   it('should fetch requested data without raising an exception or dispatching any action', async () => {
-    fetchMock.getOnce('/get_status?IS_DESKTOP=TRUE', {
+    fetchMock.getOnce('/get_status', {
       body: {
         matlab: {
           status: 'down',
@@ -104,7 +106,7 @@ describe('Test fetchWithTimeout method', () => {
       headers: { 'content-type': 'application/json' },
     });
 
-    const response = await actionCreators.fetchWithTimeout(store.dispatch, '/get_status?IS_DESKTOP=TRUE', {}, 10000);
+    const response = await actionCreators.fetchWithTimeout(store.dispatch, '/get_status', {}, 10000);
     const body = await response.json()
 
     expect(body).not.toBeNull();
@@ -116,7 +118,7 @@ describe('Test fetchWithTimeout method', () => {
     ];
 
     try {
-      const response = await actionCreators.fetchWithTimeout(store.dispatch, '/get_status?IS_DESKTOP=TRUE', {}, 100);
+      const response = await actionCreators.fetchWithTimeout(store.dispatch, '/get_status', {}, 100);
     } catch (error) {
       expect(error).toBeInstanceOf(TypeError)
       const received = store.getActions();
@@ -130,14 +132,14 @@ describe('Test fetchWithTimeout method', () => {
 
     // Send a delayed response, well after the timeout for the request has expired.
     // This should trigger the abort() method of the AbortController()
-    fetchMock.getOnce('/get_status?IS_DESKTOP=TRUE', new Promise(resolve => setTimeout(() => resolve({ body: 'ok' }), 1000 + timeout)));
+    fetchMock.getOnce('/get_status', new Promise(resolve => setTimeout(() => resolve({ body: 'ok' }), 1000 + timeout)));
 
     const abortSpy = jest.spyOn(global.AbortController.prototype, 'abort');
     const expectedActions = [
       actions.RECEIVE_ERROR,
     ];
 
-    await actionCreators.fetchWithTimeout(store.dispatch, '/get_status?IS_DESKTOP=TRUE', {}, timeout);
+    await actionCreators.fetchWithTimeout(store.dispatch, '/get_status', {}, timeout);
 
     expect(abortSpy).toBeCalledTimes(1);
     const received = store.getActions();
@@ -193,31 +195,175 @@ describe('Test Async actionCreators', () => {
     });
   });
 
-  it('dispatches REQUEST_SERVER_STATUS, RECEIVE_SERVER_STATUS when fetching status', () => {
-    fetchMock.getOnce('/get_status?IS_DESKTOP=TRUE', {
-      body: {
-        matlab: {
-          status: 'down',
-          version: 'R2023a'
+  it.each([
+    [
+      [
+        actions.REQUEST_SERVER_STATUS,
+        actions.RECEIVE_SERVER_STATUS
+      ],
+      "/get_status",
+      "concurrency check is disabled",
+      state
+    ],
+    [
+      [
+        actions.REQUEST_SERVER_STATUS,
+        actions.RECEIVE_SERVER_STATUS
+      ],
+      "/get_status",
+      "concurrency check and authentication are enabled but the client is not authenticated",
+      {
+        ...state,
+        authentication: {
+          ...state.authentication,
+          enabled: true,
+          status: false,
         },
-        licensing: null,
-        loadUrl: null,
-        error: null,
-        wsEnv: "",
-      },
-      headers: { 'content-type': 'application/json' },
-    });
+        sessionStatus:
+        {
+          ...state.sessionStatus,
+          isConcurrencyEnabled: true
+        }
+      }
+    ],
+    [
+      [
+        actions.REQUEST_SERVER_STATUS,
+        actions.RECEIVE_SERVER_STATUS,
+        actions.SET_CLIENT_ID,
+        actions.RECEIVE_SESSION_STATUS,
+        actions.WAS_EVER_ACTIVE
+      ],
+      "/get_status?IS_DESKTOP=TRUE",
+      "concurrency check is enabled and authentication is successfull without clientID",
+      {
+        ...state,
+        authentication: {
+          ...state.authentication,
+          enabled: true,
+          status: true
+        },
+        sessionStatus:
+        {
+          ...state.sessionStatus,
+          isConcurrencyEnabled: true
+        }
+      }
+    ],
+    [
+      [
+        actions.REQUEST_SERVER_STATUS,
+        actions.RECEIVE_SERVER_STATUS,
+        actions.RECEIVE_SESSION_STATUS,
+        actions.WAS_EVER_ACTIVE
+      ],
+      "/get_status?IS_DESKTOP=TRUE&MWI_CLIENT_ID=mockid",
+      "concurrency check and authentication are enabled with an active clientID",
+      {
+        ...state,
+        authentication: {
+          ...state.authentication,
+          enabled: true,
+          status: true
+        },
+        sessionStatus: {
+          ...state.sessionStatus,
+          isConcurrencyEnabled: true,
+          clientId: "mockid"
+        }
+      }
+    ],
+    [
+      [
+        actions.REQUEST_SERVER_STATUS,
+        actions.RECEIVE_SERVER_STATUS,
+        actions.RECEIVE_SESSION_STATUS,
+      ],
+      "/get_status?IS_DESKTOP=TRUE&MWI_CLIENT_ID=inactiveid",
+      "concurrency check and authentication are enabled with an inactive clientID",
+      {
+        ...state,
+        authentication: {
+          ...state.authentication,
+          enabled: true,
+          status: true
+        },
+        sessionStatus: {
+          ...state.sessionStatus,
+          isConcurrencyEnabled: true,
+          clientId: "inactiveid"
+        }
+      }
+    ]
+  ])
+    ('should dispatch %s and query %s if %s when fetching status', (expectedActions, url, about, modifiedState) => {
+      // Based on different conditions the request is made with different query parameters.
+      // fetchMock requests are not abstracted to mimic the behaviour of the real backend.
+      fetchMock.getOnce('/get_status', {
+        body: {
+          matlab: {
+            status: 'down',
+            version: 'R2023a'
+          },
+          licensing: null,
+          loadUrl: null,
+          error: null,
+          wsEnv: "",
+        },
+        headers: { 'content-type': 'application/json' },
+      });
+      fetchMock.getOnce('/get_status?IS_DESKTOP=TRUE', {
+        body: {
+          matlab: {
+            status: 'down',
+            version: 'R2023a'
+          },
+          licensing: null,
+          loadUrl: null,
+          error: null,
+          wsEnv: "",
+        },
+        headers: { 'content-type': 'application/json' },
+        clientId: "mockid",
+        isActiveClient: true
+      });
+      fetchMock.getOnce('/get_status?IS_DESKTOP=TRUE&MWI_CLIENT_ID=mockid', {
+        body: {
+          matlab: {
+            status: 'down',
+            version: 'R2023a'
+          },
+          licensing: null,
+          loadUrl: null,
+          error: null,
+          wsEnv: "",
+        },
+        headers: { 'content-type': 'application/json' },
+        isActiveClient: true
+      });
+      fetchMock.getOnce('/get_status?IS_DESKTOP=TRUE&MWI_CLIENT_ID=inactiveid', {
+        body: {
+          matlab: {
+            status: 'down',
+            version: 'R2023a'
+          },
+          licensing: null,
+          loadUrl: null,
+          error: null,
+          wsEnv: "",
+        },
+        headers: { 'content-type': 'application/json' },
+        isActiveClient: false
+      });
 
-    const expectedActions = [
-      actions.REQUEST_SERVER_STATUS,
-      actions.RECEIVE_SERVER_STATUS,
-    ];
+      let modifiedStore = mockStore(modifiedState)
 
-    return store.dispatch(actionCreators.fetchServerStatus()).then(() => {
-      const received = store.getActions();
-      expect(received.map((a) => a.type)).toEqual(expectedActions);
+      return modifiedStore.dispatch(actionCreators.fetchServerStatus()).then(() => {
+        const received = modifiedStore.getActions();
+        expect(fetchMock.lastUrl()).toBe(url)
+        expect(received.map((a) => a.type)).toEqual(expectedActions)
+      })
     });
-  });
 
   it('dispatches REQUEST_ENV_CONFIG, RECEIVE_ENV_CONFIG when fetching environment configuration', () => {
     fetchMock.getOnce('/get_env_config', {

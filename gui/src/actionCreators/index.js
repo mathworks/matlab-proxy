@@ -31,6 +31,8 @@ import {
     selectMatlabPending, 
     selectIsConcurrencyEnabled, 
     selectClientId,
+    selectAuthEnabled,
+    selectIsAuthenticated,
 } from '../selectors';
 import sha256 from 'crypto-js/sha256';
 
@@ -239,23 +241,26 @@ export async function fetchWithTimeout(dispatch, resource, options = {}, timeout
 export function fetchServerStatus(requestTransferSession = false) {
     return async function (dispatch, getState) {
         const isConcurrencyEnabled = selectIsConcurrencyEnabled(getState());
+        const isAuthEnabled = selectAuthEnabled(getState());
+        const isAuthenticated = selectIsAuthenticated(getState());
         const clientIdInState = selectClientId(getState());
         const clientId = clientIdInState ? clientIdInState : sessionStorage.getItem("MWI_CLIENT_ID");
 
         dispatch(requestServerStatus());
+        let url = './get_status';
 
-        let url = './get_status?IS_DESKTOP=TRUE'
+        if ((!isAuthEnabled || isAuthenticated) && isConcurrencyEnabled) {
+            url = `${url}?IS_DESKTOP=TRUE`;
 
-        if (isConcurrencyEnabled && clientId) {
-            let params = new URLSearchParams();     
-            params.append("MWI_CLIENT_ID",encodeURIComponent(clientId))
+            if (clientId) {
+                let params = new URLSearchParams();
+                params.append("MWI_CLIENT_ID",encodeURIComponent(clientId));
 
-            if (requestTransferSession){
-params.append("TRANSFER_SESSION",encodeURIComponent(requestTransferSession))
+                if (requestTransferSession){
+                    params.append("TRANSFER_SESSION",encodeURIComponent(requestTransferSession));
+                }
+                url = url + '&' + params.toString();
             }
-
-            url = url + '&' + params.toString();   
-
         }
 
         const response = await fetchWithTimeout(dispatch, url, {}, 10000);
@@ -270,7 +275,7 @@ params.append("TRANSFER_SESSION",encodeURIComponent(requestTransferSession))
         if ("isActiveClient" in data) { 
             dispatch(receiveSessionStatus(data))
             if (data["isActiveClient"] === true) {
-                dispatch(wasEverActive())
+                dispatch(wasEverActive());
             }
         }
     }
