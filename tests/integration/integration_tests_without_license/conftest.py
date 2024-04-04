@@ -3,13 +3,11 @@
 import pytest
 from integration import integration_tests_utils as utils
 import requests
-from logging_util import create_test_logger
+from logging_util import create_integ_test_logger
 import os
 from urllib.parse import urlparse, parse_qs
 
-_logger = create_test_logger(
-    __name__, log_file_path=os.getenv("MWI_INTEG_TESTS_LOG_FILE_PATH")
-)
+_logger = create_integ_test_logger(__name__)
 
 
 @pytest.fixture(scope="module", name="module_monkeypatch")

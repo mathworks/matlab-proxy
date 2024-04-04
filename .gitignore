@@ -13,3 +13,4 @@ htmlcov/
 coverage.xml
 .ipynb_checkpoints/
 *.ipynb
+.env

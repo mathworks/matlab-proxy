@@ -53,6 +53,7 @@ TESTS_REQUIRES = [
     "pytest",
     "pytest-env",
     "pytest-cov",
+    "pytest-timeout",
     "pytest-mock",
     "pytest-aiohttp",
     "psutil",

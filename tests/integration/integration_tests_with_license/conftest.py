@@ -7,11 +7,9 @@ import requests
 import shutil
 from matlab_proxy.util import system
 from matlab_proxy.util.mwi import environment_variables as mwi_env
-from logging_util import create_test_logger
+from logging_util import create_integ_test_logger
 
-_logger = create_test_logger(
-    __name__, log_file_path=os.getenv("MWI_INTEG_TESTS_LOG_FILE_PATH")
-)
+_logger = create_integ_test_logger(__name__)
 
 
 @pytest.fixture(scope="module", name="module_monkeypatch")
@@ -40,9 +38,11 @@ def matlab_config_cleanup_fixture(request):
     """
 
     def delete_matlab_test_dir():
+        _logger.debug("Cleaning up matlab config file")
         # Delete matlab_config_file & its owning directory
         matlab_config_file = utils.get_matlab_config_file()
         matlab_config_dir = os.path.dirname(matlab_config_file)
+        _logger.debug("Deleting matlab test dir: " + matlab_config_dir)
         try:
             shutil.rmtree(matlab_config_dir)
         except FileNotFoundError:
@@ -73,6 +73,7 @@ def matlab_proxy_fixture(module_monkeypatch, request):
     import matlab_proxy.util
     from urllib.parse import urlparse
 
+    _logger.info("Starting MATLAB Proxy fixture")
     utils.perform_basic_checks()
 
     # Select a random free port to serve matlab-proxy for testing
@@ -92,10 +93,10 @@ def matlab_proxy_fixture(module_monkeypatch, request):
 
     # Run matlab-proxy in the background in an event loop
     proc = loop.run_until_complete(utils.start_matlab_proxy_app(input_env=input_env))
-    _logger.info("Started MATLAB Proxy process")
+    _logger.debug("Started MATLAB Proxy process")
 
     utils.wait_server_info_ready(mwi_app_port)
-    _logger.info("Server file is available")
+    _logger.debug("Server file is available")
 
     matlab_proxy_url = utils.get_connection_string(mwi_app_port)
 
@@ -109,30 +110,34 @@ def matlab_proxy_fixture(module_monkeypatch, request):
             requests.exceptions.SSLError,
         ),
     )
-    _logger.info("MATLAB proxy URL responded")
+    _logger.debug("MATLAB proxy URL responded")
 
     # License matlab-proxy using playwright UI automation
     utils.license_matlab_proxy(matlab_proxy_url)
-    _logger.info("Successfully licensed MATLAB Proxy")
+    _logger.debug("Successfully licensed MATLAB via MATLAB Proxy")
 
+    # TODO: this is this block required?
     # Wait for matlab-proxy to be up and running
     utils.wait_matlab_proxy_ready(matlab_proxy_url)
-    _logger.info("MATLAB Proxy is ready")
+    _logger.debug("MATLAB Proxy is up and running")
 
+    _logger.debug("Copying matlab proxy config for reuse in tests")
     # Get the location of ".matlab"
     matlab_config_file = str(
         utils.get_matlab_config_file()
     )  # ~/.matlab/MWI/proxy_app_config.json
-
     dotmatlab_dir_path = os.path.dirname(os.path.dirname(matlab_config_file))
-
     # Create a temporary location in .matlab directory
     temp_dir_path = os.path.join(dotmatlab_dir_path, "temp_dir")
     os.mkdir(temp_dir_path)  # delete this folder after the test execution
     shutil.move(matlab_config_file, temp_dir_path)
 
+    _logger.debug("Terminating the setup+licensing matlab-proxy process")
     proc.terminate()
     loop.run_until_complete(proc.wait())
 
     # Run the matlab proxy tests
+    _logger.info("Finished licensing MATLAB for use in integration tests")
     yield
+
+    _logger.debug("Deleting matlab test directory")

@@ -11,11 +11,10 @@ import requests
 import re
 from requests.adapters import HTTPAdapter, Retry
 from urllib.parse import urlparse, parse_qs
-from logging_util import create_test_logger
+from logging_util import create_integ_test_logger
+from logging import DEBUG
 
-_logger = create_test_logger(
-    __name__, log_file_path=os.getenv("MWI_INTEG_TESTS_LOG_FILE_PATH")
-)
+_logger = create_integ_test_logger(__name__)
 
 # Timeout for polling the matlab-proxy http endpoints
 # matlab proxy in Mac machines takes more time to be 'up'
@@ -37,7 +36,9 @@ class RealMATLABServer:
     def __enter__(self):
         # Store the matlab proxy logs in os.pipe for testing
         # os.pipe2 is only supported in Linux systems
+        _logger.info("Setting up MATLAB Server for integration test")
 
+        _logger.debug("Entering RealMATLABServer enter section.")
         self.dpipe = os.pipe2(os.O_NONBLOCK) if system.is_linux() else os.pipe()
         self.mwi_app_port = utils.get_random_free_port()
         self.matlab_config_file_path = str(utils.get_matlab_config_file())
@@ -78,9 +79,27 @@ class RealMATLABServer:
         self.url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
         return self
 
+    async def _terminate_process(self, timeout):
+        """Asynchronous helper method to terminate the process with a timeout."""
+        import asyncio
+
+        process = self.proc
+        try:
+            process.terminate()
+            await asyncio.wait_for(process.wait(), timeout=timeout)
+        except asyncio.TimeoutError:
+            _logger.warning(
+                "Termination of the MATLAB Server process timed out. Attempting to kill."
+            )
+            process.kill()
+            await process.wait()
+            _logger.debug("Killed the MATLAB process after timeout.")
+
     def __exit__(self, exc_type, exc_value, exc_traceback):
+        _logger.info("Tearing down the MATLAB Server.")
         self.proc.terminate()
-        self.event_loop.run_until_complete(self.proc.wait())
+        self.event_loop.run_until_complete(self._terminate_process(10))
+        _logger.debug("Terminated the MATLAB process.")
         _move(
             self.matlab_config_file_path,
             os.path.join(self.temp_dir_path, self.temp_dir_name),
@@ -147,7 +166,9 @@ def matlab_proxy_app_fixture(
     try:
         with RealMATLABServer(loop) as matlab_proxy_app:
             yield matlab_proxy_app
-    except ProcessLookupError:
+    except ProcessLookupError as e:
+        _logger.debug("ProcessLookupError found in matlab proxy app fixture")
+        _logger.debug(e)
         pass
 
 
@@ -169,7 +190,6 @@ def test_stop_matlab(matlab_proxy_app_fixture):
     Args:
         matlab_proxy_app_fixture: A pytest fixture which yields a real matlab server to be used by tests.
     """
-
     status = _check_matlab_status(matlab_proxy_app_fixture, "up")
     assert status == "up"
 
@@ -188,6 +208,7 @@ def test_stop_matlab(matlab_proxy_app_fixture):
     assert status == "down"
 
 
+# FIXME: If output has logging or extra debug info, 600 bytes might not be enough.
 async def test_print_message(matlab_proxy_app_fixture):
     """Test if the right logs are printed
 

@@ -2,9 +2,35 @@
 
 import logging
 from pathlib import Path
+from os import getenv
 
 
-def create_test_logger(log_name, log_level=logging.INFO, log_file_path=None):
+def create_integ_test_logger(
+    log_name,
+    log_level=getenv("MWI_TEST_LOG_LEVEL", "WARNING"),
+    log_file_path=getenv("MWI_INTEG_TESTS_LOG_FILE_PATH"),
+):
+    return create_test_logger(
+        log_name, log_level, log_file_path, output_prefix="INTEG TEST"
+    )
+
+
+def create_unit_test_logger(
+    log_name,
+    log_level=getenv("MWI_TEST_LOG_LEVEL", "WARNING"),
+    log_file_path=getenv("MWI_UNIT_TESTS_LOG_FILE_PATH"),
+):
+    return create_test_logger(
+        log_name, log_level, log_file_path, output_prefix="UNIT TEST"
+    )
+
+
+def create_test_logger(
+    log_name,
+    log_level=getenv("MWI_TEST_LOG_LEVEL", "WARNING"),
+    log_file_path=None,
+    output_prefix="TEST",
+):
     """
     Returns a logger with specified name and level
 
@@ -15,7 +41,7 @@ def create_test_logger(log_name, log_level=logging.INFO, log_file_path=None):
     """
 
     # Create a logger with the name 'TEST'
-    logger = logging.getLogger("TEST - " + log_name)
+    logger = logging.getLogger(output_prefix + " - " + log_name)
 
     # Create a formatter
     formatter = logging.Formatter(

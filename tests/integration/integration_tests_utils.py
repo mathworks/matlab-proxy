@@ -8,11 +8,9 @@ import time
 import urllib3
 import requests
 import json
-from logging_util import create_test_logger
+from logging_util import create_integ_test_logger
 
-_logger = create_test_logger(
-    __name__, log_file_path=os.getenv("MWI_INTEG_TESTS_LOG_FILE_PATH")
-)
+_logger = create_integ_test_logger(__name__)
 
 
 def perform_basic_checks():
@@ -22,6 +20,7 @@ def perform_basic_checks():
     """
     import matlab_proxy.settings
 
+    _logger.info("Performing basic checks for matlab-proxy")
     # Validate MATLAB before testing
     _, matlab_path = matlab_proxy.settings.get_matlab_executable_and_root_path()
 
@@ -63,6 +62,7 @@ async def start_matlab_proxy_app(out=asyncio.subprocess.PIPE, input_env={}):
     """
     from matlab_proxy.util import system
 
+    _logger.info("Starting MATLAB Proxy app")
     cmd = matlab_proxy_cmd_for_testing()
     matlab_proxy_env = os.environ.copy()
     matlab_proxy_env.update(input_env)
@@ -73,7 +73,7 @@ async def start_matlab_proxy_app(out=asyncio.subprocess.PIPE, input_env={}):
         stdout=out,
         stderr=out,
     )
-
+    _logger.debug("MATLAB Proxy App started")
     return proc
 
 
@@ -110,6 +110,7 @@ def wait_matlab_proxy_ready(matlab_proxy_url):
     from matlab_proxy.util import system
     import matlab_proxy.settings as settings
 
+    _logger.info("Wait for MATLAB Proxy to start")
     # Wait until the matlab config file is created
     MAX_TIMEOUT = settings.get_process_startup_timeout()
     start_time = time.time()
@@ -175,6 +176,7 @@ def license_matlab_proxy(matlab_proxy_url):
     """
     from playwright.sync_api import sync_playwright, expect
 
+    _logger.info("Licensing MATLAB using matlab-proxy")
     # These are MathWorks Account credentials to license MATLAB
     # Throws 'KeyError' if the following environment variables are not set
     TEST_USERNAME = os.environ["TEST_USERNAME"]
@@ -221,7 +223,7 @@ def license_matlab_proxy(matlab_proxy_url):
             status_info,
             "Verify if Licensing is successful. This might fail if incorrect credentials are provided",
         ).to_be_visible(timeout=60000)
-
+        _logger.debug("Succeeded in licensing MATLAB using matlab-proxy")
         browser.close()
 
 
@@ -234,6 +236,7 @@ def unlicense_matlab_proxy(matlab_proxy_url):
     """
     import warnings
 
+    _logger.info("Unlicensing matlab-proxy")
     max_retries = 3  # Max retries for unlicensing matlab-proxy
     retries = 0
 
@@ -257,6 +260,7 @@ def unlicense_matlab_proxy(matlab_proxy_url):
                         f"matlab-proxy is unlicensed but with error: {data['error']}",
                         UserWarning,
                     )
+                _logger.debug("Succeeded in unlicensing matlab-proxy")
                 break
             else:
                 resp.raise_for_status()
