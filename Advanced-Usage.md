@@ -98,6 +98,43 @@ For more information about `Content-Security-Policy` header,  check the [Mozilla
 
 **NOTE**: Setting custom HTTP headers is an advanced operation, only use this functionality if you are familiar with HTTP headers.
 
+
+### Proxy Support
+
+`matlab-proxy` support for proxies is based on the support available for them in the `aiohttp` package. [AIOHTTP Proxy Support](https://docs.aiohttp.org/en/stable/client_advanced.html#proxy-support).
+
+`matlab-proxy` has configured its usage of `aiohttp` to honor the environment variables that are used to configure proxy environments. viz: `http_proxy, https_proxy, no_proxy` 
+
+`matlab-proxy` however needs to communicate via HTTP(S) with several processes including MATLAB on the machine on which it is running, and will automatically add the following values into the `no_proxy` environment variable:
+1. localhost
+1. 0.0.0.0
+1. 127.0.0.1
+
+#### Example Usage
+
+Start a web proxy on your machine using the `ubuntu/squid` container:
+```bash
+docker run --rm --name squid-container -e TZ=UTC -p 3128:3128 ubuntu/squid:5.2-22.04_beta
+```
+
+From another system terminal, configure the environment variables to use this server:
+```bash
+# Configure your environment to use the SQUID Container as its web proxy
+export http_proxy=http://your.machine.fqdn.com:3128 && \
+export HTTP_PROXY=${http_proxy} \
+       HTTPS_PROXY=${http_proxy} \
+       https_proxy=${http_proxy} \
+       MW_PROXY_HOST=your.machine.fqdn.com MW_PROXY_PORT=3128 \
+       PROXY_SETTINGS=${http_proxy}
+
+# Start matlab-proxy-app from this terminal
+matlab-proxy-app
+```
+Replace `your.machine.fqdn.com` with the FQDN for the machine on which the `ubuntu/squid` container is running.
+
+The logs from the SQUID container terminal should show activity when attempting to login to MATLAB through matlab-proxy.
+
+
 ----
 
 Copyright 2020-2024 The MathWorks, Inc.

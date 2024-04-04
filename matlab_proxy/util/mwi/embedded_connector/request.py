@@ -1,4 +1,4 @@
-# Copyright 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2024 The MathWorks, Inc.
 
 """ 
 This file contains the methods to communicate with the embedded connector.
@@ -42,7 +42,7 @@ async def send_request(url: str, data: dict, method: str, headers: dict = None) 
         data = json.dumps(data)
 
     try:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(trust_env=True) as session:
             logger.debug(
                 f"sending request: method={method}, url={url}, data={data}, headers={headers}, "
             )

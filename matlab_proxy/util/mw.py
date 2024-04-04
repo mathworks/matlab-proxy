@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2024 The MathWorks, Inc.
 
 import asyncio
 import os
@@ -46,7 +46,7 @@ async def fetch_entitlements(mhlm_api_endpoint, access_token, matlab_release):
         list: Representing a list of Dicts containing the id, label and license_number.
     """
     # Get entitlements for token
-    async with aiohttp.ClientSession() as client_session:
+    async with aiohttp.ClientSession(trust_env=True) as client_session:
         async with client_session.post(
             mhlm_api_endpoint,
             headers={"content-type": "application/x-www-form-urlencoded"},
@@ -99,7 +99,7 @@ async def fetch_expand_token(mwa_api_endpoint, identity_token, source_id):
     Returns:
         Dict: Containing User and License expiration details.
     """
-    async with aiohttp.ClientSession() as client_session:
+    async with aiohttp.ClientSession(trust_env=True) as client_session:
         async with client_session.post(
             f"{mwa_api_endpoint}/tokens",
             headers={
@@ -146,7 +146,7 @@ async def fetch_access_token(mwa_api_endpoint, identity_token, source_id):
     Returns:
         Dict : Containing the Access token.
     """
-    async with aiohttp.ClientSession() as client_session:
+    async with aiohttp.ClientSession(trust_env=True) as client_session:
         async with client_session.post(
             f"{mwa_api_endpoint}/tokens/access",
             headers={

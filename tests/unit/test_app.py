@@ -18,6 +18,49 @@ from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi.exceptions import EntitlementError, MatlabInstallError
 
 
+@pytest.mark.parametrize(
+    "no_proxy_user_configuration",
+    [
+        "",
+        "1234.1234.1234, localhost , 0.0.0.0,1.2.3.4",
+        "0.0.0.0",
+        "1234.1234.1234",
+        " 1234.1234.1234 ",
+    ],
+)
+def test_configure_no_proxy_in_env(monkeypatch, no_proxy_user_configuration):
+    """Tests the behavior of the configure_no_proxy_in_env function
+
+    Args:
+        monkeypatch (environment): MonkeyPatches the environment to mimic possible user environment settings
+    """
+    no_proxy_user_configuration_set = set(
+        [val.lstrip().rstrip() for val in no_proxy_user_configuration.split(",")]
+    )
+    # Update the environment to simulate user environment
+    monkeypatch.setenv("no_proxy", no_proxy_user_configuration)
+
+    # This function will modify the environment variables to include 0.0.0.0, localhost & 127.0.0.1
+    app.configure_no_proxy_in_env()
+
+    import os
+
+    modified_no_proxy_env = os.environ.get("no_proxy")
+
+    # Convert to set to compare, as list generated need not be ordered
+    modified_no_proxy_env_set = set(
+        [val.lstrip().rstrip() for val in modified_no_proxy_env.split(",")]
+    )
+
+    expected_no_proxy_configuration_set = {"0.0.0.0", "localhost", "127.0.0.1"}
+
+    # We expect the modified set of values to include the localhost configurations
+    # along with whatever else the user had set with no duplicates.
+    assert modified_no_proxy_env_set == no_proxy_user_configuration_set.union(
+        expected_no_proxy_configuration_set
+    )
+
+
 def test_create_app():
     """Test if aiohttp server is being created successfully.
 
