@@ -55,11 +55,15 @@ jobs:
       - name: Ensure browsers are installed for playwright
         run: python3 -m playwright install --with-deps
 
+      - name: License MATLAB Proxy
+        env:
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+        run: |
+          python3 -c "from tests.integration.utils import licensing; licensing.license_matlab_proxy()"
+
       - name: Test with pytest
         run: python3 -m pytest tests/integration -vs
-        env:
-          TEST_USERNAME: ${{secrets.TEST_USERNAME}}
-          TEST_PASSWORD: ${{secrets.TEST_PASSWORD}}
 
       - name: Copy Log File
         if: ${{ always() }}

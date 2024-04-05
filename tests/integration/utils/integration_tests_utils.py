@@ -8,7 +8,7 @@ import time
 import urllib3
 import requests
 import json
-from logging_util import create_integ_test_logger
+from tests.utils.logging_util import create_integ_test_logger
 
 _logger = create_integ_test_logger(__name__)
 
@@ -21,6 +21,7 @@ def perform_basic_checks():
     import matlab_proxy.settings
 
     _logger.info("Performing basic checks for matlab-proxy")
+
     # Validate MATLAB before testing
     _, matlab_path = matlab_proxy.settings.get_matlab_executable_and_root_path()
 
@@ -31,6 +32,7 @@ def perform_basic_checks():
     assert (
         matlab_proxy.settings.get_matlab_version(matlab_path) >= "R2020b"
     ), "MATLAB version should be R2020b or later"
+    _logger.debug("Exiting perform_basic_checks")
 
 
 def matlab_proxy_cmd_for_testing():

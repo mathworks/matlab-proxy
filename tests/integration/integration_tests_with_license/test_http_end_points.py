@@ -4,14 +4,14 @@ import json
 import os
 import time
 import matlab_proxy.settings as settings
-from integration import integration_tests_utils as utils
+from tests.integration.utils import integration_tests_utils as utils
 import pytest
 from matlab_proxy.util import system
 import requests
 import re
 from requests.adapters import HTTPAdapter, Retry
 from urllib.parse import urlparse, parse_qs
-from logging_util import create_integ_test_logger
+from tests.utils.logging_util import create_integ_test_logger
 from logging import DEBUG
 
 _logger = create_integ_test_logger(__name__)
@@ -42,9 +42,11 @@ class RealMATLABServer:
         self.dpipe = os.pipe2(os.O_NONBLOCK) if system.is_linux() else os.pipe()
         self.mwi_app_port = utils.get_random_free_port()
         self.matlab_config_file_path = str(utils.get_matlab_config_file())
+
         self.temp_dir_path = os.path.dirname(
             os.path.dirname(self.matlab_config_file_path)
         )
+
         self.temp_dir_name = "temp_dir"
         self.mwi_base_url = "/matlab-test"
 
@@ -56,13 +58,6 @@ class RealMATLABServer:
 
         self.proc = self.event_loop.run_until_complete(
             utils.start_matlab_proxy_app(out=self.dpipe[1], input_env=input_env)
-        )
-
-        _move(
-            os.path.join(
-                self.temp_dir_path, self.temp_dir_name, "proxy_app_config.json"
-            ),
-            os.path.dirname(self.matlab_config_file_path),
         )
 
         utils.wait_server_info_ready(self.mwi_app_port)
@@ -98,22 +93,7 @@ class RealMATLABServer:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         _logger.info("Tearing down the MATLAB Server.")
         self.proc.terminate()
-        self.event_loop.run_until_complete(self._terminate_process(10))
-        _logger.debug("Terminated the MATLAB process.")
-        _move(
-            self.matlab_config_file_path,
-            os.path.join(self.temp_dir_path, self.temp_dir_name),
-        )
-
-
-def _move(source, destination):
-    import shutil
-
-    try:
-        shutil.move(source, destination)
-    except shutil.Error as err:
-        _logger.error(f"Error in moving {source}")
-        _logger.exception(err)
+        self.event_loop.run_until_complete(self.proc.wait())
 
 
 def _send_http_get_request(uri, connection_scheme, headers, http_endpoint=""):

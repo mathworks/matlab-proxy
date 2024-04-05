@@ -4,11 +4,8 @@ import os
 import json
 import requests
 from requests.adapters import HTTPAdapter, Retry
-from integration import integration_tests_utils as utils
+from tests.integration.utils import integration_tests_utils as utils
 from urllib.parse import urlparse
-from logging_util import create_integ_test_logger
-
-_logger = create_integ_test_logger(log_name=__name__)
 
 
 def test_matlab_down(parse_matlab_proxy_url):

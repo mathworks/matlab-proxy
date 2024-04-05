@@ -1,9 +1,9 @@
 # Copyright 2023-2024 The MathWorks, Inc.
 
 import pytest
-from integration import integration_tests_utils as utils
+from tests.integration.utils import integration_tests_utils as utils
 import requests
-from logging_util import create_integ_test_logger
+from tests.utils.logging_util import create_integ_test_logger
 import os
 from urllib.parse import urlparse, parse_qs
 
@@ -35,12 +35,11 @@ def parse_matlab_proxy_url():
 
     headers = {
         "mwi_auth_token": (
-            ["mwi_auth_token"][0]
+            parse_qs(parsed_url.query)["mwi_auth_token"][0]
             if "mwi_auth_token" in parse_qs(parsed_url.query)
             else ""
         )
     }
-
     connection_scheme = parsed_url.scheme
 
     # Return the base URL and parameters as a tuple
@@ -62,7 +61,21 @@ def start_matlab_proxy_fixture(module_monkeypatch):
         "MWI_BASE_URL": mwi_base_url,
     }
 
+    import shutil
     import matlab_proxy
+
+    matlab_config_file = str(
+        utils.get_matlab_config_file()
+    )  # ~/.matlab/MWI/hosts/hostname/proxy_app_config.json
+
+    _logger.info(f"matlab_config_file {matlab_config_file}")
+
+    dotmatlab_dir_path = os.path.dirname(os.path.dirname(matlab_config_file))
+
+    # Create a temporary location in .matlab directory
+    temp_dir_path = os.path.join(dotmatlab_dir_path, "temp_dir")
+    os.mkdir(temp_dir_path)  # delete this folder after the test execution
+    shutil.move(matlab_config_file, temp_dir_path)
 
     loop = matlab_proxy.util.get_event_loop()
 
@@ -90,6 +103,13 @@ def start_matlab_proxy_fixture(module_monkeypatch):
         module_monkeypatch.setenv(key, value)
 
     yield
+    from pathlib import Path
+
+    shutil.move(
+        str(temp_dir_path / Path("proxy_app_config.json")),
+        str(os.path.dirname(matlab_config_file)),
+    )
+    shutil.rmtree(temp_dir_path)
 
     proc.terminate()
     loop.run_until_complete(proc.wait())
