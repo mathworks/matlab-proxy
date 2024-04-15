@@ -21,6 +21,7 @@ SUPPORTED_MATLAB_VERSIONS: Final[List[str]] = [
     "R2022b",
     "R2023a",
     "R2023b",
+    "R2024a",
 ]
 
 # This constant when set to True restricts the number of active sessions to one
