@@ -74,8 +74,15 @@ class RealMATLABServer:
         self.url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
         return self
 
-    async def _terminate_process(self, timeout):
-        """Asynchronous helper method to terminate the process with a timeout."""
+    async def _terminate_process(self, timeout=0):
+        """
+        Asynchronous helper method to terminate the process with a timeout.
+
+        Args:
+            timeout: Maximum number of seconds to wait
+                    for the process to terminate
+
+        """
         import asyncio
 
         process = self.proc
@@ -92,8 +99,8 @@ class RealMATLABServer:
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         _logger.info("Tearing down the MATLAB Server.")
-        self.proc.terminate()
-        self.event_loop.run_until_complete(self.proc.wait())
+        self.event_loop.run_until_complete(self._terminate_process(timeout=10))
+        _logger.debug("Terminated the MATLAB process.")
 
 
 def _send_http_get_request(uri, connection_scheme, headers, http_endpoint=""):
