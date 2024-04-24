@@ -18,7 +18,7 @@ from matlab_proxy import constants, settings, util
 from matlab_proxy.app_state import AppState
 from matlab_proxy.util import mwi
 from matlab_proxy.util.mwi import environment_variables as mwi_env
-from matlab_proxy.util.mwi import token_auth
+from matlab_proxy.util.mwi import token_auth, download
 from matlab_proxy.util.mwi.exceptions import AppError, InvalidTokenError, LicensingError
 from matlab_proxy.constants import IS_CONCURRENCY_CHECK_ENABLED
 
@@ -617,21 +617,24 @@ async def matlab_view(req):
         ) as client_session:
             try:
                 req_body = await transform_body(req)
+                req_url = await transform_request_url(
+                    req, matlab_base_url=matlab_base_url
+                )
                 # Set content length in case of modification
                 reqH["Content-Length"] = str(len(req_body))
                 reqH["x-forwarded-proto"] = "http"
 
                 async with client_session.request(
                     req.method,
-                    f"{matlab_base_url}{req.rel_url}",
+                    req_url,
                     headers={**reqH, **{"mwapikey": mwapikey}},
                     allow_redirects=False,
                     data=req_body,
+                    params=None,
                 ) as res:
                     headers = res.headers.copy()
                     body = await res.read()
                     headers.update(req.app["settings"]["mwi_custom_http_headers"])
-
                     return web.Response(headers=headers, status=res.status, body=body)
 
             # Handles any pending HTTP requests from the browser when the MATLAB process is terminated before responding to them.
@@ -650,6 +653,34 @@ async def matlab_view(req):
                     f"Failed to forward HTTP request to MATLAB with error: {err}"
                 )
                 raise web.HTTPNotFound()
+
+
+async def transform_request_url(req, matlab_base_url):
+    """
+    Performs any transformations that may be required on the URL.
+
+    If the request is identified as a download request it transforms the request URL to
+    support downloading the file.
+
+    The original constructed URL is returned, when there are no transformations to be applied.
+
+    Args:
+        req: The request object that contains the relative URL and other request information.
+        matlab_base_url: The base URL of the MATLAB service to which the relative URL should be appended.
+
+    Returns:
+        A string representing the transformed URL, or the original URL.
+    """
+    original_request_url = f"{matlab_base_url}{req.rel_url}"
+
+    if download.is_download_request(req):
+        download_url = await download.get_download_url(req)
+        if download_url:
+            transformed_request_url = f"{matlab_base_url}{download_url}"
+            logger.debug(f"Transformed Request url: {transformed_request_url}")
+            return transformed_request_url
+
+    return original_request_url
 
 
 async def transform_body(req):
@@ -925,3 +956,8 @@ def main():
     desired_configuration_name = util.parse_cli_args()["config"]
 
     create_and_start_app(config_name=desired_configuration_name)
+
+
+# In support of enabling debugging in a Python Debugger (VSCode)
+if __name__ == "__main__":
+    main()

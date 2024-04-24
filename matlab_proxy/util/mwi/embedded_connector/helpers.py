@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022 The MathWorks, Inc.
+# Copyright 2020-2024 The MathWorks, Inc.
 
 """ This file contains helper methods which return the details required for sending
 a HTTP request to the Embedded Connector. """
