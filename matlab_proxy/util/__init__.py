@@ -3,6 +3,7 @@
 import argparse
 import os
 import socket
+import time
 
 from pathlib import Path
 
@@ -198,7 +199,9 @@ def get_child_processes(parent_process):
     # to get hold child processes
     parent_process_psutil = psutil.Process(parent_process.pid)
 
-    while True:
+    max_attempts = 10
+    child_processes = None
+    for _ in range(max_attempts):
         try:
             # Before checking for any child processes, ensure that the parent process is running
             assert (
@@ -216,6 +219,10 @@ def get_child_processes(parent_process):
 
         if child_processes:
             break
+        time.sleep(0.1)
+
+    if not child_processes:
+        raise RuntimeError("No child processes found after multiple attempts.")
 
     return child_processes
 

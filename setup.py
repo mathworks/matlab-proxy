@@ -56,6 +56,7 @@ TESTS_REQUIRES = [
     "pytest-timeout",
     "pytest-mock",
     "pytest-aiohttp",
+    "pytest-timeout",
     "psutil",
     "urllib3",
     "requests",

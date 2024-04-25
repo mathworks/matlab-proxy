@@ -1,29 +1,29 @@
-# Copyright 2020-2022 The MathWorks, Inc.
+# Copyright 2020-2024 The MathWorks, Inc.
 
 import asyncio
-import os
-
+import pytest
 import psutil
-from matlab_proxy import util
+
+from matlab_proxy.util import get_child_processes, system, add_signal_handlers, prettify
 from matlab_proxy.util import system
 
 
 def test_get_supported_termination_signals():
     """Test to check for supported OS signals."""
-    assert len(util.system.get_supported_termination_signals()) >= 1
+    assert len(system.get_supported_termination_signals()) >= 1
 
 
-def test_add_signal_handlers(loop):
+def test_add_signal_handlers(loop: asyncio.AbstractEventLoop):
     """Test to check if signal handlers are being added to asyncio loop
 
     Args:
         loop (asyncio loop): In built-in pytest fixture.
     """
 
-    loop = util.add_signal_handlers(loop)
+    loop = add_signal_handlers(loop)
 
     # In posix systems, event loop is modified with new signal handlers
-    if util.system.is_posix():
+    if system.is_posix():
         assert loop._signal_handlers is not None
         assert loop._signal_handlers.items() is not None
 
@@ -31,7 +31,7 @@ def test_add_signal_handlers(loop):
         import signal
 
         # In a windows system, the signal handlers are added to the 'signal' package.
-        for interrupt_signal in util.system.get_supported_termination_signals():
+        for interrupt_signal in system.get_supported_termination_signals():
             assert signal.getsignal(interrupt_signal) is not None
 
 
@@ -39,38 +39,97 @@ def test_prettify():
     """Tests if text is prettified"""
     txt_arr = ["Hello world"]
 
-    prettified_txt = util.prettify(boundary_filler="=", text_arr=txt_arr)
+    prettified_txt = prettify(boundary_filler="=", text_arr=txt_arr)
 
     assert txt_arr[0] in prettified_txt
     assert "=" in prettified_txt
 
 
-async def test_get_child_processes(loop):
-    """Tests if child processes are returned"""
+def test_get_child_processes_no_children_initially(mocker):
+    import time
 
-    # Python process exits before validating get_child_processes
-    # in Mac machine, so an asynchronous infinite loop is launched as a
-    # to keep it always running
-    process_no = 1
-    inf_path = os.path.join(os.path.dirname(__file__), "inf_loop.py")
-    cmd = [f"python {inf_path} {process_no}"]
-    proc = await asyncio.create_subprocess_shell(*cmd)
+    # Create mock processes
+    mock_parent_process_psutil = mocker.MagicMock(spec=psutil.Process)
+    mock_child_processes = [mocker.MagicMock(spec=psutil.Process) for _ in range(2)]
 
-    children = util.get_child_processes(proc)
+    # Mock the Process class from psutil
+    mocker.patch("psutil.Process", return_value=mock_parent_process_psutil)
+    mock_parent_process_psutil.is_running.return_value = True
 
-    assert len(children) > 0
+    # Function that changes the behavior of .children() after a delay
+    def children_side_effect(*args, **kwargs):
+        # Wait for a specific time to simulate delay in the child process being present
+        time.sleep(0.4)
+        return mock_child_processes
 
-    # Terminate the parent process (of type asyncio.subprocess.Process)
-    proc.terminate()
-    await proc.wait()
+    mock_parent_process_psutil.children.side_effect = children_side_effect
 
-    try:
-        # Terminate the child process (of type psutil.Process)
-        children[0].terminate()
-        children[0].wait()
+    # Create a mock for asyncio.subprocess.Process with a dummy pid
+    parent_process = mocker.MagicMock(spec=asyncio.subprocess.Process)
+    parent_process.pid = 12345
 
-    except psutil.NoSuchProcess:
-        # occasionally psutil.NoSuchProcess is raised while terminating the child process
-        # when the parent process is already terminated. Since all the processes launched
-        # by the test are already terminated, so we may pass the test even with this error
-        pass
+    # Call the function with the mocked parent process
+    child_processes = get_child_processes(parent_process)
+
+    # Assert that the return value is our list of mock child processes
+    assert child_processes == mock_child_processes
+
+    # Assert that is_running and children methods were called on the mock
+    mock_parent_process_psutil.children.assert_called_with(recursive=False)
+
+
+def test_get_child_processes_no_children(mocker):
+    # Create a mock for asyncio.subprocess.Process with a dummy pid
+    parent_process = mocker.MagicMock(spec=asyncio.subprocess.Process)
+    parent_process.pid = 12345
+
+    # Mock the Process class from psutil
+    mock_parent_process_psutil = mocker.MagicMock(spec=psutil.Process)
+    mocker.patch("psutil.Process", return_value=mock_parent_process_psutil)
+    mock_parent_process_psutil.is_running.return_value = True
+    mock_parent_process_psutil.children.return_value = []
+
+    # Call the function with the mocked parent process
+    with pytest.raises(RuntimeError):
+        get_child_processes(parent_process)
+
+
+def test_get_child_processes_with_children(mocker):
+    # Create mock processes
+    mock_parent_process_psutil = mocker.MagicMock(spec=psutil.Process)
+    mock_child_process = mocker.MagicMock(spec=psutil.Process)
+
+    # Mock the Process class from psutil
+    mocker.patch("psutil.Process", return_value=mock_parent_process_psutil)
+    mock_parent_process_psutil.is_running.return_value = True
+
+    # Mock a list of child processes that psutil would return
+    mock_parent_process_psutil.children.return_value = [mock_child_process]
+
+    # Create a mock for asyncio.subprocess.Process with a dummy pid
+    parent_process = mocker.MagicMock(spec=asyncio.subprocess.Process)
+    parent_process.pid = 12345
+
+    # Call the function with the mocked parent process
+    child_processes = get_child_processes(parent_process)
+
+    # Assert that the returned value is a list containing the mock child process
+    assert child_processes == [mock_child_process]
+
+
+def test_get_child_processes_parent_not_running(mocker):
+    # Mock the Process class from psutil
+    mock_parent_process_psutil = mocker.MagicMock(spec=psutil.Process)
+    mocker.patch("psutil.Process", return_value=mock_parent_process_psutil)
+    mock_parent_process_psutil.is_running.return_value = False
+
+    # Create a mock for asyncio.subprocess.Process with a dummy pid
+    parent_process = mocker.MagicMock(spec=asyncio.subprocess.Process)
+    parent_process.pid = 12345
+
+    # Calling the function with a non-running parent process should raise an AssertionError
+    with pytest.raises(
+        AssertionError,
+        match="Can't check for child processes as the parent process is no longer running.",
+    ):
+        get_child_processes(parent_process)

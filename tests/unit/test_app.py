@@ -11,7 +11,7 @@ from http import HTTPStatus
 
 import aiohttp
 import pytest
-import test_constants
+import tests.unit.test_constants as test_constants
 
 from matlab_proxy import app, util
 from matlab_proxy.util.mwi import environment_variables as mwi_env
