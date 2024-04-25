@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import React from 'react';
 import ReactDOM from 'react-dom';
@@ -11,8 +11,8 @@ import rootReducer from './reducers';
 import thunkMiddleware from 'redux-thunk';
 
 const composeEnhancers = (
-    typeof window !== 'undefined'
-    && window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__
+    typeof window !== 'undefined' &&
+    window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__
 ) || compose;
 
 const store = createStore(rootReducer, composeEnhancers(

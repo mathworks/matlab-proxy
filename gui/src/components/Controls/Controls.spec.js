@@ -1,108 +1,107 @@
-// Copyright 2020-2023 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import React from 'react';
 import Controls from './index';
-import App from '../App'
-import { render, fireEvent } from '../../test/utils/react-test';
-
+import App from '../App';
+import { render } from '../../test/utils/react-test';
+import { fireEvent } from '@testing-library/react';
 import state from '../../test/utils/state';
 
-const _ = require("lodash");
+const _ = require('lodash');
 
 describe('Controls Component', () => {
-  let initialState, callbackFn;
+    let initialState, callbackFn;
 
-  beforeEach(() => {
-    initialState = _.cloneDeep(state);
-    initialState.serverStatus.licensingInfo.entitlementId = initialState.serverStatus.licensingInfo.entitlements[0].id;
-    initialState.serverStatus.isSubmitting = false;
-    callbackFn = jest.fn().mockImplementation((_) => {});
-   });
-
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('should render without crashing', () => {
-    render(<Controls callback={callbackFn} />);
-  });
-
-  it('should startMatlab on button click', () => {
-    const { getByTestId } = render(<Controls callback={callbackFn} />, {
-      initialState: initialState,
+    beforeEach(() => {
+        initialState = _.cloneDeep(state);
+        initialState.serverStatus.licensingInfo.entitlementId = initialState.serverStatus.licensingInfo.entitlements[0].id;
+        initialState.serverStatus.isSubmitting = false;
+        callbackFn = jest.fn().mockImplementation((_) => {});
     });
 
-    const btn = getByTestId('startMatlabBtn');
-    fireEvent.click(btn);
-
-    expect(callbackFn).toHaveBeenCalledTimes(1);
-  });
-
-  it('should stopMatlab on button click', () => {
-    const { getByTestId } = render(<Controls callback={callbackFn} />, {
-      initialState: initialState,
+    afterEach(() => {
+        jest.clearAllMocks();
     });
 
-    const btn = getByTestId('stopMatlabBtn');
-    fireEvent.click(btn);
-
-    expect(callbackFn).toHaveBeenCalledTimes(1);
-  });
-
-  it('should unsetLicensing on button click', () => {
-    const { getByTestId } = render(<Controls callback={callbackFn} />, {
-      initialState: initialState,
+    it('should render without crashing', () => {
+        render(<Controls callback={callbackFn} />);
     });
 
-    const btn = getByTestId('unsetLicensingBtn');
-    fireEvent.click(btn);
+    it('should startMatlab on button click', () => {
+        const { getByTestId } = render(<Controls callback={callbackFn} />, {
+            initialState
+        });
 
-    expect(callbackFn).toHaveBeenCalledTimes(1);
-  });
+        const btn = getByTestId('startMatlabBtn');
+        fireEvent.click(btn);
 
-  it('should open Help on button click', () => {
-    const { getByTestId } = render(<Controls callback={callbackFn} />, {
-      initialState: initialState,
+        expect(callbackFn).toHaveBeenCalledTimes(1);
     });
 
-    const btn = getByTestId('helpBtn');
-    fireEvent.click(btn);
+    it('should stopMatlab on button click', () => {
+        const { getByTestId } = render(<Controls callback={callbackFn} />, {
+            initialState
+        });
 
-    expect(callbackFn).toHaveBeenCalledTimes(1);
-  });
+        const btn = getByTestId('stopMatlabBtn');
+        fireEvent.click(btn);
 
-  it('should render additional css style when error', () => {
-    initialState.error = {
-      type: 'OnlineLicensingError',
-    };
-
-    const { getByTestId } = render(<Controls callback={callbackFn} />, {
-      initialState: initialState,
+        expect(callbackFn).toHaveBeenCalledTimes(1);
     });
 
-    const btn = getByTestId('startMatlabBtn');
-    expect(btn).toHaveClass('btn_color_blue');
-  });
+    it('should unsetLicensing on button click', () => {
+        const { getByTestId } = render(<Controls callback={callbackFn} />, {
+            initialState
+        });
 
-  it('should restart matlab upon clicking the Start/Restart Matlab button', () => {
+        const btn = getByTestId('unsetLicensingBtn');
+        fireEvent.click(btn);
 
-    //Hide the tutorial and make the overlay visible.
-    initialState.tutorialHidden = true;
-    initialState.overlayVisibility = true;
-
-    const { getByTestId, container } = render(<App />, {
-      initialState: initialState,
+        expect(callbackFn).toHaveBeenCalledTimes(1);
     });
 
-    const startMatlabButton = getByTestId('startMatlabBtn');
-    fireEvent.click(startMatlabButton);
+    it('should open Help on button click', () => {
+        const { getByTestId } = render(<Controls callback={callbackFn} />, {
+            initialState
+        });
 
-    expect(container.querySelector('#confirmation')).toBeInTheDocument();
+        const btn = getByTestId('helpBtn');
+        fireEvent.click(btn);
 
-    const confirmButton = getByTestId('confirmButton');
-    fireEvent.click(confirmButton);
+        expect(callbackFn).toHaveBeenCalledTimes(1);
+    });
 
-    let tableData = container.querySelector('.details');
-    expect(tableData.innerHTML).toContain('Starting. This may take several minutes');
-  });
+    it('should render additional css style when error', () => {
+        initialState.error = {
+            type: 'OnlineLicensingError'
+        };
+
+        const { getByTestId } = render(<Controls callback={callbackFn} />, {
+            initialState
+        });
+
+        const btn = getByTestId('startMatlabBtn');
+        expect(btn).toHaveClass('btn_color_blue');
+    });
+
+    it('should restart matlab upon clicking the Start/Restart Matlab button', () => {
+    // Hide the tutorial and make the overlay visible.
+        initialState.tutorialHidden = true;
+        initialState.overlayVisibility = true;
+
+        const { getByTestId, container } = render(<App />, {
+            initialState
+        });
+
+        const startMatlabButton = getByTestId('startMatlabBtn');
+        fireEvent.click(startMatlabButton);
+
+        expect(container.querySelector('#confirmation')).toBeInTheDocument();
+
+        const confirmButton = getByTestId('confirmButton');
+        fireEvent.click(confirmButton);
+
+        const tableData = container.querySelector('.details');
+        expect(tableData.innerHTML).toContain('Starting. This may take several minutes');
+    });
 });

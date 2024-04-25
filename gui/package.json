@@ -5,6 +5,7 @@
   "dependencies": {
     "clsx": "^1.1.1",
     "cross-fetch": "^3.0.6",
+    "crypto-js": "4.2.0",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-draggable": "^4.4.3",
@@ -15,13 +16,14 @@
     "react-use": "^15.3.4",
     "redux": "^4.0.5",
     "redux-thunk": "^2.3.0",
-    "reselect": "^4.0.0",
-    "crypto-js": "4.2.0"
+    "reselect": "^4.0.0"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "eslint": "npx eslint .",
+    "eslint:fix": "npx eslint . --fix",
     "eject": "react-scripts eject",
     "coverage": "react-scripts test --coverage"
   },
@@ -48,8 +50,11 @@
     "@testing-library/react": "^11.2.6",
     "@testing-library/react-hooks": "^3.4.1",
     "@testing-library/user-event": "^14.4.3",
+    "eslint-plugin-jest": "^27.9.0",
+    "eslint-plugin-testing-library": "^6.2.0",
     "fetch-mock": "^9.10.7",
     "react-test-renderer": "^16.13.1",
-    "redux-mock-store": "^1.5.4"
+    "redux-mock-store": "^1.5.4",
+    "standard": "^17.1.0"
   }
 }

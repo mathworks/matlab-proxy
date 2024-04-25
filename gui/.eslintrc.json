@@ -1,0 +1,50 @@
+{
+  "extends": [
+    "standard",
+    "plugin:react/recommended"
+  ],
+  "plugins": [
+    "react",
+    "jest",
+    "testing-library"
+  ],
+  "env": {
+    "jest/globals": true,
+    "browser": true
+  },
+  "rules": {
+    "indent": ["error", 4, {"SwitchCase": 1}],
+    "semi": ["error", "always"],
+    "no-extra-semi": "error",
+    "quote-props": "warn",
+    "dot-notation": "warn",
+    "object-curly-newline": "warn",
+    "multiline-ternary": "warn",
+    "prefer-const": "warn",
+    "no-prototype-builtins": "warn",
+    "array-callback-return": "warn",
+    "array-bracket-spacing": "warn",
+    "quotes": "warn",
+    "lines-between-class-members": "warn",
+    "no-empty": "warn",
+    "prefer-regex-literals": "warn",
+    "n/no-callback-literal": "warn",
+    "no-useless-catch": "warn",
+    "n/handle-callback-err": "warn",
+    "no-case-declarations": "warn",
+    "computed-property-spacing": "warn",
+    "no-async-promise-executor": "warn",
+    "no-unused-vars": "warn",
+    "n/no-deprecated-api": "warn",
+    "no-unreachable-loop": "warn",
+    "no-void": "warn"
+  },
+  "ignorePatterns": ["build/**"],
+  "settings": {
+    "react": {
+    "version": "detect"
+    }
+  }
+}
+
+

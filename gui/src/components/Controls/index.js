@@ -1,4 +1,4 @@
-// Copyright 2020-2023 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import React from 'react';
 import PropTypes from 'prop-types';
@@ -6,17 +6,17 @@ import { useSelector } from 'react-redux';
 import ReactTooltip from 'react-tooltip';
 import {
     selectSubmittingServerStatus,
-    selectLicensingInfo,    
+    selectLicensingInfo,
     selectLicensingProvided,
     selectMatlabUp,
     selectMatlabStarting,
     selectMatlabStopping,
-    selectMatlabDown, 
+    selectMatlabDown,
     selectError,
     selectIsAuthenticated,
     selectAuthEnabled,
-    selectLicensingIsMhlm, 
-    selectIsEntitled, 
+    selectLicensingIsMhlm,
+    selectIsEntitled
 } from '../../selectors';
 import {
     fetchStartMatlab,
@@ -29,10 +29,10 @@ import './Controls.css';
 // Suggested actions for certain errors
 const ERROR_TYPE_MAP = {
     'sign-out': ['NetworkLicensingError', 'EntitlementError', 'UIVisibleFatalError'],
-    'restart': ['OnlineLicensingError']
+    restart: ['OnlineLicensingError']
 };
 
-function Controls({
+function Controls ({
     callback
 }) {
     const submitting = useSelector(selectSubmittingServerStatus);
@@ -49,48 +49,46 @@ function Controls({
 
     // If licensing type is MHLM and the user is not entitled ( MATLAB version couldn't be determined (VersionInfo.xml was not found))
     // then start, stop & signout buttons should be disabled.
-    const licensingIsMhlm = useSelector(selectLicensingIsMhlm); 
-    const isEntitled = useSelector(selectIsEntitled); 
+    const licensingIsMhlm = useSelector(selectLicensingIsMhlm);
+    const isEntitled = useSelector(selectIsEntitled);
 
     let licensingData, licensingConfirmationMessage;
     switch (licensingInfo?.type) {
-        case "mhlm":
-            licensingData =  {
+        case 'mhlm':
+            licensingData = {
                 label: 'Sign Out',
-                dataTip : 'Sign out of MATLAB',
+                dataTip: 'Sign out of MATLAB'
             };
-            licensingConfirmationMessage = `Are you sure you want to sign out of MATLAB?`
+            licensingConfirmationMessage = 'Are you sure you want to sign out of MATLAB?';
             break;
-        case "nlm":
-            licensingData =  {
+        case 'nlm':
+            licensingData = {
                 label: 'Remove License Server Address',
-                dataTip : 'Remove the network license manager server address',
-            };  
-            licensingConfirmationMessage = `Are you sure you want to remove the network license manager server address?`
-            break;
-
-        case "existing_license":
-            licensingData =  {
-                label: 'Stop using Existing License',
-                dataTip : 'Stop using existing license',
+                dataTip: 'Remove the network license manager server address'
             };
-            licensingConfirmationMessage = `Are you sure you want to stop using an Existing License?`
+            licensingConfirmationMessage = 'Are you sure you want to remove the network license manager server address?';
             break;
-        
+
+        case 'existing_license':
+            licensingData = {
+                label: 'Stop using Existing License',
+                dataTip: 'Stop using existing license'
+            };
+            licensingConfirmationMessage = 'Are you sure you want to stop using an Existing License?';
+            break;
+
         default:
-            licensingData =  {
+            licensingData = {
                 label: 'None',
-                dataTip : 'None',
-            }; 
-            licensingConfirmationMessage = null  
-        }
-
-
+                dataTip: 'None'
+            };
+            licensingConfirmationMessage = null;
+    }
 
     const Confirmations = {
         START: {
             type: 'confirmation',
-            message: `Are you sure you want to ${ matlabUp ? 're' : ''}start MATLAB?`,
+            message: `Are you sure you want to ${matlabUp ? 're' : ''}start MATLAB?`,
             callback: fetchStartMatlab
         },
         STOP: {
@@ -113,8 +111,8 @@ function Controls({
         }
     };
 
-    function getBtnClass(btn) {
-        let cls = 'btn companion_btn ';
+    function getBtnClass (btn) {
+        const cls = 'btn companion_btn ';
         if (error) {
             if ((ERROR_TYPE_MAP[btn] || []).includes(error.type)) {
                 return cls + 'btn_color_blue';
@@ -124,7 +122,7 @@ function Controls({
             return cls + 'btn_color_blue';
         }
         return cls + 'btn_color_mediumgray';
-    };    
+    }
 
     return (
         <div id="controls" className="labels-on-top">
@@ -210,8 +208,10 @@ function Controls({
     );
 }
 
+// TODO: Should these be required ?
 Controls.propTypes = {
-    confirmHandler: PropTypes.func
+    confirmHandler: PropTypes.func,
+    callback: PropTypes.func.isRequired
 };
 
 export default Controls;

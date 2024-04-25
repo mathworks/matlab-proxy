@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import React from 'react';
 import { useSelector } from 'react-redux';
@@ -7,10 +7,10 @@ import './Help.css';
 
 import {
     selectOverlayHidable,
-    selectEnvConfig,
+    selectEnvConfig
 } from '../../selectors';
 
-function Help({
+function Help ({
     closeHandler,
     dismissAllHandler
 }) {
@@ -25,9 +25,7 @@ function Help({
 
     const config = useSelector(selectEnvConfig);
     const url = config.doc_url;
-    const targetEnvMsg = config.extension_name === "" ? `MATLAB Web Desktop` : `MATLAB Integration for ${config.extension_name_short_description}`;
-
-
+    const targetEnvMsg = config.extension_name === '' ? 'MATLAB Web Desktop' : `MATLAB Integration for ${config.extension_name_short_description}`;
 
     return (
         <div className="modal show"
@@ -63,10 +61,12 @@ function Help({
             </div>
         </div>
     );
-};
+}
 
+// TODO: If dismiss handler is required it causes weird failures in test
 Help.propTypes = {
-    closeHandler: PropTypes.func.isRequired
+    closeHandler: PropTypes.func.isRequired,
+    dismissAllHandler: PropTypes.func
 };
 
 export default Help;

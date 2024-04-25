@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
@@ -8,7 +8,7 @@ import {
 
 // Regular expression to match port@hostname,
 // where port is any number and hostname is alphanumeric
-// Regex FOR 
+// Regex FOR
 //      Start of Line, Any number of 0-9 digits , @, any number of nonwhite space characters with "- _ ." allowed, and EOL
 // IS:
 // ^[0-9]+[@](\w|\_|\-|\.)+$
@@ -17,41 +17,40 @@ import {
 // eslint-disable-next-line
 const connStrRegex = /^[0-9]+[@](\w|\_|\-|\.)+/
 
-function validateInput(nlm_connections_str) {
+function validateInput (nlmConnectionsStr) {
     /*
-    nlm_connections_str must contain server names (each of the form port@hostname) separated by \':\' on unix or \';\' on windows(server triads however must be comma seperated)    
-    
-    Some valid nlm_connections_str values are:
-    1) port@hostname  
+    nlmConntectionsStr must contain server names (each of the form port@hostname) separated by \':\' on unix or \';\' on windows(server triads however must be comma seperated)
+
+    Some valid nlmConntectionsStr values are:
+    1) port@hostname
     3) port1@hostname1:port2@hostname2
     4) port1@hostname1:port2@hostname2:port3@hostname3
     5) port1@hostname1:port2@hostname2,port3@hostname3,port4@hostname4:port5@hostname5
     */
 
-    let nlm_connection_strs = nlm_connections_str.split(/:|;|,/)
+    const nlmConnectionStrs = nlmConnectionsStr.split(/:|;|,/);
 
     // All strings comply with port@hostname format
-    for (let nlm_connection_str of nlm_connection_strs) {   
-        if (!connStrRegex.test(nlm_connection_str)){
-            return false
-        } 
-    }        
-    return true
-}    
+    for (const nlmConnectionStr of nlmConnectionStrs) {
+        if (!connStrRegex.test(nlmConnectionStr)) {
+            return false;
+        }
+    }
+    return true;
+}
 
-
-function NLM() {
+function NLM () {
     const dispatch = useDispatch();
     const [connStr, setConnStr] = useState('');
     const [changed, setChanged] = useState(false);
 
     const valid = validateInput(connStr);
 
-    function submitForm(event) {
+    function submitForm (event) {
         event.preventDefault();
         dispatch(fetchSetLicensing({
-            'type': 'nlm',
-            'connectionString': connStr
+            type: 'nlm',
+            connectionString: connStr
         }));
     }
 

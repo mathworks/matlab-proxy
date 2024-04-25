@@ -1,10 +1,10 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import React from 'react';
 import PropTypes from 'prop-types';
 import './MatlabJsd.css';
 
-function MatlabJsd({ url }) {
+function MatlabJsd ({ url }) {
     return (
         <div id="MatlabJsd">
             <iframe

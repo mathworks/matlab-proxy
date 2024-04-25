@@ -1,143 +1,138 @@
-// Copyright 2020-2023 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import React from 'react';
 import LicenseGatherer from './index';
-import { render, fireEvent } from '../../test/utils/react-test';
-import state from '../../test/utils/state'; 
+import { render } from '../../test/utils/react-test';
+import { fireEvent } from '@testing-library/react';
+import state from '../../test/utils/state';
 import MHLM from './MHLM';
 
 const _ = require('lodash');
 
 describe('LicenseGatherer component', () => {
+    let initialState;
+    beforeEach(() => {
+        initialState = _.cloneDeep(state);
+    });
 
-  let initialState;
-  beforeEach(() => {
-    initialState =  _.cloneDeep(state)
-  });
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
+    it('should throw error', () => {
+        const errorMock = jest.spyOn(console, 'error').mockImplementation(() => { });
 
+        try {
+            render(<LicenseGatherer />);
+        } catch (error) {
+            expect(error).toBeInstanceOf(TypeError);
+            expect(errorMock).toHaveBeenCalledTimes(2);
+        }
+    });
 
-  it('should throw error', () => {
-    const errorMock = jest.spyOn(console, 'error').mockImplementation(() => { })
+    it('should render without crashing', () => {
+        render(<LicenseGatherer />, { initialState });
+    });
 
-    try {
-      render(<LicenseGatherer />);
-    }
-    catch (error) {
-      expect(error).toBeInstanceOf(TypeError);
-      expect(errorMock).toHaveBeenCalledTimes(2);
-    }
+    it('should render without crashing. Should have a subdomain for mhlmLoginHostName', () => {
+        initialState.serverStatus.wsEnv = 'mw-integ';
 
-  });
+        const { container } = render(<LicenseGatherer />, { initialState });
 
-  it('should render without crashing', () => {
-    render(<LicenseGatherer />, { initialState: initialState });
-  });
+        const mhlmTab = container.querySelector('#mhlm-tab');
 
+        expect(mhlmTab).toBeInTheDocument();
 
-  it('should render without crashing. Should have a subdomain for mhlmLoginHostName', () => {
-    initialState.serverStatus.wsEnv = 'mw-integ'
+        fireEvent.click(mhlmTab);
 
-    const { container } = render(<LicenseGatherer />, { initialState: initialState });
+        const iFrame = container.getElementsByTagName('iframe').item(0);
 
-    const mhlmTab = container.querySelector('#mhlm-tab');
+        expect(iFrame.src).toContain(initialState.serverStatus.wsEnv);
+    });
 
-    expect(mhlmTab).toBeInTheDocument();
+    it('should have rendered mhlm tab by default without crashing', () => {
+        const { container } = render(<LicenseGatherer />, { initialState });
 
-    fireEvent.click(mhlmTab);
+        const mhlmTab = container.querySelector('#mhlm-tab');
 
-    const iFrame = container.getElementsByTagName('iframe').item(0)
+        expect(mhlmTab).toBeInTheDocument();
+        // Click on mhlm Tab
+        fireEvent.click(mhlmTab);
 
-    expect(iFrame.src).toContain(initialState.serverStatus.wsEnv);
-  });
+        // Check if mhlm iframe is rendered.
+        const mhlmTabContent = container.querySelector('#MHLM');
+        expect(mhlmTabContent).toBeInTheDocument();
+    });
 
-  it('should have rendered mhlm tab by default without crashing', () => {
-    const { container } = render(<LicenseGatherer />, { initialState: initialState });
-
-    const mhlmTab = container.querySelector('#mhlm-tab');
-
-    expect(mhlmTab).toBeInTheDocument();
-    // Click on mhlm Tab
-    fireEvent.click(mhlmTab);
-
-    // Check if mhlm iframe is rendered.
-    const mhlmTabContent = container.querySelector('#MHLM');
-    expect(mhlmTabContent).toBeInTheDocument();
-  });
-
-  it('should have rendered mhlm tab with the drop down to choose matlab version and start MATLAB button', () => {
+    it('should have rendered mhlm tab with the drop down to choose matlab version and start MATLAB button', () => {
     // Set matlab version to null for the matlab version drop-down to render
-    initialState.matlab.versionOnPath = null;
-    initialState.matlab.supportedVersions = ["R2020b", "R2021a"]
-    const fetchedMhlmLicensingInfo = {dummyValue: "yes"}
+        initialState.matlab.versionOnPath = null;
+        initialState.matlab.supportedVersions = ['R2020b', 'R2021a'];
+        const fetchedMhlmLicensingInfo = { dummyValue: 'yes' };
 
-    const { container } = render(<MHLM mhlmLicensingInfo={fetchedMhlmLicensingInfo}/>, { initialState: initialState });
+        const { container } = render(<MHLM mhlmLicensingInfo={fetchedMhlmLicensingInfo}/>, { initialState });
 
-    let startMatlabBtn = container.querySelector('#startMatlabBtn')
-    
-    expect(startMatlabBtn).toBeInTheDocument()
+        const startMatlabBtn = container.querySelector('#startMatlabBtn');
 
-    fireEvent.click(startMatlabBtn)
-  });
+        expect(startMatlabBtn).toBeInTheDocument();
 
-  it('should have rendered nlm tab content without crashing', () => {
-    const { container } = render(<LicenseGatherer />, { initialState: initialState });
+        fireEvent.click(startMatlabBtn);
+    });
 
-    const nlmTab = container.querySelector('#nlm-tab');
-    expect(nlmTab).toBeInTheDocument();
+    it('should have rendered nlm tab content without crashing', () => {
+        const { container } = render(<LicenseGatherer />, { initialState });
 
-    // Click on nlm Tab
-    fireEvent.click(nlmTab);
+        const nlmTab = container.querySelector('#nlm-tab');
+        expect(nlmTab).toBeInTheDocument();
 
-    // Check if nlm tab is rendered.
-    const nlmTabContent = container.querySelector('#NLM');
-    expect(nlmTabContent).toBeInTheDocument();
-  }); 
+        // Click on nlm Tab
+        fireEvent.click(nlmTab);
 
-  it('should have rendered existing license tab content without crashing', () => {
-    const { container } = render(<LicenseGatherer />, { initialState: initialState });
+        // Check if nlm tab is rendered.
+        const nlmTabContent = container.querySelector('#NLM');
+        expect(nlmTabContent).toBeInTheDocument();
+    });
 
-    const existingLicenseTab = container.querySelector('#existingLicense-tab');
-    expect(existingLicenseTab).toBeInTheDocument();
+    it('should have rendered existing license tab content without crashing', () => {
+        const { container } = render(<LicenseGatherer />, { initialState });
 
-    // Click on existingLicense Tab
-    fireEvent.click(existingLicenseTab);
+        const existingLicenseTab = container.querySelector('#existingLicense-tab');
+        expect(existingLicenseTab).toBeInTheDocument();
 
-    // Check if existingLicense tab is rendered.
-    const existingLicenseTabContent = container.querySelector('#existingLicense');
-    expect(existingLicenseTabContent).toBeInTheDocument();
-  }); 
+        // Click on existingLicense Tab
+        fireEvent.click(existingLicenseTab);
 
-  test.each([
-    ['1234', true], ['hostname', true], ['1234hostname', true], ['1234,', true], ['hostname,', true], 
-    ['1234@hostname', false], ['1234@hostname,4567@hostname', false], ['1234@hostname:4567@hostname', false], 
-    ['1234@hostname,4567@hostname,456@hostname', false], ['1234@hostname,4567@hostname,456@hostname:789@hostname', false],
-    ['789@hostname:1234@hostname,4567@hostname,456@hostname', false], ['789@hostname:1234@hostname,4567@hostname,456@hostname:789@hostname', false],
-  ])(
-      'Test to check for NLM connection string: %s if the \'disabled\' property of the Submit button is set to %s',
-      (NLMConnStr, disabledValue) => {
+        // Check if existingLicense tab is rendered.
+        const existingLicenseTabContent = container.querySelector('#existingLicense');
+        expect(existingLicenseTabContent).toBeInTheDocument();
+    });
 
-      const { container } = render(<LicenseGatherer />, { initialState: initialState });
+    test.each([
+        ['1234', true], ['hostname', true], ['1234hostname', true], ['1234,', true], ['hostname,', true],
+        ['1234@hostname', false], ['1234@hostname,4567@hostname', false], ['1234@hostname:4567@hostname', false],
+        ['1234@hostname,4567@hostname,456@hostname', false], ['1234@hostname,4567@hostname,456@hostname:789@hostname', false],
+        ['789@hostname:1234@hostname,4567@hostname,456@hostname', false], ['789@hostname:1234@hostname,4567@hostname,456@hostname:789@hostname', false]
+    ])(
+        'Test to check for NLM connection string: %s if the \'disabled\' property of the Submit button is set to %s',
+        (NLMConnStr, disabledValue) => {
+            const { container } = render(<LicenseGatherer />, { initialState });
 
-      const nlmTab = container.querySelector('#nlm-tab');
-      const input = container.querySelector('#nlm-connection-string')
-      const submitButton = container.querySelector('#submit')
+            const nlmTab = container.querySelector('#nlm-tab');
+            const input = container.querySelector('#nlm-connection-string');
+            const submitButton = container.querySelector('#submit');
 
-      expect(nlmTab).toBeInTheDocument();
+            expect(nlmTab).toBeInTheDocument();
 
-      // Click on nlm Tab
-      fireEvent.click(nlmTab);
+            // Click on nlm Tab
+            fireEvent.click(nlmTab);
 
-      // Check if nlm iframe is rendered.
-      const nlmTabContent = container.querySelector('#NLM');
-      expect(nlmTabContent).toBeInTheDocument();
+            // Check if nlm iframe is rendered.
+            const nlmTabContent = container.querySelector('#NLM');
+            expect(nlmTabContent).toBeInTheDocument();
 
-      fireEvent.change(input, {target: {value: NLMConnStr}})    
-      // Check if Submit button is disabled for an invalid nlm connection string
-      expect(submitButton.disabled).toBe(disabledValue)
-    }
-  );
+            fireEvent.change(input, { target: { value: NLMConnStr } });
+            // Check if Submit button is disabled for an invalid nlm connection string
+            expect(submitButton.disabled).toBe(disabledValue);
+        }
+    );
 });

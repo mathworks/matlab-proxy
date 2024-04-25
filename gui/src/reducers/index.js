@@ -27,12 +27,12 @@ import {
     RECEIVE_SESSION_STATUS,
     REQUEST_SESSION_STATUS,
     RECEIVE_CONCURRENCY_CHECK,
-    WAS_EVER_ACTIVE,
+    WAS_EVER_ACTIVE
 } from '../actions';
 
-// Stores info on whether token authentication enabled on the backend. 
+// Stores info on whether token authentication enabled on the backend.
 // This is enforced by the backend.
-export function authEnabled(state = false, action) {
+export function authEnabled (state = false, action) {
     switch (action.type) {
         case RECEIVE_ENV_CONFIG:
             return action.config.authentication.enabled;
@@ -42,7 +42,7 @@ export function authEnabled(state = false, action) {
 }
 
 // Stores information on whether to use MOS HTML while rendering MATLAB.
-export function useMOS(state = false, action) {
+export function useMOS (state = false, action) {
     switch (action.type) {
         case RECEIVE_ENV_CONFIG:
             return action.config.useMOS;
@@ -52,7 +52,7 @@ export function useMOS(state = false, action) {
 }
 
 // Stores information on whether to provide MRE parameter to HTML while rendering MATLAB.
-export function useMRE(state = false, action) {
+export function useMRE (state = false, action) {
     switch (action.type) {
         case RECEIVE_ENV_CONFIG:
             return action.config.useMRE;
@@ -62,7 +62,7 @@ export function useMRE(state = false, action) {
 }
 
 // Stores status of token authentication.
-export function authStatus(state = false, action) {
+export function authStatus (state = false, action) {
     switch (action.type) {
         case RECEIVE_ENV_CONFIG:
             return action.config.authentication.status;
@@ -74,7 +74,7 @@ export function authStatus(state = false, action) {
 }
 
 // Stores auth token
-export function authToken(state = null, action) {
+export function authToken (state = null, action) {
     switch (action.type) {
         case SET_AUTH_TOKEN:
             return action.authentication.token;
@@ -84,8 +84,8 @@ export function authToken(state = null, action) {
 }
 
 // Stores whether the concurrency is enabled or not
-export function isConcurrencyEnabled(state = false, action) {
-    switch(action.type){
+export function isConcurrencyEnabled (state = false, action) {
+    switch (action.type) {
         case RECEIVE_ENV_CONFIG:
         case RECEIVE_CONCURRENCY_CHECK:
             return action.config.isConcurrencyEnabled;
@@ -94,7 +94,7 @@ export function isConcurrencyEnabled(state = false, action) {
     }
 }
 
-export function triggerPosition(state = { x: window.innerWidth / 2 + 27, y: 0 }, action) {
+export function triggerPosition (state = { x: window.innerWidth / 2 + 27, y: 0 }, action) {
     switch (action.type) {
         case SET_TRIGGER_POSITION:
             return { x: action.x, y: action.y };
@@ -103,7 +103,7 @@ export function triggerPosition(state = { x: window.innerWidth / 2 + 27, y: 0 },
     }
 }
 
-export function tutorialHidden(state = false, action) {
+export function tutorialHidden (state = false, action) {
     switch (action.type) {
         case SET_TUTORIAL_HIDDEN:
             return action.hidden;
@@ -112,14 +112,14 @@ export function tutorialHidden(state = false, action) {
     }
 }
 
-export function overlayVisibility(state = false, action) {
+export function overlayVisibility (state = false, action) {
     switch (action.type) {
         case SET_OVERLAY_VISIBILITY:
             return action.visibility;
         case RECEIVE_SERVER_STATUS:
             if (
-                action.previousMatlabPending === true
-                && action.status.matlab.status === "up"
+                action.previousMatlabPending === true &&
+                action.status.matlab.status === 'up'
             ) return false;
         // fall through
         default:
@@ -127,7 +127,7 @@ export function overlayVisibility(state = false, action) {
     }
 }
 
-export function licensingInfo(state = {}, action) {
+export function licensingInfo (state = {}, action) {
     switch (action.type) {
         case RECEIVE_SERVER_STATUS:
         case RECEIVE_SET_LICENSING:
@@ -142,7 +142,7 @@ export function licensingInfo(state = {}, action) {
     }
 }
 
-export function matlabStatus(state = 'down', action) {
+export function matlabStatus (state = 'down', action) {
     switch (action.type) {
         case RECEIVE_SERVER_STATUS:
         case RECEIVE_SET_LICENSING:
@@ -158,27 +158,27 @@ export function matlabStatus(state = 'down', action) {
     }
 }
 
-export function matlabVersionOnPath(state = null, action) {
-    switch (action.type) {       
+export function matlabVersionOnPath (state = null, action) {
+    switch (action.type) {
         case RECEIVE_SERVER_STATUS:
         case RECEIVE_SET_LICENSING:
-            return action.status.matlab.version
+            return action.status.matlab.version;
         case RECEIVE_ENV_CONFIG:
-            return action.config.matlab.version
+            return action.config.matlab.version;
         default:
             return state;
     }
 }
 
-export function supportedMatlabVersions(state = null, action) {
-    switch (action.type) {       
+export function supportedMatlabVersions (state = null, action) {
+    switch (action.type) {
         case RECEIVE_ENV_CONFIG:
-            return action.config.matlab.supported_versions
+            return action.config.matlab.supported_versions;
         default:
             return state;
     }
 }
-export function isActiveClient(state = true, action) {
+export function isActiveClient (state = true, action) {
     switch (action.type) {
         case RECEIVE_SESSION_STATUS:
             return action.status.isActiveClient;
@@ -187,7 +187,7 @@ export function isActiveClient(state = true, action) {
     }
 }
 
-export function wsEnv(state = null, action) {
+export function wsEnv (state = null, action) {
     switch (action.type) {
         case RECEIVE_SERVER_STATUS:
         case RECEIVE_SET_LICENSING:
@@ -200,7 +200,7 @@ export function wsEnv(state = null, action) {
     }
 }
 
-export function isFetching(state = false, action) {
+export function isFetching (state = false, action) {
     switch (action.type) {
         case REQUEST_SERVER_STATUS:
         case REQUEST_SET_LICENSING:
@@ -216,14 +216,14 @@ export function isFetching(state = false, action) {
         case RECEIVE_STOP_MATLAB:
         case RECEIVE_START_MATLAB:
         case RECEIVE_ERROR:
-        case RECEIVE_ENV_CONFIG: 
+        case RECEIVE_ENV_CONFIG:
             return false;
         default:
             return state;
     }
 }
 
-export function isFetchingServerStatus(state = false, action) {
+export function isFetchingServerStatus (state = false, action) {
     switch (action.type) {
         case REQUEST_SERVER_STATUS:
             return true;
@@ -235,7 +235,7 @@ export function isFetchingServerStatus(state = false, action) {
     }
 }
 
-export function hasFetched(state = false, action) {
+export function hasFetched (state = false, action) {
     switch (action.type) {
         case RECEIVE_SERVER_STATUS:
         case RECEIVE_SET_LICENSING:
@@ -248,8 +248,8 @@ export function hasFetched(state = false, action) {
     }
 }
 
-export function hasClientInitialized(state = false, action) {
-    switch(action.type) {
+export function hasClientInitialized (state = false, action) {
+    switch (action.type) {
         case REQUEST_SERVER_INITIALIZATION:
             return true;
         default:
@@ -257,8 +257,8 @@ export function hasClientInitialized(state = false, action) {
     }
 }
 
-export function wasEverActive(state = false, action) {
-    switch(action.type) {
+export function wasEverActive (state = false, action) {
+    switch (action.type) {
         case WAS_EVER_ACTIVE:
             return true;
         default:
@@ -266,7 +266,7 @@ export function wasEverActive(state = false, action) {
     }
 }
 
-export function isSubmitting(state = false, action) {
+export function isSubmitting (state = false, action) {
     switch (action.type) {
         case REQUEST_SET_LICENSING:
         case REQUEST_TERMINATE_INTEGRATION:
@@ -284,7 +284,7 @@ export function isSubmitting(state = false, action) {
     }
 }
 
-export function fetchFailCount(state = 0, action) {
+export function fetchFailCount (state = 0, action) {
     switch (action.type) {
         case RECEIVE_SERVER_STATUS:
         case RECEIVE_SET_LICENSING:
@@ -296,11 +296,10 @@ export function fetchFailCount(state = 0, action) {
             return state + 1;
         default:
             return state;
-
     }
 }
 
-export function loadUrl(state = null, action) {
+export function loadUrl (state = null, action) {
     switch (action.type) {
         case RECEIVE_TERMINATE_INTEGRATION:
             return action.loadUrl;
@@ -309,28 +308,28 @@ export function loadUrl(state = null, action) {
     }
 }
 
-export function warnings(state = null, action) {
+export function warnings (state = null, action) {
     switch (action.type) {
-        case RECEIVE_SERVER_STATUS:
-            const warnings = action.status.warnings;                             
+        case RECEIVE_SERVER_STATUS: {
+            const warnings = action.status.warnings;
             return warnings.length > 0 ? warnings : null;
+        }
         default:
             return state;
     }
 }
 
-export function error(state = null, action) {
+export function error (state = null, action) {
     switch (action.type) {
         case SET_AUTH_STATUS:
             if (action?.authentication?.error !== null) {
-                const { message, type } = action.authentication.error
+                const { message, type } = action.authentication.error;
                 return {
-                    message: message,
-                    type: type,
+                    message,
+                    type,
                     logs: null
-                }
-            }
-            else return null;
+                };
+            } else return null;
         case RECEIVE_ERROR:
             return {
                 message: action.error,
@@ -342,57 +341,60 @@ export function error(state = null, action) {
         case RECEIVE_TERMINATE_INTEGRATION:
         case RECEIVE_STOP_MATLAB:
         case RECEIVE_START_MATLAB:
-            return action.status.error ? {
-                message: action.status.error.message,
-                logs: action.status.error.logs,
-                type: action.status.error.type
-            } : null;
+            return action.status.error
+                ? {
+                    message: action.status.error.message,
+                    logs: action.status.error.logs,
+                    type: action.status.error.type
+                }
+                : null;
         default:
             return state;
     }
 }
 
-export function envConfig(state = null, action) {
+export function envConfig (state = null, action) {
     switch (action.type) {
-        case RECEIVE_ENV_CONFIG:
+        case RECEIVE_ENV_CONFIG: {
             // Token authentication and matlab info is also sent as a response to /get_env_config endpoint.
             // The authentication and matlab pieces of redux state are updated accordingly for the RECEIVE_ENV_CONFIG action type.
-            // Hence, storing the rest of the envConfig without authentication and matlab info. 
-            const { authentication, matlab,  ...envConfig } = action.config
-            return envConfig
+            // Hence, storing the rest of the envConfig without authentication and matlab info.
+            const { authentication, matlab, ...envConfig } = action.config;
+            return envConfig;
+        }
         default:
             return state;
     }
 }
 
-export function clientId(state = null, action) {
+export function clientId (state = null, action) {
     switch (action.type) {
         case SET_CLIENT_ID:
-            return action.client_id
+            return action.clientId;
         default:
             return state;
     }
 }
 
 export const authentication = combineReducers({
-    enabled : authEnabled,
-    status : authStatus,
-    token : authToken,
+    enabled: authEnabled,
+    status: authStatus,
+    token: authToken
 });
 
 export const matlab = combineReducers({
-    status : matlabStatus,
-    versionOnPath : matlabVersionOnPath, 
-    supportedVersions: supportedMatlabVersions,
+    status: matlabStatus,
+    versionOnPath: matlabVersionOnPath,
+    supportedVersions: supportedMatlabVersions
 });
 
 export const serverStatus = combineReducers({
-    licensingInfo,   
+    licensingInfo,
     wsEnv,
     isFetchingServerStatus,
     hasFetched,
     isSubmitting,
-    fetchFailCount,
+    fetchFailCount
 });
 
 export const sessionStatus = combineReducers({
@@ -400,7 +402,7 @@ export const sessionStatus = combineReducers({
     hasClientInitialized,
     wasEverActive,
     isConcurrencyEnabled,
-    clientId,
+    clientId
 });
 
 export default combineReducers({
@@ -416,5 +418,5 @@ export default combineReducers({
     useMOS,
     useMRE,
     authentication,
-    matlab,
+    matlab
 });

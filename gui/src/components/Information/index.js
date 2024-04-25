@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2023 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import React, { useRef, useState } from 'react';
 import PropTypes from 'prop-types';
@@ -12,12 +12,12 @@ import {
     selectInformationDetails,
     selectAuthEnabled,
     selectIsAuthenticated,
-    selectAuthToken,
+    selectAuthToken
 } from '../../selectors';
 import { updateAuthStatus, getAuthToken } from '../../actionCreators';
 import './Information.css';
 
-function Information({
+function Information ({
     closeHandler,
     children
 }) {
@@ -39,19 +39,19 @@ function Information({
 
     let info;
     switch (licensingInfo?.type) {
-        case "mhlm":
+        case 'mhlm':
             info = {
                 label: `Online License Manager (${licensingInfo.emailAddress})`
             };
             break;
-        case "nlm":
+        case 'nlm':
             info = {
                 label: `Network License Manager (${licensingInfo.connectionString})`
             };
             break;
-        case "existing_license":            
+        case 'existing_license':
             info = {
-                label : 'Existing License'
+                label: 'Existing License'
             };
             break;
         default:
@@ -62,57 +62,62 @@ function Information({
 
     const details = useSelector(selectInformationDetails);
 
-    const errorMessageNode = error ? (
-        <div className="error-container alert alert-danger">
-            <p><strong>Error</strong></p>
-            <Linkify>
-                <div className="error-text"><pre style={{backgroundColor: 'hsla(0,0%,100%,0)', border: 'none', fontFamily: 'inherit', fontSize: '15px'}}>{error.message}</pre></div>
-            </Linkify>
-        </div>
-    ) : null;
-
-    const errorLogsNode = (error && error.logs !== null && error.logs.length > 0) ? (
-        <div className="expand_collapse error-logs-container">
-            <h4 className={`expand_trigger ${errorLogsExpanded ? 'expanded' : 'collapsed'}`} 
-            onClick={() => setErrorLogsExpanded(!errorLogsExpanded)}>
-                <span className="icon-arrow-open-down"></span>
-                <span className="icon-arrow-open-right"></span>
-                Error logs
-            </h4>
-            <div id="error-logs"
-                className={`expand_target error-container alert alert-danger ${errorLogsExpanded ? 'expanded' : 'collapsed'}`}
-                aria-expanded={errorLogsExpanded}>
+    const errorMessageNode = error
+        ? (
+            <div className="error-container alert alert-danger">
+                <p><strong>Error</strong></p>
                 <Linkify>
-                    <div className="error-msg">{error.logs.join('\n').trim()}</div>
+                    <div className="error-text"><pre style={{ backgroundColor: 'hsla(0,0%,100%,0)', border: 'none', fontFamily: 'inherit', fontSize: '15px' }}>{error.message}</pre></div>
                 </Linkify>
             </div>
-        </div>
-    ) : null;
+        )
+        : null;
+
+    const errorLogsNode = (error && error.logs !== null && error.logs.length > 0)
+        ? (
+            <div className="expand_collapse error-logs-container">
+                <h4 className={`expand_trigger ${errorLogsExpanded ? 'expanded' : 'collapsed'}`}
+                    onClick={() => setErrorLogsExpanded(!errorLogsExpanded)}>
+                    <span className="icon-arrow-open-down"></span>
+                    <span className="icon-arrow-open-right"></span>
+                Error logs
+                </h4>
+                <div id="error-logs"
+                    className={`expand_target error-container alert alert-danger ${errorLogsExpanded ? 'expanded' : 'collapsed'}`}
+                    aria-expanded={errorLogsExpanded}>
+                    <Linkify>
+                        <div className="error-msg">{error.logs.join('\n').trim()}</div>
+                    </Linkify>
+                </div>
+            </div>
+        )
+        : null;
 
     const linkDecorator = (href, text, key) => (
-            <a href={href} key={key} target="_blank" rel="noopener noreferrer">
-                {text}
-            </a>
-        );
+        <a href={href} key={key} target="_blank" rel="noopener noreferrer">
+            {text}
+        </a>
+    );
 
-
-    const warningsNode = (warnings && warnings.length > 0) ? (
-        <div className="expand_collapse warnings-container">
-            <h4 className={`expand_trigger ${warningsExpanded ? 'expanded' : 'collapsed'}`}
-                onClick={() => setWarningsExpanded(!warningsExpanded)}>
-                <span className="icon-arrow-open-down"></span>
-                <span className="icon-arrow-open-right"></span>
+    const warningsNode = (warnings && warnings.length > 0)
+        ? (
+            <div className="expand_collapse warnings-container">
+                <h4 className={`expand_trigger ${warningsExpanded ? 'expanded' : 'collapsed'}`}
+                    onClick={() => setWarningsExpanded(!warningsExpanded)}>
+                    <span className="icon-arrow-open-down"></span>
+                    <span className="icon-arrow-open-right"></span>
                 Warnings
-            </h4>
-            <div id="warnings"
-                className={`expand_target warnings-container alert alert-warning ${warningsExpanded ? 'expanded' : 'collapsed'}`}
-                aria-expanded={warningsExpanded}>
-                <Linkify componentDecorator={linkDecorator}>
-                    <div className="warnings-msg">{warnings.map((warning, index) => (index + 1).toString() + ")" + warning.trim()).join("\n\n")}</div>
-                </Linkify>
+                </h4>
+                <div id="warnings"
+                    className={`expand_target warnings-container alert alert-warning ${warningsExpanded ? 'expanded' : 'collapsed'}`}
+                    aria-expanded={warningsExpanded}>
+                    <Linkify componentDecorator={linkDecorator}>
+                        <div className="warnings-msg">{warnings.map((warning, index) => (index + 1).toString() + ')' + warning.trim()).join('\n\n')}</div>
+                    </Linkify>
+                </div>
             </div>
-        </div>
-    ) : null;
+        )
+        : null;
 
     const onCloseClick = event => {
         if (event.target === event.currentTarget) {
@@ -127,19 +132,19 @@ function Information({
             dispatch(getAuthToken());
         }
         setShowToken(true);
-    }
+    };
 
     const toggleVisibility = () => {
         tokenInput.current.type = tokenInput.current.type === 'text' ? 'password' : 'text';
-    }
+    };
 
     const authenticate = async (token) => {
         // Update redux state with the token after validation from the backend
         dispatch(updateAuthStatus(token.trim()));
 
-        // Reset local state variable which was used to hold user's input for token. 
+        // Reset local state variable which was used to hold user's input for token.
         setToken('');
-    }
+    };
 
     return (
         <div className="modal show"
@@ -152,7 +157,7 @@ function Information({
             <div className="modal-dialog modal-dialog-centered" role="document">
                 <div className={`modal-content alert alert-${details.alert}`}>
                     <div className="modal-header">
-                        { 
+                        {
                             overlayHidable && (
                                 <button
                                     type="button"
@@ -169,56 +174,55 @@ function Information({
                     </div >
                     <div className="modal-body">
                         <div className="details">
-                                <div className='flex-container main-flex'>
-                                    <div className='flex-item-1'>MATLAB Status:</div>
-                                    <div className='flex-item-2'>
-                                        <span id="spinner"
-                                            className={details.spinner ? 'show' : 'hidden'}
-                                        ></span>
-                                        {details.label}
-                                    </div>
+                            <div className='flex-container main-flex'>
+                                <div className='flex-item-1'>MATLAB Status:</div>
+                                <div className='flex-item-2'>
+                                    <span id="spinner"
+                                        className={details.spinner ? 'show' : 'hidden'}
+                                    ></span>
+                                    {details.label}
                                 </div>
-                                <div className='flex-container'>
-                                    <div className='flex-item-1'>Licensing:</div>
-                                    <div className='flex-item-2'>{info.label}</div>
-                                </div>
+                            </div>
+                            <div className='flex-container'>
+                                <div className='flex-item-1'>Licensing:</div>
+                                <div className='flex-item-2'>{info.label}</div>
+                            </div>
 
-                                <div className='flex-container'>      
-                                    {authEnabled &&
-                                    <>  
-                                    <div onClick={()=>{ if(showToken) setShowToken(false)}} 
-                                        className={`${showToken ? 'passive-link': ''} flex-item-1`} 
-                                        ><span id={`${showToken ? 'offset' : '' }`}>{isAuthenticated ? showToken ? '(Hide Token)' : 'Authenticated!' : 'Please Authenticate' }</span>
+                            <div className='flex-container'>
+                                {authEnabled &&
+                                    <>
+                                        <div onClick={() => { if (showToken) setShowToken(false); }}
+                                            className={`${showToken ? 'passive-link' : ''} flex-item-1`}
+                                        ><span id={`${showToken ? 'offset' : ''}`}>{isAuthenticated ? showToken ? '(Hide Token)' : 'Authenticated!' : 'Please Authenticate' }</span>
                                             {(isAuthenticated && !showToken) && <span id='icon-small' className={'alert_icon icon-alert-success flex-item-1'} />}
                                         </div>
                                         <>
-                                        {isAuthenticated ? 
-                                        <>
-                                            <div className='flex-item-2'>
-                                                <span onClick={viewToken} 
-                                                className={`${!showToken ? 'passive-link': ''} flex-item-1`} > {showToken ? `${authToken}` : '(View token)'}</span>
-                                            </div>
-                                        </>
-                                        :
-                                        <div className="flex-item-2">
-                                            <form id="token-form" onSubmit={(e) => e.preventDefault()} className='flex-container'>
-                                            <input
-                                            
-                                            ref={tokenInput} 
-                                            onBlur={toggleVisibility}
-                                            onFocus={toggleVisibility}
-                                            className='flex-item-2'
-                                            id='token' name='token' placeholder='Please enter auth token' type='password' value={token} onChange={(e)=> setToken(e.target.value)}/>
+                                            {isAuthenticated
+                                                ? <>
+                                                    <div className='flex-item-2'>
+                                                        <span onClick={viewToken}
+                                                            className={`${!showToken ? 'passive-link' : ''} flex-item-1`} > {showToken ? `${authToken}` : '(View token)'}</span>
+                                                    </div>
+                                                </>
+                                                : <div className="flex-item-2">
+                                                    <form id="token-form" onSubmit={(e) => e.preventDefault()} className='flex-container'>
+                                                        <input
 
-                                            <button onClick={()=>authenticate(token)} className="btn btn_color_blue token-btn"
-                                            >Submit</button>
-                                        </form>
-                                        </div>
-                                        }
+                                                            ref={tokenInput}
+                                                            onBlur={toggleVisibility}
+                                                            onFocus={toggleVisibility}
+                                                            className='flex-item-2'
+                                                            id='token' name='token' placeholder='Please enter auth token' type='password' value={token} onChange={(e) => setToken(e.target.value)}/>
+
+                                                        <button onClick={() => authenticate(token)} className="btn btn_color_blue token-btn"
+                                                        >Submit</button>
+                                                    </form>
+                                                </div>
+                                            }
                                         </>
                                     </>
-                                    }
-                                </div>
+                                }
+                            </div>
                         </div>
                         {errorMessageNode}
                         {errorLogsNode}
@@ -233,8 +237,10 @@ function Information({
     );
 }
 
+// TODO: If children is required test fails expected number of calls is wrong.
 Information.propTypes = {
-    closeHandler: PropTypes.func.isRequired
+    closeHandler: PropTypes.func.isRequired,
+    children: PropTypes.oneOfType([PropTypes.node, PropTypes.arrayOf(PropTypes.node)])
 };
 
 export default Information;

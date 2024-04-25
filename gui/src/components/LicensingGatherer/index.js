@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import React, { useState } from 'react';
 import MHLM from './MHLM';
@@ -6,30 +6,29 @@ import NLM from './NLM';
 import ExistingLicense from './ExistingLicense';
 import './LicensingGatherer.css';
 
-function LicensingGatherer() {
-
+function LicensingGatherer () {
     const [activeTab, setActiveTab] = useState('mhlm');
 
     const handleMhlmTabClick = e => {
         e.preventDefault();
-        setActiveTab("mhlm");
+        setActiveTab('mhlm');
     };
 
     const handleNlmTabClick = e => {
         e.preventDefault();
-        setActiveTab("nlm");
+        setActiveTab('nlm');
     };
     const handleExistingLicenseTabClick = e => {
         e.preventDefault();
-        setActiveTab("existingLicense");
-    }; 
+        setActiveTab('existingLicense');
+    };
 
-    const mhlmActive = activeTab === "mhlm" ? "active" : "";
-    const mhlmAriaExpanded = activeTab === "mhlm" ? "true" : "false";
-    const nlmActive = activeTab === "nlm" ? "active" : "";
-    const nlmAriaExpanded = activeTab === "nlm" ? "true" : "false";
-    const existingLicenseActive = activeTab === "existingLicense" ? "active" : "";
-    const existingLicenseAriaExpanded = activeTab === "existingLicense" ? "true" : "false";
+    const mhlmActive = activeTab === 'mhlm' ? 'active' : '';
+    const mhlmAriaExpanded = activeTab === 'mhlm' ? 'true' : 'false';
+    const nlmActive = activeTab === 'nlm' ? 'active' : '';
+    const nlmAriaExpanded = activeTab === 'nlm' ? 'true' : 'false';
+    const existingLicenseActive = activeTab === 'existingLicense' ? 'active' : '';
+    const existingLicenseAriaExpanded = activeTab === 'existingLicense' ? 'true' : 'false';
 
     return (
         <div className="modal show" id="setup-dialog" tabIndex="-1" role="dialog" aria-labelledby="setup-dialog-title">
@@ -89,7 +88,7 @@ function LicensingGatherer() {
                                         </a>
                                     </p>
                                 </div>
-                            </div>                            
+                            </div>
                         </div>
                     </div>
                 </div>

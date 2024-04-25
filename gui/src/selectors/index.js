@@ -25,7 +25,7 @@ export const selectAuthEnabled = state => state.authentication.enabled;
 export const selectAuthToken = state => state.authentication.token;
 export const selectIsAuthenticated = state => state.authentication.status === true;
 export const selectIsActiveClient = state => state.sessionStatus.isActiveClient;
-export const selectIsConcurrencyEnabled = state => state.sessionStatus.isConcurrencyEnabled; 
+export const selectIsConcurrencyEnabled = state => state.sessionStatus.isConcurrencyEnabled;
 export const selectWasEverActive = state => state.sessionStatus.wasEverActive;
 export const selectClientId = state => state.sessionStatus.clientId;
 
@@ -36,7 +36,7 @@ export const selectTriggerPosition = createSelector(
 
 export const selectHasFetchedEnvConfig = createSelector(
     selectEnvConfig,
-    envConfig => envConfig !== null 
+    envConfig => envConfig !== null
 );
 
 export const selectIsError = createSelector(
@@ -56,9 +56,9 @@ export const selectIsConnectionError = createSelector(
     selectIsConcurrent,
     (fails, isConcurrencyEnabled, isConcurrent) => {
         if (isConcurrencyEnabled && isConcurrent) {
-            return fails >= 1
+            return fails >= 1;
         }
-        return fails >= MAX_REQUEST_FAIL_COUNT
+        return fails >= MAX_REQUEST_FAIL_COUNT;
     }
 );
 
@@ -170,12 +170,12 @@ export const selectIsInvalidTokenError = createSelector(
     selectIsError,
     selectError,
     (authEnabled, isAuthenticated, isError, error) => {
-        if ((authEnabled && !isAuthenticated) && isError && error.type === "InvalidTokenError") {
-            return true
+        if ((authEnabled && !isAuthenticated) && isError && error.type === 'InvalidTokenError') {
+            return true;
         }
-        return false
+        return false;
     }
-)
+);
 
 export const selectInformationDetails = createSelector(
     selectMatlabStatus,
@@ -184,22 +184,22 @@ export const selectInformationDetails = createSelector(
     selectAuthEnabled,
     selectIsInvalidTokenError,
     (matlabStatus, isError, error, authEnabled, isInvalidTokenError) => {
-        // Check for any errors on the front-end 
-        // to see if HTTP Requests are timing out.       
+        // Check for any errors on the front-end
+        // to see if HTTP Requests are timing out.
         if (isError && error.statusCode === 408) {
             return {
                 icon: 'warning',
                 alert: 'warning',
-                label: 'Unknown',
-            }
+                label: 'Unknown'
+            };
         }
 
         if (isError && authEnabled && isInvalidTokenError) {
             return {
                 icon: 'warning',
                 alert: 'warning',
-                label: 'Invalid Token supplied',
-            }
+                label: 'Invalid Token supplied'
+            };
         }
 
         // Check status of MATLAB for errors
@@ -225,7 +225,7 @@ export const selectInformationDetails = createSelector(
                     alert: 'info',
                     spinner: true
                 };
-            case 'down':
+            case 'down': {
                 const detail = {
                     label: 'Not running',
                     icon: 'info-reverse',
@@ -236,9 +236,9 @@ export const selectInformationDetails = createSelector(
                     detail.alert = 'danger';
                 }
                 return detail;
+            }
             default:
                 throw new Error(`Unknown MATLAB status: "${matlabStatus}".`);
         }
-
     }
 );

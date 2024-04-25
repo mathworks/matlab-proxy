@@ -32,19 +32,19 @@ import {
     selectUseMRE,
     selectIsConcurrent,
     selectWasEverActive,
-    selectIsConcurrencyEnabled,
-} from "../../selectors";
+    selectIsConcurrencyEnabled
+} from '../../selectors';
 
 import {
     setOverlayVisibility,
     fetchServerStatus,
     fetchEnvConfig,
-    updateAuthStatus,
+    updateAuthStatus
 } from '../../actionCreators';
 import blurredBackground from './MATLAB-env-blur.png';
-import EntitlementSelector from "../EntitlementSelector";
+import EntitlementSelector from '../EntitlementSelector';
 
-function App() {
+function App () {
     const dispatch = useDispatch();
 
     const overlayVisible = useSelector(selectOverlayVisible);
@@ -68,29 +68,29 @@ function App() {
     const wasEverActive = useSelector(selectWasEverActive);
 
     const baseUrl = useMemo(() => {
-        const url = document.URL
-        return url.split(window.location.origin)[1].split('index.html')[0]
-    }, [])
+        const url = document.URL;
+        return url.split(window.location.origin)[1].split('index.html')[0];
+    }, []);
 
     const parseQueryParams = (url) => {
         const queryParams = new URLSearchParams(url.search);
         return queryParams;
-    }
+    };
 
     const fullyQualifiedUrl = useMemo(() => {
         // Returns the Fully Qualified URL used to load the page.
-        const url = document.URL
-        let baseUrlStr = url.split('/index.html')[0]
+        const url = document.URL;
+        const baseUrlStr = url.split('/index.html')[0];
         return baseUrlStr;
-    }, [])
+    }, []);
 
     const htmlToRenderMATLAB = () => {
-        let theHtmlToRenderMATLAB = useMOS ? "index-matlabonlineserver.html" : 'index-jsd-cr.html'
+        let theHtmlToRenderMATLAB = useMOS ? 'index-matlabonlineserver.html' : 'index-jsd-cr.html';
         if (useMRE) {
-            theHtmlToRenderMATLAB += `?mre=${fullyQualifiedUrl}`
+            theHtmlToRenderMATLAB += `?mre=${fullyQualifiedUrl}`;
         }
-        return theHtmlToRenderMATLAB
-    }
+        return theHtmlToRenderMATLAB;
+    };
 
     const toggleOverlayVisible = useCallback(
         () => dispatch(setOverlayVisibility(!overlayVisible)),
@@ -100,7 +100,7 @@ function App() {
     const [dialogModel, setDialogModel] = useState(null);
     const [isTerminated, setIsTerminated] = useState(false);
 
-    // sessionDialog stores the state of concurrent session based on which either matlab gets rendered or the concurrent session dialog gets rendered 
+    // sessionDialog stores the state of concurrent session based on which either matlab gets rendered or the concurrent session dialog gets rendered
     let sessionDialog = null;
     let dialog;
     if (dialogModel) {
@@ -110,7 +110,7 @@ function App() {
             toggleOverlayVisible(false);
         };
         switch (dialogModel.type) {
-            case 'confirmation':
+            case 'confirmation': {
                 const confirm = () => {
                     dispatch(dialogModel.callback());
                     setDialogModel(null);
@@ -123,6 +123,7 @@ function App() {
                     </Confirmation>
                 );
                 break;
+            }
             case 'help':
                 dialog = (
                     <Help
@@ -142,31 +143,29 @@ function App() {
                 <p>Attempt to <a href="../">return to a parent app</a></p>
             </Error>
         );
-    } else if (error && error.type === "MatlabInstallError") {
+    } else if (error && error.type === 'MatlabInstallError') {
         dialog = <Error message={error.message} />;
-    } 
-    // check the user authentication before giving them the option to transfer the session.
-    else if ((!authEnabled || isAuthenticated) && isSessionConcurrent && isConcurrencyEnabled) {
-        // Transfer the session to this tab 
+    } else if ((!authEnabled || isAuthenticated) && isSessionConcurrent && isConcurrencyEnabled) {
+        // check the user authentication before giving them the option to transfer the session.
+        // Transfer the session to this tab
         // setting the query parameter of requestTransferSession to true
-        const transferSessionOnClick= () => {
+        const transferSessionOnClick = () => {
             dispatch(fetchServerStatus(true));
-            sessionDialog=null;
-        }
+            sessionDialog = null;
+        };
         const endSession = () => {
             setIsTerminated(true);
-        }
-        if(isTerminated) {
+        };
+        if (isTerminated) {
             sessionDialog = <Error message="Your session has been terminated. Refresh the page to restart the session." />;
-        }
-        else {
+        } else {
             sessionDialog = (
                 <Confirmation
                     confirm={transferSessionOnClick}
                     cancel={endSession}
                     title='MATLAB is currently open in another window'
-                    cancelButton={wasEverActive?('Cancel'):('Continue in existing window')}
-                    confirmButton = {wasEverActive?('Confirm'):('Continue in this window')}>
+                    cancelButton={wasEverActive ? ('Cancel') : ('Continue in existing window')}
+                    confirmButton = {wasEverActive ? ('Confirm') : ('Continue in this window')}>
                     {wasEverActive
                         ? 'You have been disconnected because MATLAB is open in another window. Click on Confirm to continue using MATLAB here.'
                         : <div>MATLAB is open in another window and cannot be opened in a second window or tab at the same time.<br></br>Would you like to continue in this window?</div> }
@@ -180,7 +179,6 @@ function App() {
         if (!hasFetchedEnvConfig) {
             dispatch(fetchEnvConfig());
         }
-
     }, [dispatch, hasFetchedEnvConfig]);
 
     useEffect(() => {
@@ -188,13 +186,11 @@ function App() {
         if (hasFetchedEnvConfig && !hasFetchedServerStatus) {
             dispatch(fetchServerStatus());
         }
-
     }, [dispatch, hasFetchedServerStatus, hasFetchedEnvConfig]);
 
     // Periodic fetch server status
     useInterval(() => {
-        if(hasFetchedServerStatus)
-        {
+        if (hasFetchedServerStatus) {
             dispatch(fetchServerStatus());
         }
     }, fetchStatusPeriod);
@@ -208,7 +204,7 @@ function App() {
 
     useEffect(() => {
         const queryParams = parseQueryParams(window.location);
-        const token = queryParams.get("mwi_auth_token");
+        const token = queryParams.get('mwi_auth_token');
 
         if (token) {
             dispatch(updateAuthStatus(token));
@@ -228,17 +224,14 @@ function App() {
     if (dialog) {
         // TODO Inline confirmation component build
         overlayContent = dialog;
-    }
-    // Give precedence to token auth over licensing info ie. once after token auth is done, show licensing if not provided.
-    else if ((!licensingProvided) && hasFetchedServerStatus && (!authEnabled || isAuthenticated)) {
+    } else if ((!licensingProvided) && hasFetchedServerStatus && (!authEnabled || isAuthenticated)) {
+        // Give precedence to token auth over licensing info ie. once after token auth is done, show licensing if not provided.
         overlayContent = <LicensingGatherer role="licensing" aria-describedby="license-window" />;
-    }
-    // Show license selector if the user has entitlements and is not currently entitled
-    else if (hasEntitlements && !isEntitled) {
+    } else if (hasEntitlements && !isEntitled) {
+        // Show license selector if the user has entitlements and is not currently entitled
         overlayContent = <EntitlementSelector options={licensingInfo.entitlements} />;
-    }
-    // in all other cases, we will either ask for the token, 
-    else if (!dialog) {
+    } else if (!dialog) {
+        // in all other cases, we will either ask for the token,
         overlayContent = (
             <Information closeHandler={toggleOverlayVisible}>
                 <Controls callback={args => setDialogModel(args)} />
@@ -246,12 +239,13 @@ function App() {
         );
     }
 
-    const overlay = overlayVisible ? (
-        <Overlay>
-            {overlayContent}
-        </Overlay>
-    ) : null;
-
+    const overlay = overlayVisible
+        ? (
+            <Overlay>
+                {overlayContent}
+            </Overlay>
+        )
+        : null;
 
     // FIXME Until https://github.com/http-party/node-http-proxy/issues/1342
     // is addressed, use a direct URL in development mode. Once that is
@@ -268,7 +262,7 @@ function App() {
     if (matlabUp) {
         matlabJsd = (!authEnabled || isAuthenticated)
             ? (<MatlabJsd url={matlabUrl} />)
-            : <img style={{ objectFit: 'fill' }} src={blurredBackground} alt='Blurred MATLAB environment' />
+            : <img style={{ objectFit: 'fill' }} src={blurredBackground} alt='Blurred MATLAB environment' />;
     }
 
     const overlayTrigger = overlayVisible ? null : <OverlayTrigger />;
@@ -278,17 +272,19 @@ function App() {
         // Have noticed this behavior both in windows and Linux.
         // If session dialog is not 'null' then render the transfer dialog or error dialog otherwise render the normal MATLAB.
         <React.Fragment>
-            {sessionDialog?(
-                <Overlay>
-                    {sessionDialog}
-                </Overlay>
-            ):(
-                <div data-testid="app" className="main">
-                    {overlayTrigger}
-                    {matlabJsd}
-                    {overlay}
-                </div>
-            )}
+            {sessionDialog
+                ? (
+                    <Overlay>
+                        {sessionDialog}
+                    </Overlay>
+                )
+                : (
+                    <div data-testid="app" className="main">
+                        {overlayTrigger}
+                        {matlabJsd}
+                        {overlay}
+                    </div>
+                )}
         </React.Fragment>
     );
 }

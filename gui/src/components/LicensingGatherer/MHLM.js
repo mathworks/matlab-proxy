@@ -1,73 +1,73 @@
-// Copyright (c) 2020-2023 The MathWorks, Inc.
+// Copyright 2020-2024 The MathWorks, Inc.
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import PropTypes from 'prop-types';
 import {
     selectLicensingMhlmUsername,
     selectWsEnv,
     selectMatlabVersionOnPath,
-    selectSupportedMatlabVersions,
+    selectSupportedMatlabVersions
 } from '../../selectors';
 import {
-    fetchSetLicensing,
+    fetchSetLicensing
 } from '../../actionCreators';
 
-
 // Send a generated nonce to the login iframe
-function setLoginNonce(username) {
-    const clientNonce = (Math.random() + "").substr(2);
+function setLoginNonce (username) {
+    const clientNonce = (Math.random() + '').substr(2);
     const noncePayload = {
-        event: "init",
+        event: 'init',
         clientTransactionId: clientNonce,
-        transactionId: "",
-        release: "",
-        platform: "",
-        clientString: "desktop-jupyter",
-        clientID: "",
-        locale: "",
-        profileTier: "",
+        transactionId: '',
+        release: '',
+        platform: '',
+        clientString: 'desktop-jupyter',
+        clientID: '',
+        locale: '',
+        profileTier: '',
         showCreateAccount: false,
         showRememberMe: false,
         showLicenseField: false,
-        licenseNo: "",
+        licenseNo: '',
         cachedUsername: username,
         cachedRememberMe: false
     };
 
-    const loginFrame = document.getElementById("loginframe").contentWindow;
-    loginFrame.postMessage(JSON.stringify(noncePayload), "*");
+    const loginFrame = document.getElementById('loginframe').contentWindow;
+    loginFrame.postMessage(JSON.stringify(noncePayload), '*');
 }
 
-function initLogin(clientNonce, serverNonce, sourceId) {
+function initLogin (clientNonce, serverNonce, sourceId) {
     const initPayload = {
-        event: "load",
+        event: 'load',
         clientTransactionId: clientNonce,
         transactionId: serverNonce,
-        release: "",
-        platform: "web",
-        clientString: "desktop-jupyter",
-        clientId: "",
-        sourceId: sourceId,
-        profileTier: "MINIMUM",
+        release: '',
+        platform: 'web',
+        clientString: 'desktop-jupyter',
+        clientId: '',
+        sourceId,
+        profileTier: 'MINIMUM',
         showCreateAccount: false,
         showRememberMe: false,
         showLicenseField: false,
-        entitlementId: "",
+        entitlementId: '',
         showPrivacyPolicy: true,
-        contextualText: "",
-        legalText: "",
-        cachedIdentifier: "",
-        cachedRememberMe: "",
-        token: "",
+        contextualText: '',
+        legalText: '',
+        cachedIdentifier: '',
+        cachedRememberMe: '',
+        token: '',
         unauthorized: false
     };
 
-    const loginFrame = document.getElementById("loginframe").contentWindow;
-    loginFrame.postMessage(JSON.stringify(initPayload), "*");
+    const loginFrame = document.getElementById('loginframe').contentWindow;
+    loginFrame.postMessage(JSON.stringify(initPayload), '*');
 }
 
 // Adding a child prop with null as default for improved testability.
-function MHLM({mhlmLicensingInfo = null}) {
+function MHLM ({ mhlmLicensingInfo = null }) {
     const dispatch = useDispatch();
     const username = useSelector(selectLicensingMhlmUsername);
     const wsEnv = useSelector(selectWsEnv);
@@ -76,9 +76,9 @@ function MHLM({mhlmLicensingInfo = null}) {
 
     const [iFrameLoaded, setIFrameLoaded] = useState(false);
     // useState variable to store response from mhlm after authentication
-    const [fetchedMhlmLicensingInfo, setFetchedMhlmLicensingInfo] = useState(mhlmLicensingInfo)
-    const [selectedMatlabVersion, setSelectedMatlabVersion] = useState(supportedMatlabVersions[supportedMatlabVersions.length - 1]); 
-    
+    const [fetchedMhlmLicensingInfo, setFetchedMhlmLicensingInfo] = useState(mhlmLicensingInfo);
+    const [selectedMatlabVersion, setSelectedMatlabVersion] = useState(supportedMatlabVersions[supportedMatlabVersions.length - 1]);
+
     const mhlmLoginHostname = useMemo(
         () => {
             let subdomain = 'login';
@@ -92,12 +92,11 @@ function MHLM({mhlmLicensingInfo = null}) {
 
     // Create random sourceId string
     const sourceId = useState(
+        Math.random().toString(36).substring(2, 15) +
         Math.random().toString(36).substring(2, 15)
-        + Math.random().toString(36).substring(2, 15)
     )[0];
 
     useEffect(() => {
-
         const handler = event => {
             // Only process events that are related to the iframe setup
             if (event.origin === mhlmLoginHostname) {
@@ -115,12 +114,12 @@ function MHLM({mhlmLicensingInfo = null}) {
                         profileId: data.profileId,
                         emailAddress: data.emailAddress,
                         sourceId
-                    }
+                    };
                     // matlab version is required in subsequent steps on the server side.
                     // If matlab version is available, persist licensing on the server side.
                     // Else, store response from mhlm and render drop down to choose matlab version.
-                    if(matlabVersionOnPath){                        
-                        dispatch(fetchSetLicensing({...mhlmLicensingInfo, "matlabVersion": matlabVersionOnPath}));   
+                    if (matlabVersionOnPath) {
+                        dispatch(fetchSetLicensing({ ...mhlmLicensingInfo, matlabVersion: matlabVersionOnPath }));
                     } else {
                         setFetchedMhlmLicensingInfo(mhlmLicensingInfo);
                     }
@@ -128,11 +127,11 @@ function MHLM({mhlmLicensingInfo = null}) {
             }
         };
 
-        window.addEventListener("message", handler);
+        window.addEventListener('message', handler);
 
         // Clean up
         return () => {
-            window.removeEventListener("message", handler);
+            window.removeEventListener('message', handler);
         };
     }, [dispatch, sourceId, mhlmLoginHostname, fetchedMhlmLicensingInfo, matlabVersionOnPath]);
 
@@ -160,17 +159,17 @@ function MHLM({mhlmLicensingInfo = null}) {
                 Sorry your browser does not support inline frames.
             </iframe>
         </div>
-    )
+    );
 
     const submitForm = (event) => {
         event.preventDefault();
-        dispatch(fetchSetLicensing({...fetchedMhlmLicensingInfo, "matlabVersion": selectedMatlabVersion}))
+        dispatch(fetchSetLicensing({ ...fetchedMhlmLicensingInfo, matlabVersion: selectedMatlabVersion }));
     };
 
     const chooseMatlabVersionDropDown = (
-    <div id="ChooseMatlabVersion">
+        <div id="ChooseMatlabVersion">
             <form onSubmit={submitForm}>
-                <div className='form-group'>                     
+                <div className='form-group'>
                     <p>
                         <b>Note</b>: The version of MATLAB could not be determined. Choose the version of MATLAB you are attempting to start.
                     </p>
@@ -188,15 +187,17 @@ function MHLM({mhlmLicensingInfo = null}) {
                     <input type="submit" id="startMatlabBtn" value="Start MATLAB" className="btn btn_color_blue" />
                 </div>
             </form>
-    </div>            
+        </div>
     );
 
     // Render MHLM iFrame if not authenticated and matlab version couldn't be determined
-    if(fetchedMhlmLicensingInfo && !matlabVersionOnPath){       
+    if (fetchedMhlmLicensingInfo && !matlabVersionOnPath) {
         return chooseMatlabVersionDropDown;
     } else {
         return mhlmIframe;
     }
 }
-
+MHLM.propTypes = {
+    mhlmLicensingInfo: PropTypes.object
+};
 export default MHLM;
