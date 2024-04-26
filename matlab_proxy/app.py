@@ -4,6 +4,7 @@ import asyncio
 import json
 import mimetypes
 import pkgutil
+import secrets
 import sys
 import uuid
 
@@ -795,6 +796,18 @@ def configure_and_start(app):
 
     web_logger = None if not mwi_env.is_web_logging_enabled() else logger
 
+    # Setup the session storage,
+    # Uniqified per session to prevent multiple proxy servers on the same FQDN from interfering with each other.
+    uniqify_session_cookie = secrets.token_hex()
+    fernet_key = fernet.Fernet.generate_key()
+    f = fernet.Fernet(fernet_key)
+    aiohttp_session_setup(
+        app,
+        EncryptedCookieStorage(
+            f, cookie_name="matlab-proxy-session-" + uniqify_session_cookie
+        ),
+    )
+
     # Setup runner
     runner = web.AppRunner(app, logger=web_logger, access_log=web_logger)
     loop.run_until_complete(runner.setup())
@@ -869,13 +882,6 @@ def create_app(config_name=matlab_proxy.get_default_config_name()):
 
     app.router.add_route("*", f"{base_url}/{{proxyPath:.*}}", matlab_view)
     app.on_cleanup.append(cleanup_background_tasks)
-
-    # Setup the session storage
-    fernet_key = fernet.Fernet.generate_key()
-    f = fernet.Fernet(fernet_key)
-    aiohttp_session_setup(
-        app, EncryptedCookieStorage(f, cookie_name="matlab-proxy-session")
-    )
 
     return app
 
