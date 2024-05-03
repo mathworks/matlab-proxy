@@ -1,4 +1,4 @@
-# Copyright 2023 The MathWorks, Inc.
+# Copyright 2023-2024 The MathWorks, Inc.
 
 import json
 import os
@@ -7,9 +7,10 @@ from pathlib import Path
 from typing import Optional
 
 import pytest
-from matlab_proxy import settings
 
+from matlab_proxy import settings
 from matlab_proxy.app_state import AppState
+from matlab_proxy.constants import MWI_AUTH_TOKEN_NAME_FOR_HTTP
 from matlab_proxy.util.mwi.exceptions import LicensingError, MatlabError
 from tests.unit.util import MockResponse
 
@@ -55,7 +56,7 @@ def app_state_fixture(sample_settings_fixture):
 
 @pytest.fixture
 def sample_token_headers_fixture():
-    return {"mwi_auth_token_name": "asdf"}
+    return {MWI_AUTH_TOKEN_NAME_FOR_HTTP: "asdf"}
 
 
 @pytest.fixture
@@ -76,7 +77,10 @@ def app_state_with_token_auth_fixture(
     ((mwi_auth_token_name, mwi_auth_token_hash),) = sample_token_headers_fixture.items()
     app_state_fixture.matlab_session_files["matlab_ready_file"] = tmp_matlab_ready_file
     app_state_fixture.settings["mwi_is_token_auth_enabled"] = True
-    app_state_fixture.settings["mwi_auth_token_name"] = mwi_auth_token_name
+    app_state_fixture.settings["mwi_auth_token_name_for_env"] = mwi_auth_token_name
+    app_state_fixture.settings["mwi_auth_token_name_for_http"] = (
+        MWI_AUTH_TOKEN_NAME_FOR_HTTP
+    )
     app_state_fixture.settings["mwi_auth_token_hash"] = mwi_auth_token_hash
     app_state_fixture.settings["mwi_server_url"] = "http://localhost:8888"
 

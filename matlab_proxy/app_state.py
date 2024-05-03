@@ -11,12 +11,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Final, Optional
 
 from matlab_proxy import util
-from matlab_proxy.settings import (
-    get_process_startup_timeout,
-)
 from matlab_proxy.constants import (
     CONNECTOR_SECUREPORT_FILENAME,
     MATLAB_LOGS_FILE_NAME,
+)
+from matlab_proxy.settings import (
+    get_process_startup_timeout,
 )
 from matlab_proxy.util import mw, mwi, system, windows
 from matlab_proxy.util.mwi import environment_variables as mwi_env
@@ -28,11 +28,10 @@ from matlab_proxy.util.mwi.exceptions import (
     LicensingError,
     MatlabError,
     OnlineLicensingError,
-    XvfbError,
     UIVisibleFatalError,
+    XvfbError,
     log_error,
 )
-
 
 logger = mwi.logger.get()
 
@@ -314,7 +313,11 @@ class AppState:
             [Dict | None]: Returns token authentication headers if any.
         """
         return (
-            {self.settings["mwi_auth_token_name"]: self.settings["mwi_auth_token_hash"]}
+            {
+                self.settings["mwi_auth_token_name_for_http"]: self.settings[
+                    "mwi_auth_token_hash"
+                ]
+            }
             if self.settings["mwi_is_token_auth_enabled"]
             else None
         )

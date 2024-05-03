@@ -1031,7 +1031,7 @@ async def test_update_entitlement_with_correct_entitlement(set_licensing_info):
     assert resp.status == HTTPStatus.OK
 
 
-async def test_get_auth_token_route(test_server, monkeypatch):
+async def test_get_auth_token_route(test_server):
     """Test to check endpoint : "/get_auth_token"
 
     Args:

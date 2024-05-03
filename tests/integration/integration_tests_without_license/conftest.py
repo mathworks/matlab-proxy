@@ -6,6 +6,7 @@ import requests
 from tests.utils.logging_util import create_integ_test_logger
 import os
 from urllib.parse import urlparse, parse_qs
+from matlab_proxy.constants import MWI_AUTH_TOKEN_NAME_FOR_HTTP
 
 _logger = create_integ_test_logger(__name__)
 
@@ -34,9 +35,9 @@ def parse_matlab_proxy_url():
     parsed_url = urlparse(utils.get_connection_string(mwi_app_port))
 
     headers = {
-        "mwi_auth_token": (
-            parse_qs(parsed_url.query)["mwi_auth_token"][0]
-            if "mwi_auth_token" in parse_qs(parsed_url.query)
+        MWI_AUTH_TOKEN_NAME_FOR_HTTP: (
+            parse_qs(parsed_url.query)[MWI_AUTH_TOKEN_NAME_FOR_HTTP][0]
+            if MWI_AUTH_TOKEN_NAME_FOR_HTTP in parse_qs(parsed_url.query)
             else ""
         )
     }

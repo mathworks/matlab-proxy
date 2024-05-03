@@ -35,6 +35,7 @@ import {
     selectIsAuthenticated
 } from '../selectors';
 import sha256 from 'crypto-js/sha256';
+import { MWI_AUTH_TOKEN_NAME_FOR_HTTP } from '../constants';
 
 export function setAuthStatus (authentication) {
     return {
@@ -296,7 +297,7 @@ export function updateAuthStatus (token) {
         const options = {
             method: 'POST',
             headers: {
-                mwi_auth_token: tokenHash
+                [MWI_AUTH_TOKEN_NAME_FOR_HTTP]: tokenHash
             }
         };
         const response = await fetchWithTimeout(dispatch, './authenticate', options, 15000);

@@ -43,6 +43,7 @@ import {
 } from '../../actionCreators';
 import blurredBackground from './MATLAB-env-blur.png';
 import EntitlementSelector from '../EntitlementSelector';
+import { MWI_AUTH_TOKEN_NAME_FOR_HTTP } from '../../constants';
 
 function App () {
     const dispatch = useDispatch();
@@ -165,10 +166,10 @@ function App () {
                     cancel={endSession}
                     title='MATLAB is currently open in another window'
                     cancelButton={wasEverActive ? ('Cancel') : ('Continue in existing window')}
-                    confirmButton = {wasEverActive ? ('Confirm') : ('Continue in this window')}>
+                    confirmButton={wasEverActive ? ('Confirm') : ('Continue in this window')}>
                     {wasEverActive
                         ? 'You have been disconnected because MATLAB is open in another window. Click on Confirm to continue using MATLAB here.'
-                        : <div>MATLAB is open in another window and cannot be opened in a second window or tab at the same time.<br></br>Would you like to continue in this window?</div> }
+                        : <div>MATLAB is open in another window and cannot be opened in a second window or tab at the same time.<br></br>Would you like to continue in this window?</div>}
                 </Confirmation>
             );
         }
@@ -204,7 +205,7 @@ function App () {
 
     useEffect(() => {
         const queryParams = parseQueryParams(window.location);
-        const token = queryParams.get('mwi_auth_token');
+        const token = queryParams.get(MWI_AUTH_TOKEN_NAME_FOR_HTTP);
 
         if (token) {
             dispatch(updateAuthStatus(token));

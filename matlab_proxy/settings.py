@@ -17,6 +17,7 @@ from cryptography.x509.oid import NameOID
 
 import matlab_proxy
 from matlab_proxy import constants
+from matlab_proxy.constants import MWI_AUTH_TOKEN_NAME_FOR_HTTP
 from matlab_proxy.util import mwi, system
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import token_auth
@@ -197,11 +198,12 @@ def get_dev_settings(config):
         "mwi_logs_root_dir": get_mwi_logs_root_dir(dev=True),
         "mw_context_tags": get_mw_context_tags(matlab_proxy.get_default_config_name()),
         "mwi_server_url": None,
-        "mwi_is_token_auth_enabled": mwi_auth_token != None,
+        "mwi_is_token_auth_enabled": mwi_auth_token is not None,
         "mwi_auth_status": False,
         "mwi_auth_token": mwi_auth_token,
         "mwi_auth_token_hash": mwi_auth_token_hash,
-        "mwi_auth_token_name": mwi_env.get_env_name_mwi_auth_token().lower(),
+        "mwi_auth_token_name_for_http": MWI_AUTH_TOKEN_NAME_FOR_HTTP,
+        "mwi_auth_token_name_for_env": mwi_env.get_env_name_mwi_auth_token().lower(),
         "mwi_use_existing_license": mwi.validators.validate_use_existing_licensing(
             os.getenv(mwi_env.get_env_name_mwi_use_existing_license(), "")
         ),
@@ -322,11 +324,12 @@ def get_server_settings(config_name):
         "mw_context_tags": get_mw_context_tags(config_name),
         # The url where the matlab-proxy server is accessible at
         "mwi_server_url": None,
-        "mwi_is_token_auth_enabled": mwi_auth_token != None,
+        "mwi_is_token_auth_enabled": mwi_auth_token is not None,
         "mwi_auth_status": False,
         "mwi_auth_token": mwi_auth_token,
         "mwi_auth_token_hash": mwi_auth_token_hash,
-        "mwi_auth_token_name": mwi_env.get_env_name_mwi_auth_token().lower(),
+        "mwi_auth_token_name_for_http": MWI_AUTH_TOKEN_NAME_FOR_HTTP,
+        "mwi_auth_token_name_for_env": mwi_env.get_env_name_mwi_auth_token().lower(),
         "mwi_use_existing_license": mwi.validators.validate_use_existing_licensing(
             os.getenv(mwi_env.get_env_name_mwi_use_existing_license(), "")
         ),

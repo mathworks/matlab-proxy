@@ -7,6 +7,7 @@ import App from './index';
 import * as actionCreators from '../../actionCreators';
 import state from '../../test/utils/state';
 import { MAX_REQUEST_FAIL_COUNT } from '../../constants';
+import { MWI_AUTH_TOKEN_NAME_FOR_HTTP } from '../../constants';
 
 const _ = require('lodash');
 
@@ -47,7 +48,7 @@ describe('App Component', () => {
     });
 
     it('should render overlayTrigger (after closing the tutorial)', () => {
-    // Hide the tutorial before rendering the component.
+        // Hide the tutorial before rendering the component.
         initialState.tutorialHidden = true;
         initialState.overlayVisibility = false;
 
@@ -64,7 +65,7 @@ describe('App Component', () => {
     });
 
     it('should render LicensingGatherer component within the App component when no licensing is provided and user is authenticated', () => {
-    // Set lincensingInfo to empty object.
+        // Set licensingInfo to empty object.
         initialState.overlayVisibility = true;
         initialState.serverStatus.licensingInfo = {};
         initialState.authentication.enabled = true;
@@ -79,7 +80,7 @@ describe('App Component', () => {
     });
 
     it('should render LicensingGatherer component within the App component when no licensing is provided and authentication is disabled', () => {
-    // Set lincensingInfo to empty object.
+        // Set licensingInfo to empty object.
         initialState.overlayVisibility = true;
         initialState.serverStatus.licensingInfo = {};
         initialState.authentication.enabled = false;
@@ -93,7 +94,7 @@ describe('App Component', () => {
     });
 
     it('should render Information Component within App Component after licensing is provided and user is authenticated', () => {
-    // Hide the tutorial and make the overlay visible.
+        // Hide the tutorial and make the overlay visible.
         initialState.tutorialHidden = true;
         initialState.overlayVisibility = true;
 
@@ -112,7 +113,7 @@ describe('App Component', () => {
     });
 
     it('should render Information Component within App Component after licensing is provided and auth is not enabled', () => {
-    // Hide the tutorial and make the overlay visible.
+        // Hide the tutorial and make the overlay visible.
         initialState.tutorialHidden = true;
         initialState.overlayVisibility = true;
 
@@ -131,7 +132,7 @@ describe('App Component', () => {
     });
 
     it('should display integration terminated error', () => {
-    // Hide the tutorial, make the overlay visible and set fetchFailCount to MAX_REQUEST_FAIL_COUNT
+        // Hide the tutorial, make the overlay visible and set fetchFailCount to MAX_REQUEST_FAIL_COUNT
         initialState.tutorialHidden = true;
         initialState.overlayVisibility = true;
         initialState.serverStatus.fetchFailCount = MAX_REQUEST_FAIL_COUNT;
@@ -173,7 +174,7 @@ describe('App Component', () => {
     });
 
     it('should display Confirmation component ', () => {
-    // Hide the tutorial and make the overlay visible
+        // Hide the tutorial and make the overlay visible
         initialState.tutorialHidden = true;
         initialState.overlayVisibility = true;
 
@@ -196,7 +197,7 @@ describe('App Component', () => {
     });
 
     it('should display Help Component', () => {
-    // Hide the tutorial and make the overlay visible
+        // Hide the tutorial and make the overlay visible
         initialState.tutorialHidden = true;
         initialState.overlayVisibility = true;
 
@@ -230,9 +231,9 @@ describe('App Component', () => {
 
     const tokenInQuery = '12345';
     it.each([
-        [`?mwi_auth_token=${tokenInQuery}&test1=1&test2=2`, tokenInQuery],
-        [`?test1=1&mwi_auth_token=${tokenInQuery}&test2=2`, tokenInQuery],
-        [`?test1=1&test2=2&mwi_auth_token=${tokenInQuery}`, tokenInQuery]
+        [`?${MWI_AUTH_TOKEN_NAME_FOR_HTTP}=${tokenInQuery}&test1=1&test2=2`, tokenInQuery],
+        [`?test1=1&${MWI_AUTH_TOKEN_NAME_FOR_HTTP}=${tokenInQuery}&test2=2`, tokenInQuery],
+        [`?test1=1&test2=2&${MWI_AUTH_TOKEN_NAME_FOR_HTTP}=${tokenInQuery}`, tokenInQuery]
     ])("should pick the token correctly when the query parameters are '%s'", (queryParams, expectedToken) => {
         const url = 'http://localhost.com:5555';
         const mockUpdateAuthStatus = jest.spyOn(actionCreators, 'updateAuthStatus');

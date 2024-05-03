@@ -59,7 +59,7 @@ def generate_mwi_auth_token_and_hash():
 def get_mwi_auth_token_access_str(app_settings):
     """Returns formatted string with mwi token for use with server URL"""
     if app_settings["mwi_is_token_auth_enabled"]:
-        mwi_auth_token_name = app_settings["mwi_auth_token_name"]
+        mwi_auth_token_name = app_settings["mwi_auth_token_name_for_http"]
         mwi_auth_token = app_settings["mwi_auth_token"]
         return f"?{mwi_auth_token_name}={mwi_auth_token}"
 
@@ -134,7 +134,20 @@ async def _get_token_name(request):
         str : token name
     """
     app_settings = request.app["settings"]
-    return app_settings["mwi_auth_token_name"]
+    return app_settings["mwi_auth_token_name_for_env"]
+
+
+def _get_token_name_for_http(request):
+    """Gets the name of the token from settings.
+
+    Args:
+        request (HTTPRequest) : Used to get to app settings
+
+    Returns:
+        str : token name
+    """
+    app_settings = request.app["settings"]
+    return app_settings["mwi_auth_token_name_for_http"]
 
 
 async def _get_token(request):
@@ -238,11 +251,11 @@ async def _is_valid_token_in_url_query(request):
     query_string = request.query_string
     logger.debug(f"url query parameters found:{query_string}")
     if query_string:
-        token_name = await _get_token_name(request)
+        token_name = _get_token_name_for_http(request)
         parsed_token = parse_qs(request.query_string).get(token_name)
         if parsed_token:
             parsed_token = parsed_token[0]
-            logger.debug(f"parsed_token from url query string.")
+            logger.debug("parsed_token from url query string.")
             return await _is_valid_token(parsed_token, request)
 
     logger.debug("Token not found in url query.")
@@ -262,8 +275,9 @@ async def _is_valid_token_in_headers(request):
     """
     logger.debug("Checking for token in request headers...")
     headers = request.headers
-    token_name = await _get_token_name(request)
+    token_name = _get_token_name_for_http(request)
     if token_name in headers:
+        logger.debug(f"Token found in headers: {token_name}")
         is_valid_token = await _is_valid_token(headers[token_name], request)
         if is_valid_token:
             await _store_token_hash_into_session(request)

@@ -6,6 +6,7 @@ from aiohttp_session import setup as aiohttp_session_setup
 from aiohttp_session.cookie_storage import EncryptedCookieStorage
 from cryptography import fernet
 
+from matlab_proxy.constants import MWI_AUTH_TOKEN_NAME_FOR_HTTP
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import token_auth
 
@@ -105,10 +106,11 @@ def fake_server_with_auth_enabled(
 
     app = web.Application()
     app["settings"] = {
-        "mwi_is_token_auth_enabled": mwi_auth_token != None,
+        "mwi_is_token_auth_enabled": mwi_auth_token is not None,
         "mwi_auth_token": mwi_auth_token,
         "mwi_auth_token_hash": mwi_auth_token_hash,
-        "mwi_auth_token_name": mwi_env.get_env_name_mwi_auth_token().lower(),
+        "mwi_auth_token_name_for_http": MWI_AUTH_TOKEN_NAME_FOR_HTTP,
+        "mwi_auth_token_name_for_env": mwi_env.get_env_name_mwi_auth_token().lower(),
     }
     app.router.add_get("/", fake_endpoint)
     app.router.add_post("/", fake_endpoint)
@@ -127,7 +129,7 @@ async def test_set_value_with_token(
     resp = await fake_server_with_auth_enabled.post(
         "/",
         data={"value": "foo"},
-        headers={"mwi_auth_token": get_custom_auth_token_str},
+        headers={MWI_AUTH_TOKEN_NAME_FOR_HTTP: get_custom_auth_token_str},
     )
     assert resp.status == web.HTTPOk.status_code
     assert await resp.text() == "thanks for the data"
@@ -158,7 +160,9 @@ async def test_set_value_with_token_hash(
         "/",
         data={"value": "foo"},
         headers={
-            "mwi_auth_token": token_auth._generate_hash(get_custom_auth_token_str)
+            MWI_AUTH_TOKEN_NAME_FOR_HTTP: token_auth._generate_hash(
+                get_custom_auth_token_str
+            )
         },
     )
     assert resp.status == web.HTTPOk.status_code
@@ -193,7 +197,9 @@ async def test_set_value_without_token(fake_server_with_auth_enabled):
 
 async def test_set_value_with_invalid_token(fake_server_with_auth_enabled):
     resp2 = await fake_server_with_auth_enabled.post(
-        "/", data={"value": "foobar"}, headers={"mwi_auth_token": "invalid-token"}
+        "/",
+        data={"value": "foobar"},
+        headers={MWI_AUTH_TOKEN_NAME_FOR_HTTP: "invalid-token"},
     )
     assert resp2.status == web.HTTPForbidden.status_code
 
@@ -205,7 +211,11 @@ async def test_set_value_with_token_in_params(
     resp = await fake_server_with_auth_enabled.post(
         "/",
         data={"value": "foofoo"},
-        params={"mwi_auth_token": token_auth._generate_hash(get_custom_auth_token_str)},
+        params={
+            MWI_AUTH_TOKEN_NAME_FOR_HTTP: token_auth._generate_hash(
+                get_custom_auth_token_str
+            )
+        },
     )
     assert resp.status == web.HTTPOk.status_code
     assert await resp.text() == "thanks for the data"
@@ -232,7 +242,11 @@ async def test_get_value_with_token_in_query_params(
     fake_server_with_auth_enabled.server.app["value"] = "bar"
     resp = await fake_server_with_auth_enabled.get(
         "/",
-        params={"mwi_auth_token": token_auth._generate_hash(get_custom_auth_token_str)},
+        params={
+            MWI_AUTH_TOKEN_NAME_FOR_HTTP: token_auth._generate_hash(
+                get_custom_auth_token_str
+            )
+        },
     )
     assert resp.status == web.HTTPOk.status_code
     assert await resp.text() == "value: bar"
@@ -257,7 +271,7 @@ def fake_server_without_auth_enabled(loop, aiohttp_client, monkeypatch):
         "mwi_is_token_auth_enabled": mwi_auth_token != None,
         "mwi_auth_token": mwi_auth_token,
         "mwi_auth_token_hash": mwi_auth_token_hash,
-        "mwi_auth_token_name": mwi_env.get_env_name_mwi_auth_token().lower(),
+        "mwi_auth_token_name_for_env": mwi_env.get_env_name_mwi_auth_token().lower(),
     }
     app.router.add_get("/", fake_endpoint)
     app.router.add_post("/", fake_endpoint)
@@ -283,7 +297,7 @@ async def test_get_value_in_query_params(
     # Server should respond even if token is provided when not needed.
     fake_server_without_auth_enabled.server.app["value"] = "bar2"
     resp = await fake_server_without_auth_enabled.get(
-        "/", params={"mwi_auth_token": get_custom_auth_token_str}
+        "/", params={"mwi-auth-token": get_custom_auth_token_str}
     )
     assert resp.status == web.HTTPOk.status_code
     assert await resp.text() == "value: bar2"
