@@ -1,7 +1,13 @@
-# Copyright 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2024 The MathWorks, Inc.
 
 # Composite Action to generate Code Coverage XML and Upload it
 name: Generate Code Coverage XML
+
+inputs:
+  codecov-token:
+    description: 'codecov.io token'
+    required: true
+
 runs:
   using: "composite"
   steps:
@@ -27,13 +33,14 @@ runs:
       shell: bash
 
     - name: Upload python coverage report to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         directory: ./
         name: Python-codecov
         files: ./coverage.xml
         fail_ci_if_error: true
         verbose: true
+        token: ${{ inputs.codecov-token }}
 
     - name: Install Node Dependencies
       run: npm --prefix gui install gui
@@ -44,8 +51,9 @@ runs:
       shell: bash
 
     - name: Upload Javscript coverage report to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         directory: ./gui/coverage/
         fail_ci_if_error: true
         verbose: true
+        token: ${{ inputs.codecov-token }}

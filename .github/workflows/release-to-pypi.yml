@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc
+# Copyright 2020-2024 The MathWorks, Inc.
 
 # Workflow to test MATLAB-Proxy while releasing to PyPi
 name: Release to PyPI
@@ -23,6 +23,8 @@ jobs:
 
       - name: Generate Code Coverage XML
         uses: ./.github/actions/generate-code-coverage
+        with:
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
 
   build_and_publish_pypi:
