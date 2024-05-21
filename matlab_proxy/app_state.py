@@ -9,11 +9,13 @@ import time
 from collections import deque
 from datetime import datetime, timedelta, timezone
 from typing import Final, Optional
+import uuid
 
 from matlab_proxy import util
 from matlab_proxy.constants import (
     CONNECTOR_SECUREPORT_FILENAME,
     MATLAB_LOGS_FILE_NAME,
+    IS_CONCURRENCY_CHECK_ENABLED,
 )
 from matlab_proxy.settings import (
     get_process_startup_timeout,
@@ -102,6 +104,12 @@ class AppState:
         # Specific to concurrent session and is used to track the active client/s that are currently
         # connected to the backend
         self.active_client = None
+
+        # Used to detect whether the active client is actively sending out request or is inactive
+        self.active_client_request_detected = False
+
+        # An event loop task to handle the detection of client activity
+        self.task_detect_client_status = None
 
     def __get_cached_config_file(self):
         """Get the cached config file
@@ -1304,3 +1312,76 @@ class AppState:
             if err is not None:
                 self.error = err
                 log_error(logger, err)
+
+    def get_session_status(self, is_desktop, client_id, transfer_session):
+        """
+        Determines the session status for a client, potentially generating a new client ID.
+
+        This function is responsible for managing and tracking the session status of a client.
+        It can generate a new client ID if one is not provided and the conditions are met.
+        It also manages the active client status within the session, especially in scenarios
+        involving desktop clients and when concurrency checks are enabled.
+
+        Args:
+            is_desktop (bool): A flag indicating whether the client is a desktop client.
+            client_id (str or None): The client ID. If None, a new client ID may be generated.
+            transfer_session (bool): Indicates whether the session should be transferred to this client.
+
+        Returns:
+            tuple:
+                - A 2-tuple containing the generated client ID (or None if not generated) and
+                a boolean indicating whether the client is considered the active client.
+                - If concurrency checks are not enabled or the client is not a desktop client, it returns None for both
+                the generated client ID and the active client status.
+        """
+        if IS_CONCURRENCY_CHECK_ENABLED and is_desktop:
+            generated_client_id = None
+            if not client_id:
+                generated_client_id = str(uuid.uuid4())
+                client_id = generated_client_id
+
+            if not self.active_client or transfer_session:
+                self.active_client = client_id
+
+                if not self.task_detect_client_status:
+                    # Create the loop to detect the active status of the client
+                    loop = util.get_event_loop()
+                    self.task_detect_client_status = loop.create_task(
+                        self.detect_active_client_status()
+                    )
+
+            if self.active_client == client_id:
+                is_active_client = True
+                self.active_client_request_detected = True
+            else:
+                is_active_client = False
+            return generated_client_id, is_active_client
+        return None, None
+
+    async def detect_active_client_status(self, sleep_time=1, max_inactive_count=10):
+        """Detects whether the client is online or not by continuously checking if the active client is making requests
+
+        Args:
+            sleep_time (int): The time in seconds for which the process waits before checking for the next get_status request from the active client.
+            max_inactive_count (int): The maximum number of times the check for the request from the active_client fails before reseting the active client id.
+        """
+        inactive_count = 0
+        while self.active_client:
+            # Check if the get_status request from the active client is received or not
+            await asyncio.sleep(sleep_time)
+            if self.active_client_request_detected:
+                self.active_client_request_detected = False
+                inactive_count = 0
+            else:
+                inactive_count = inactive_count + 1
+            if inactive_count > max_inactive_count:
+                # If no request is received from the active_client for more than 10 seconds then clear the active client id
+                inactive_count = 0
+                self.active_client = None
+        if self.task_detect_client_status:
+            try:
+                # Self cleanup of the task
+                self.task_detect_client_status.cancel()
+                self.task_detect_client_status = None
+            except Exception as e:
+                logger.error("Cleaning of task: 'detect_client_status' failed.")

@@ -584,3 +584,81 @@ async def test_start_matlab_without_xvfb(app_state_fixture, mocker):
     assert app_state_fixture.processes["xvfb"] is None
     # Check if Matlab started
     assert app_state_fixture.processes["matlab"] is mock_matlab
+
+
+@pytest.mark.parametrize(
+    "is_desktop, client_id, is_client_id_present, expected_is_active_client",
+    [
+        (False, None, False, None),
+        (False, "mock_id", False, None),
+        (True, None, True, True),
+        (True, "mock_id", False, True),
+    ],
+    ids=[
+        "request_from_non-desktop_client",
+        "request_from_non-desktop_client_having_mock_id",
+        "request_from_desktop_client",
+        "request_from_desktop_client_having_mock_id",
+    ],
+)
+async def test_get_session_status(
+    app_state_fixture,
+    is_desktop,
+    client_id,
+    is_client_id_present,
+    expected_is_active_client,
+):
+    """Test to check if correnct session response is returned based on various conditions.
+
+    Args:
+        app_state_fixture (AppState): Object of AppState class with defaults set
+        is_desktop (bool): A flag indicating whether the client is a desktop client.
+        client_id (str or None): The client ID. If None, a new client ID may be generated.
+        is_client_id_present (bool): Indicates whether the expected value of client_id is string or not.
+        expected_is_active_client (bool): Indicates the expected value of is_active_client
+
+    """
+    # The value of transfer_session is a Don't Care condition as initially the value of client_id is always None.
+    output_client_id, output_is_active_client = app_state_fixture.get_session_status(
+        is_desktop, client_id, transfer_session=False
+    )
+    assert isinstance(output_client_id, str) == is_client_id_present, (
+        "Expected client_id to be a string got None"
+        if is_client_id_present
+        else "Expected client_id to be None got a string value"
+    )
+    assert (
+        output_is_active_client == expected_is_active_client
+    ), f"Expected is_active_client to be {expected_is_active_client} got {output_is_active_client}"
+    # For clean up of task_detect_client_status
+    app_state_fixture.active_client = None
+
+
+async def test_get_session_status_can_transfer_session(app_state_fixture):
+    """Test to check whether transer session changes client id to the new id
+
+    Args:
+        app_state_fixture (AppState): Object of AppState class with defaults set
+    """
+    app_state_fixture.active_client = "mock_id"
+    app_state_fixture.get_session_status(
+        is_desktop=True, client_id="new_id", transfer_session=True
+    )
+    assert app_state_fixture.active_client == "new_id"
+    # For clean up of task_detect_client_status
+    app_state_fixture.active_client = None
+
+
+async def test_detect_active_client_status_can_reset_active_client(app_state_fixture):
+    """Test to check whether the value of active client is being reset due to the client inactivity.
+
+    Args:
+        app_state_fixture (AppState): Object of AppState class with defaults set
+    """
+    app_state_fixture.active_client = "mock_id"
+    await app_state_fixture.detect_active_client_status(
+        sleep_time=0, max_inactive_count=0
+    )
+    assert (
+        app_state_fixture.active_client == None
+    ), f"Expected the active_client to be None"

@@ -284,6 +284,20 @@ async def test_get_status_route(test_server):
     assert resp.status == HTTPStatus.OK
 
 
+async def test_clear_client_id_route(test_server):
+    """Test to check endpoint: "/clear_client_id"
+
+    Args:
+        test_server (aiohttp_client): A aiohttp_client server for sending POST request.
+    """
+
+    state = test_server.server.app["state"]
+    state.active_client = "mock_client_id"
+    resp = await test_server.post("/clear_client_id")
+    assert resp.status == HTTPStatus.OK
+    assert state.active_client is None
+
+
 async def test_get_env_config(test_server):
     """Test to check endpoint : "/get_env_config"
 

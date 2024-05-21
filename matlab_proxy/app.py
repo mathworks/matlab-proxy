@@ -6,7 +6,6 @@ import mimetypes
 import pkgutil
 import secrets
 import sys
-import uuid
 
 import aiohttp
 from aiohttp import client_exceptions, web
@@ -97,16 +96,15 @@ def marshal_error(error):
 
 
 async def create_status_response(
-    app, loadUrl=None, client_id=None, transfer_session=False, is_desktop=False
+    app, loadUrl=None, client_id=None, is_active_client=None
 ):
     """Send a generic status response about the state of server, MATLAB, MATLAB Licensing and the client session status.
 
     Args:
         app (aiohttp.web.Application): Web Server
         loadUrl (String, optional): Represents the root URL. Defaults to None.
-        client_id (String, optional): Represents the unique client_id when concurrency check is enabled. Defaults to None.
-        transfer_session (Boolean, optional): Represents whether the connection should be transfered or not when concurrency check is enabled. Defaults to False.
-        is_desktop (Boolean, optional): Represents whether the request is made by the desktop app or some other kernel. Defaults to False.
+        client_id (String, optional): Represents the generated client_id when concurrency check is enabled and client does not have a client_id. Defaults to None.
+        is_active_client (Boolean, optional): Represents whether the current client is the active_client when concurrency check is enabled. Defaults to None.
 
     Returns:
         JSONResponse: A JSONResponse object containing the generic state of the server, MATLAB, MATLAB Licensing and the client session status.
@@ -124,17 +122,30 @@ async def create_status_response(
         "wsEnv": state.settings.get("ws_env", ""),
     }
 
-    if IS_CONCURRENCY_CHECK_ENABLED and is_desktop:
-        if not client_id:
-            client_id = str(uuid.uuid4())
-            status["clientId"] = client_id
-
-        if not state.active_client or transfer_session:
-            state.active_client = client_id
-
-        status["isActiveClient"] = True if state.active_client == client_id else False
+    if client_id:
+        status["clientId"] = client_id
+    if is_active_client is not None:
+        status["isActiveClient"] = is_active_client
 
     return web.json_response(status)
+
+
+@token_auth.authenticate_access_decorator
+async def clear_client_id(req):
+    """API endpoint to reset the active client
+
+    Args:
+        req (HTTPRequest): HTTPRequest Object
+
+    Returns:
+        Response: an empty response in JSON format
+    """
+    # Sleep for one second prior to clearing the client id to ensure that any remaining get_status responses are fully processed first.
+    await asyncio.sleep(1)
+    state = req.app["state"]
+    state.active_client = None
+    # This response is of no relevance to the front-end as the client has already exited
+    return web.json_response({})
 
 
 @token_auth.authenticate_access_decorator
@@ -201,15 +212,17 @@ async def get_status(req):
         JSONResponse: JSONResponse object containing information about the server, MATLAB and MATLAB Licensing.
     """
     # The client sends the CLIENT_ID as a query parameter if the concurrency check has been set to true.
+    state = req.app["state"]
     client_id = req.query.get("MWI_CLIENT_ID", None)
     transfer_session = json.loads(req.query.get("TRANSFER_SESSION", "false"))
     is_desktop = req.query.get("IS_DESKTOP", False)
 
+    generated_client_id, is_active_client = state.get_session_status(
+        is_desktop, client_id, transfer_session
+    )
+
     return await create_status_response(
-        req.app,
-        client_id=client_id,
-        transfer_session=transfer_session,
-        is_desktop=is_desktop,
+        req.app, client_id=generated_client_id, is_active_client=is_active_client
     )
 
 
@@ -773,6 +786,8 @@ async def cleanup_background_tasks(app):
     # Stop any running async tasks
     logger = mwi.logger.get()
     tasks = state.tasks
+    if state.task_detect_client_status:
+        tasks["detect_client_status"] = state.task_detect_client_status
     for task_name, task in tasks.items():
         if not task.cancelled():
             logger.debug(f"Cancelling MWI task: {task_name} : {task} ")
@@ -868,6 +883,7 @@ def create_app(config_name=matlab_proxy.get_default_config_name()):
     app.router.add_route("GET", f"{base_url}/get_auth_token", get_auth_token)
     app.router.add_route("GET", f"{base_url}/get_env_config", get_env_config)
     app.router.add_route("PUT", f"{base_url}/start_matlab", start_matlab)
+    app.router.add_route("POST", f"{base_url}/clear_client_id", clear_client_id)
     app.router.add_route("DELETE", f"{base_url}/stop_matlab", stop_matlab)
     app.router.add_route("PUT", f"{base_url}/set_licensing_info", set_licensing_info)
     app.router.add_route("PUT", f"{base_url}/update_entitlement", update_entitlement)

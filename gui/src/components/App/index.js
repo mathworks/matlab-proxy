@@ -176,6 +176,22 @@ function App () {
     }
 
     useEffect(() => {
+        const handlePageHide = (event) => {
+            // Performs actions before the component unloads
+            if (isConcurrencyEnabled && !isSessionConcurrent && hasFetchedServerStatus) {
+                // A POST request to clear the active client when the tab/browser is closed
+                navigator.sendBeacon('./clear_client_id');
+            }
+            event.preventDefault();
+            event.returnValue = '';
+        };
+        window.addEventListener('pagehide', handlePageHide);
+        return () => {
+            window.removeEventListener('pagehide', handlePageHide);
+        };
+    }, [isConcurrencyEnabled, isSessionConcurrent, hasFetchedServerStatus]);
+
+    useEffect(() => {
         // Initial fetch environment configuration
         if (!hasFetchedEnvConfig) {
             dispatch(fetchEnvConfig());
