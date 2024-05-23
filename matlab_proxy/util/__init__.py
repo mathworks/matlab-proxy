@@ -11,6 +11,9 @@ import matlab_proxy
 from matlab_proxy.util import mwi, system
 from matlab_proxy.util.event_loop import *
 from matlab_proxy.util.mwi import environment_variables as mwi_env
+from matlab_proxy.util.mwi.exceptions import (
+    UIVisibleFatalError,
+)
 
 logger = mwi.logger.get()
 
@@ -181,7 +184,7 @@ def prettify(boundary_filler=" ", text_arr=[]):
     return result
 
 
-def get_child_processes(parent_process):
+def get_child_processes(parent_process, max_attempts=10, sleep_interval=1):
     """Get list of child processes from a parent process.
 
     Args:
@@ -199,7 +202,6 @@ def get_child_processes(parent_process):
     # to get hold child processes
     parent_process_psutil = psutil.Process(parent_process.pid)
 
-    max_attempts = 10
     child_processes = None
     for _ in range(max_attempts):
         try:
@@ -212,17 +214,24 @@ def get_child_processes(parent_process):
 
             if not child_processes:
                 logger.debug("Waiting for the child processes to be created...")
+                time.sleep(sleep_interval)
                 continue
+
+            else:
+                logger.debug(f"Found the child process: {child_processes[0]}")
+                break
 
         except AssertionError as err:
             raise err
 
-        if child_processes:
-            break
-        time.sleep(0.1)
-
     if not child_processes:
-        raise RuntimeError("No child processes found after multiple attempts.")
+        logger.debug(
+            f"MATLAB process was not found while searching for the child processes."
+        )
+
+        raise UIVisibleFatalError(
+            "Unable to create MATLAB process. Click Start MATLAB to try again."
+        )
 
     return child_processes
 

@@ -846,6 +846,10 @@ class AppState:
 
                 return matlab
 
+            except UIVisibleFatalError as e:
+                self.error = e
+                log_error(logger, e)
+
             except Exception as err:
                 self.error = err
                 log_error(logger, err)
@@ -972,7 +976,7 @@ class AppState:
             )
             await self.stop_matlab(force_quit=True)
             self.error = MatlabError(
-                "Unable to start MATLAB because of a timeout. Try again by clicking Start MATLAB."
+                "MATLAB startup has timed out. Click Start MATLAB to try again."
             )
 
     async def __read_matlab_ready_file(self, delay):

@@ -6,6 +6,9 @@ import psutil
 
 from matlab_proxy.util import get_child_processes, system, add_signal_handlers, prettify
 from matlab_proxy.util import system
+from matlab_proxy.util.mwi.exceptions import (
+    UIVisibleFatalError,
+)
 
 
 def test_get_supported_termination_signals():
@@ -90,7 +93,7 @@ def test_get_child_processes_no_children(mocker):
     mock_parent_process_psutil.children.return_value = []
 
     # Call the function with the mocked parent process
-    with pytest.raises(RuntimeError):
+    with pytest.raises(UIVisibleFatalError):
         get_child_processes(parent_process)
 
 
