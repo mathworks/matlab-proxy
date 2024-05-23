@@ -63,7 +63,13 @@ TESTS_REQUIRES = [
     "pytest-playwright",
 ]
 
-INSTALL_REQUIRES = ["aiohttp>=3.7.4", "psutil", "aiohttp_session[secure]"]
+INSTALL_REQUIRES = [
+    "aiohttp>=3.7.4",
+    "aiohttp_session[secure]",
+    "importlib-metadata",
+    "importlib-resources",
+    "psutil",
+]
 
 HERE = Path(__file__).parent.resolve()
 long_description = (HERE / "README.md").read_text()

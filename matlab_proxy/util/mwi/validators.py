@@ -1,31 +1,30 @@
 # Copyright 2020-2024 The MathWorks, Inc.
 """This file contains validators for various runtime artifacts.
-A validator is defined as a function which verifies the input and 
-returns it unchanged if validation passes. 
+A validator is defined as a function which verifies the input and
+returns it unchanged if validation passes.
 Returning inputs allows validators to be used inline with the input.
 
-Example: 
+Example:
 Original code: if( input ):
 With validator: if (valid(input)):
 
 Exceptions are thrown to signal failure.
 """
+
 import errno
 import os
-from pathlib import Path
-import pkg_resources
 import socket
+from pathlib import Path
 from typing import List
-
 
 import matlab_proxy
 from matlab_proxy import util
-from matlab_proxy.util import system
 from matlab_proxy.constants import VERSION_INFO_FILE_NAME
+from matlab_proxy.util import system
 
 from . import environment_variables as mwi_env
 from . import logger as mwi_logger
-from .exceptions import MatlabInstallError, FatalError
+from .exceptions import FatalError, MatlabInstallError
 
 logger = mwi_logger.get()
 
@@ -213,10 +212,13 @@ def __get_configs():
         Dict: Contains all the values present in 'matlab_web_desktop_configs' entry_point from all the packages
         installed in the current environment.
     """
+    import importlib_metadata
+
+    matlab_proxy_eps = importlib_metadata.entry_points(
+        group=matlab_proxy.get_entrypoint_name()
+    )
     configs = {}
-    for entry_point in pkg_resources.iter_entry_points(
-        matlab_proxy.get_entrypoint_name()
-    ):
+    for entry_point in matlab_proxy_eps:
         configs[entry_point.name.lower()] = entry_point.load()
 
     return configs

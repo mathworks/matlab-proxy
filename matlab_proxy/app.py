@@ -16,12 +16,11 @@ from cryptography import fernet
 import matlab_proxy
 from matlab_proxy import constants, settings, util
 from matlab_proxy.app_state import AppState
-from matlab_proxy.util import mwi
-from matlab_proxy.util.mwi import environment_variables as mwi_env
-from matlab_proxy.util.mwi import token_auth, download
-from matlab_proxy.util.mwi.exceptions import AppError, InvalidTokenError, LicensingError
 from matlab_proxy.constants import IS_CONCURRENCY_CHECK_ENABLED
-
+from matlab_proxy.util import mwi
+from matlab_proxy.util.mwi import download, token_auth
+from matlab_proxy.util.mwi import environment_variables as mwi_env
+from matlab_proxy.util.mwi.exceptions import AppError, InvalidTokenError, LicensingError
 
 mimetypes.add_type("font/woff", ".woff")
 mimetypes.add_type("font/woff2", ".woff2")
@@ -475,7 +474,7 @@ def make_static_route_table(app):
     Returns:
         Dict: Containing information about the static files and header information.
     """
-    from pkg_resources import resource_isdir, resource_listdir
+    import importlib_resources
 
     from matlab_proxy import gui
     from matlab_proxy.gui import static
@@ -492,8 +491,9 @@ def make_static_route_table(app):
         (gui.static.js.__name__, "/static/js"),
         (gui.static.media.__name__, "/static/media"),
     ]:
-        for name in resource_listdir(mod, ""):
-            if not resource_isdir(mod, name):
+        for entry in importlib_resources.files(mod).iterdir():
+            name = entry.name
+            if not importlib_resources.files(mod).joinpath(name).is_dir():
                 if name != "__init__.py":
                     # Special case for manifest.json
                     if "manifest.json" in name:
