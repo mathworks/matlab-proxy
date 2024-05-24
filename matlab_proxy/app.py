@@ -421,7 +421,7 @@ async def termination_integration_delete(req):
     await req.app.cleanup()
     """When testing with pytest, its not possible to catch sys.exit(0) using the construct
     'with pytest.raises()', there by causing the test : test_termination_integration_delete()
-    to fail. Inorder to avoid this, adding the below if condition to check to skip sys.exit(0) when testing
+    to fail. In order to avoid this, adding the below if condition to check to skip sys.exit(0) when testing
     """
     logger.debug("Exiting with return code 0")
     if not mwi_env.is_testing_mode_enabled():

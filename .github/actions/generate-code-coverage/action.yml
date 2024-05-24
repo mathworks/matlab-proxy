@@ -1,7 +1,8 @@
 # Copyright 2020-2024 The MathWorks, Inc.
 
-# Composite Action to generate Code Coverage XML and Upload it
 name: Generate Code Coverage XML
+description: |
+  Generates Code Coverage for the Python and Javascript code and uploads it to codecov.io
 
 inputs:
   codecov-token:
@@ -17,7 +18,7 @@ runs:
         python-version: '3.8'
 
     - name: Use Node.js 18.x
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: 18
 
@@ -29,7 +30,8 @@ runs:
       shell: bash
 
     - name: Generate Code Coverage report for Python code
-      run: python3 -m pytest --cov=./ --cov-report=xml tests/unit
+      run: |
+        python3 -m pytest --cov=matlab_proxy --cov-report=xml tests/unit
       shell: bash
 
     - name: Upload python coverage report to Codecov

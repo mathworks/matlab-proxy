@@ -1,4 +1,4 @@
-# Copyright 2020-2023 The MathWorks, Inc
+# Copyright 2020-2024 The MathWorks, Inc.
 
 # Workflow that contains jobs to test MATLAB Proxy
 name: Testing MATLAB Proxy Integration
@@ -20,7 +20,7 @@ jobs:
   call-run-unit-tests-r002:
       uses: ./.github/workflows/run-unit-tests.yml
 
-   # Runs integration tests
+  # Runs integration tests
   call-integration-tests:
     uses: ./.github/workflows/run-integration-tests.yml
     secrets: inherit
