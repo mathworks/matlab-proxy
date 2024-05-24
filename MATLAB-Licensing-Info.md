@@ -27,3 +27,9 @@ Based on the license that you want to use, you can follow the procedures outline
 | ------ | ------ | ------ |
 | You want your users to use online licensing  | Campus-Wide, Individual  | These licenses are already configured for use with MATLAB Proxy. When starting MATLAB, an end user will need to log in to their MathWorks account to use the license linked to it. |
 | You want your users to use licenses administered using a network license manager   | Campus-Wide, Concurrent, or Network Named User  | You will need to embed the address of your network license manager using the `MLM_LICENSE_FILE` environment variable. See [Advanced-Usage.md](./Advanced-Usage.md). Otherwise, an end user will need to manually enter the address to the network license manager when they start MATLAB. Each instance of MATLAB will consume a license seat. Using network named user licenses is possible but is *not recommended*. All named users will need to be explicitly specified in the license manager options file. Named users may not use MathWorks products on more than two computers simultaneously - specifying a single, generic named user for the integration will not be viable.   |
+
+----
+
+Copyright 2020-2024 The MathWorks, Inc.
+
+----

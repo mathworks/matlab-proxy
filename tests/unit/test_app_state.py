@@ -7,12 +7,18 @@ from pathlib import Path
 from typing import Optional
 
 import pytest
+from matlab_proxy import settings
 
 from matlab_proxy import settings
 from matlab_proxy.app_state import AppState
 from matlab_proxy.constants import MWI_AUTH_TOKEN_NAME_FOR_HTTP
 from matlab_proxy.util.mwi.exceptions import LicensingError, MatlabError
 from tests.unit.util import MockResponse
+
+from matlab_proxy.constants import (
+    CONNECTOR_SECUREPORT_FILENAME,
+    USER_CODE_OUTPUT_FILE_NAME,
+)
 
 
 @pytest.fixture
@@ -35,6 +41,7 @@ def sample_settings_fixture(tmp_path):
         "mwi_logs_root_dir": Path(settings.get_mwi_config_folder(dev=True)),
         "app_port": 12345,
         "mwapikey": "asdf",
+        "has_custom_code_to_execute": False,
     }
 
 
@@ -662,3 +669,30 @@ async def test_detect_active_client_status_can_reset_active_client(app_state_fix
     assert (
         app_state_fixture.active_client == None
     ), f"Expected the active_client to be None"
+
+
+@pytest.mark.parametrize(
+    "session_file_count, has_custom_code_to_execute", [(2, True), (1, False)]
+)
+def test_create_logs_dir_for_MATLAB(
+    app_state_fixture, session_file_count, has_custom_code_to_execute
+):
+    """Test to check create_logs_dir_for_MATLAB()
+
+    Args:
+        app_state_fixture (AppState): Object of AppState class with defaults set
+    """
+    # Arrange
+    app_state_fixture.settings["has_custom_code_to_execute"] = (
+        has_custom_code_to_execute
+    )
+
+    # Act
+    app_state_fixture.create_logs_dir_for_MATLAB()
+
+    # Assert
+    for _, session_file_path in app_state_fixture.matlab_session_files.items():
+        # Check session files are present in mwi logs directory
+        assert app_state_fixture.mwi_logs_dir == Path(session_file_path).parent
+
+    assert len(app_state_fixture.matlab_session_files) == session_file_count

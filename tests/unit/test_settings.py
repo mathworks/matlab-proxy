@@ -458,3 +458,38 @@ def test_get_ssl_context_with_invalid_custom_ssl_files_raises_exception(
 
     with pytest.raises(Exception, match=exception_msg):
         settings._validate_ssl_files_and_get_ssl_context(mwi_certs_dir)
+
+
+@pytest.mark.parametrize(
+    "expected_value_for_has_custom_code, custom_code, has_custom_code_exception_matlab_cmd",
+    [(False, "", False), (True, "run(disp('MATLAB'))", True)],
+    ids=["No custom code to execute", "Has custom code to execute"],
+)
+def test_get_matlab_settings_custom_code(
+    monkeypatch,
+    mocker,
+    expected_value_for_has_custom_code,
+    custom_code,
+    has_custom_code_exception_matlab_cmd,
+):
+    # Arrange
+    monkeypatch.setenv(mwi_env.get_env_name_custom_matlab_code(), custom_code)
+    mocker.patch(
+        "matlab_proxy.settings.get_matlab_executable_and_root_path",
+        return_value=("matlab", None),
+    )
+
+    # Act
+    matlab_settings = settings.get_matlab_settings()
+    exception_present_in_matlab_cmd = (
+        "MATLABCustomStartupCodeError" in matlab_settings["matlab_cmd"][-1]
+    )
+    print(matlab_settings)
+
+    # Assert
+    assert (
+        matlab_settings["has_custom_code_to_execute"]
+        == expected_value_for_has_custom_code
+    )
+
+    assert exception_present_in_matlab_cmd == has_custom_code_exception_matlab_cmd

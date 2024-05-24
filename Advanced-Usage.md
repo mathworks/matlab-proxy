@@ -31,6 +31,7 @@ The following table describes all the environment variables that you can set to 
 | **MWI_USE_EXISTING_LICENSE** | string (optional) | `"True"` | When set to True, matlab-proxy will not ask you for additional licensing information and will try to launch an already activated MATLAB on your system PATH.
 | **MWI_CUSTOM_MATLAB_ROOT** | string (optional) | `"/path/to/matlab/root/"` | Optionally, provide a custom path to MATLAB root. For more information see [Adding MATLAB to System Path](#adding-matlab-to-system-path) |
 | **MWI_PROCESS_START_TIMEOUT** | integer (optional) | `1234` |  This field controls the time (in seconds) for which `matlab-proxy` waits for the processes it spins up, viz: MATLAB & Xvfb, to respond. By default, this value is `600 seconds`. A timeout could either indicate an issue with the spawned processes or be a symptom of a resource-constrained environment. Increase this value if your environment needs more time for the spawned processes to start.|
+| **MWI_MATLAB_STARTUP_SCRIPT** | string (optional) | `"addpath('/path/to/a/folder'), c=12"` | Executes string provided at MATLAB startup. For details, see [Run Custom MATLAB Startup Code](#run-custom-matlab-startup-code) |
 
 ## Adding MATLAB to System Path
 
@@ -134,6 +135,33 @@ Replace `your.machine.fqdn.com` with the FQDN for the machine on which the `ubun
 
 The logs from the SQUID container terminal should show activity when attempting to login to MATLAB through matlab-proxy.
 
+### Run Custom MATLAB Startup Code
+
+Use the environment variable `MWI_MATLAB_STARTUP_SCRIPT` to specify MATLAB code to run at startup. 
+
+When you start MATLAB using `matlab-proxy`, MATLAB will first run a `startup.m` file, if one exists on your path. For details, see [User-defined startup script for MATLAB](https://www.mathworks.com/help/matlab/ref/startup.html). MATLAB will then run any code you have provided as a string to the `MWI_MATLAB_STARTUP_SCRIPT` environment variable.
+
+
+You might want to run code at startup to:
+1. Add a folder to the MATLAB search path before you run a script.
+2. Set a constant in the workspace
+
+For example, to set variables `c1` and `c2`, with values `124` and `'xyz'`, respectively, and to add the folder `C:\Windows\Temp` to the MATLAB search path, run the command:
+```bash
+env MWI_MATLAB_STARTUP_SCRIPT="c1=124, c2='xyz', addpath('C:\Windows\Temp')" matlab-proxy-app
+```
+To specify a script to run at startup, use the `run` command and provide the path to your script.
+```bash
+env MWI_MATLAB_STARTUP_SCRIPT="run('path/to/startup_script.m')" matlab-proxy-app
+```
+
+If the code you specify throws an error, then after MATLAB starts, you see a variable `MATLABCustomStartupCodeError` of type `MException` in the workspace. To see the error message, run `disp(MATLABCustomStartupCodeError.message)` in the command window.
+
+Note: Restarting MATLAB from within `matlab-proxy` will run the specified code again.
+
+#### Limitations
+
+* Commands that require user input or open MATLAB editor windows are not supported. Using commands such as `keyboard`, `openExample` or `edit` will render `matlab-proxy` unresponsive.
 
 ----
 

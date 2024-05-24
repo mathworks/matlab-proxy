@@ -7,6 +7,7 @@ CONNECTOR_SECUREPORT_FILENAME: Final[str] = "connector.securePort"
 VERSION_INFO_FILE_NAME: Final[str] = "VersionInfo.xml"
 MAX_HTTP_REQUEST_SIZE: Final[int] = 500_000_000  # 500MB
 MATLAB_LOGS_FILE_NAME: Final[str] = "matlab_logs.txt"
+USER_CODE_OUTPUT_FILE_NAME: Final[str] = "startup_code_output.txt"
 
 # Max startup duration in seconds for processes launched by matlab-proxy
 # This constant is meant for internal use within matlab-proxy

@@ -162,6 +162,11 @@ def get_env_name_process_startup_timeout():
     return "MWI_PROCESS_START_TIMEOUT"
 
 
+def get_env_name_custom_matlab_code():
+    """User specified MATLAB code that will be executed by matlab-proxy upon its start"""
+    return "MWI_MATLAB_STARTUP_SCRIPT"
+
+
 class Experimental:
     """This class houses functions which are undocumented APIs and Environment variables.
     Note: Never add any state to this class. Its only intended for use as an abstraction layer

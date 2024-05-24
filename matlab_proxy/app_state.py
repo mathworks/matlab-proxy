@@ -16,10 +16,11 @@ from matlab_proxy.constants import (
     CONNECTOR_SECUREPORT_FILENAME,
     MATLAB_LOGS_FILE_NAME,
     IS_CONCURRENCY_CHECK_ENABLED,
+    USER_CODE_OUTPUT_FILE_NAME,
 )
-from matlab_proxy.settings import (
-    get_process_startup_timeout,
-)
+
+from matlab_proxy.settings import get_process_startup_timeout
+
 from matlab_proxy.util import mw, mwi, system, windows
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import token_auth
@@ -594,6 +595,24 @@ class AppState:
             self.matlab_session_files["matlab_ready_file"] = matlab_ready_file
 
             logger.debug(f"matlab_session_files:{self.matlab_session_files}")
+
+            # check if the user has provided any code or not
+            if self.settings.get("has_custom_code_to_execute"):
+                # Keep a reference to the user code output file in the matlab_session_files for cleanup
+                user_code_output_file = mwi_logs_dir / USER_CODE_OUTPUT_FILE_NAME
+                self.matlab_session_files["startup_code_output_file"] = (
+                    user_code_output_file
+                )
+                logger.info(
+                    util.prettify(
+                        boundary_filler="*",
+                        text_arr=[
+                            f"When MATLAB starts, you can see the output for your startup code at:",
+                            f"{self.matlab_session_files.get('startup_code_output_file', ' ')}",
+                        ],
+                    )
+                )
+
             return
 
     def create_server_info_file(self):

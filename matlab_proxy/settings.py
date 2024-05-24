@@ -366,7 +366,10 @@ def get_matlab_settings():
     flag_to_hide_desktop = ["-nodesktop"]
     if system.is_windows():
         flag_to_hide_desktop.extend(["-noDisplayDesktop", "-wait", "-log"])
-    matlab_startup_file = str(Path(__file__).resolve().parent / "matlab" / "startup.m")
+
+    matlab_code_dir = Path(__file__).resolve().parent / "matlab"
+    matlab_startup_file = str(matlab_code_dir / "startup.m")
+    matlab_code_file = str(matlab_code_dir / "evaluateUserMatlabCode.m")
 
     matlab_version = get_matlab_version(matlab_root_path)
 
@@ -388,6 +391,18 @@ def get_matlab_settings():
     profile_matlab_startup = (
         "-timing" if mwi_env.Experimental.is_matlab_startup_profiling_enabled() else ""
     )
+
+    has_custom_code_to_execute = (
+        len(os.getenv(mwi_env.get_env_name_custom_matlab_code(), "").strip()) > 0
+    )
+    mp_code_to_execute = f"try; run('{matlab_startup_file}'); catch MATLABProxyInitializationError; disp(MATLABProxyInitializationError.message); end;"
+    custom_code_to_execute = f"try; run('{matlab_code_file}'); catch MATLABCustomStartupCodeError; disp(MATLABCustomStartupCodeError.message); end;"
+    code_to_execute = (
+        mp_code_to_execute + custom_code_to_execute
+        if has_custom_code_to_execute
+        else mp_code_to_execute
+    )
+
     return {
         "matlab_path": matlab_root_path,
         "matlab_version": matlab_version,
@@ -402,13 +417,14 @@ def get_matlab_settings():
             *mpa_flags,
             profile_matlab_startup,
             "-r",
-            f"try; run('{matlab_startup_file}'); catch ME; disp(ME.message); end;",
+            code_to_execute,
         ],
         "ws_env": ws_env,
         "mwa_api_endpoint": f"https://login{ws_env_suffix}.mathworks.com/authenticationws/service/v4",
         "mhlm_api_endpoint": f"https://licensing{ws_env_suffix}.mathworks.com/mls/service/v1/entitlement/list",
         "mwa_login": f"https://login{ws_env_suffix}.mathworks.com",
         "nlm_conn_str": nlm_conn_str,
+        "has_custom_code_to_execute": has_custom_code_to_execute,
     }
 
 
