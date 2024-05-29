@@ -1,19 +1,10 @@
 # Testing Information for matlab-proxy
 
 
+This page shows how to run unit and integration tests for matlab-proxy.
 
-This document provides instructions for running the test suite for
-the MATLAB Proxy project. The test suite is categorized into unit tests
-and integration tests, each serving a different purpose in validating
-the functionality of the MATLAB Proxy.
-
-The unit tests are fast-running tests to validate the behaviour of individual
-methods. Unit tests ensure small sections of the source code (units of code)
-operate correctly.
-
-The integration tests validate if the MATLAB Proxy works well in the
-presence of a real MATLAB®. It hits the various http-endpoints of MATLAB Proxy
-and checks if the response is as expected.
+The unit tests quickly validate individual
+methods. The integration tests check that `matlab-proxy` works well with MATLAB®, by testing HTTP endpoints for correct responses.
 
 ## Unit Tests
 
@@ -21,68 +12,67 @@ The unit tests are written using the
 [Pytest](https://docs.pytest.org/en/latest/) and
 [Jest](https://jestjs.io/) frameworks.
 
-To run the Python unit tests in this project, follow these steps:
-* From the root directory of this project, run the command
+To run the Python unit tests in this project, follow these steps.
+
+1. From the root directory of this project, run:
   ```
   python3 -m pip install ".[dev]"
   ```
-* Run the command to run the python unit tests
+2. Run the unit tests:
   ```
   python3 -m pytest tests/unit
   ```
 
-To run the node unit tests in this project, follow these steps:
-* Change the directory to `gui` from the root of this project and run the command
+To run the Node unit tests follow these steps.
+
+1. From the project root, change to the `gui` folder and run:
   ```
   npm install
   ```
-* Run the 'build' script in package.json
+2. Run the `build` script in `package.json`:
   ```
   npm run build --if-present
   ```
-* Run the command to run the node unit tests
+3. Run the Node unit tests:
   ```
   npm test
   ```
 
 ## Integration Tests
 
-The integration tests are written using [Pytest](https://docs.pytest.org/en/latest/)
+The integration tests are written using the [Pytest](https://docs.pytest.org/en/latest/)
 Python package.
 
-### Integration test requirements
-1. MATLAB (Version >= `R2020b`) on the system path
-2. MATLAB Proxy should be unlicensed
-3. Run the following commands from the root directory of the project:
+### Integration Test Requirements
+
+
+1. Ensure that MATLAB R2020b or later is on the system path
+2. From the project root folder, run:
     ```
     python3 -m pip install ".[dev]"
     python3 -m playwright install --with-deps
     ```
-4. MATLAB Proxy requirements
-5. Valid MathWorks Account credentials
+3. Ensure that your system meets the `matlab-proxy` [Requirements](https://github.com/mathworks/matlab-proxy#requirements)
+4. Ensure that you have valid MathWorks account credentials
 
-### How to run the integration tests
-* Set the environment variables TEST_USERNAME and TEST_PASSWORD to be your
-  MathWorks Account user credentials.
+### Run Integration Tests
+
+Start by licensing `matlab-proxy`. If it is already licensed, skip the first two steps.
+
+1. Start MATLAB Proxy using `matlab-proxy-app`
+1. Use the dialog to license MATLAB Proxy using online licensing, network license manager, or an existing license.
+1. If you want the tests to be logged in a file, set the variable `MWI_INTEG_TESTS_LOG_FILE_PATH`
+  to the path of your log file:
+
     - Bash (Linux/macOS):
         ```bash
-        export TEST_USERNAME="some-username" && TEST_PASSWORD="some-password"
+        export MWI_INTEG_TESTS_LOG_FILE_PATH="Desired Path"
         ```
     - Powershell (Windows):
         ```powershell
-        $env:TEST_USERNAME="some-username"; $env:TEST_PASSWORD="some-password"
+        $env:MWI_INTEG_TESTS_LOG_FILE_PATH="Desired Path"
         ```
-* If you need the tests logs to be available in a file, set MWI_INTEG_TESTS_LOG_FILE_PATH
-  to the intended path of the log file.
-    - Bash (Linux/macOS):
-        ```bash
-        export MWI_INTEG_TESTS_LOG_FILE_PATH="Path intended"
-        ```
-    - Powershell (Windows):
-        ```powershell
-        $env:MWI_INTEG_TESTS_LOG_FILE_PATH="Path intended"
-        ```
-* Run the following command from the root directory of the project:
+1. From the project root folder, run:
     ```
     python3 -m pytest tests/integration -vs
     ```
