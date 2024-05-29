@@ -624,10 +624,12 @@ async def matlab_view(req):
 
     # Standard HTTP Request
     else:
-        # Proxy, injecting request header
+        # Proxy, injecting request header, disabling request timeouts
+        timeout = aiohttp.ClientTimeout(total=None)
         async with aiohttp.ClientSession(
             trust_env=True,
             connector=aiohttp.TCPConnector(verify_ssl=False),
+            timeout=timeout,
         ) as client_session:
             try:
                 req_body = await transform_body(req)
