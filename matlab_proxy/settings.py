@@ -395,8 +395,10 @@ def get_matlab_settings():
     has_custom_code_to_execute = (
         len(os.getenv(mwi_env.get_env_name_custom_matlab_code(), "").strip()) > 0
     )
-    mp_code_to_execute = f"try; run('{matlab_startup_file}'); catch MATLABProxyInitializationError; disp(MATLABProxyInitializationError.message); end;"
-    custom_code_to_execute = f"try; run('{matlab_code_file}'); catch MATLABCustomStartupCodeError; disp(MATLABCustomStartupCodeError.message); end;"
+
+    # Sanitize file paths to avoid MATLAB not running the script due to early breakup of character array.
+    mp_code_to_execute = f"try; run('{_sanitize_file_path_for_matlab(matlab_startup_file)}'); catch MATLABProxyInitializationError; disp(MATLABProxyInitializationError.message); end;"
+    custom_code_to_execute = f"try; run('{_sanitize_file_path_for_matlab(matlab_code_file)}'); catch MATLABCustomStartupCodeError; disp(MATLABCustomStartupCodeError.message); end;"
     code_to_execute = (
         mp_code_to_execute + custom_code_to_execute
         if has_custom_code_to_execute
@@ -621,3 +623,11 @@ def generate_new_self_signed_certs(mwi_certs_dir):
         cert_file = priv_key_file = None
 
     return cert_file, priv_key_file
+
+
+def _sanitize_file_path_for_matlab(filepath: str) -> str:
+    """
+    Replace single quotes in the filepath with double single quotes to preserve the quote when used in MATLAB code.
+    """
+    filepath_with_single_quotes_escaped = filepath.replace("'", "''")
+    return filepath_with_single_quotes_escaped
