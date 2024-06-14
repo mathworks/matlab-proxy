@@ -187,7 +187,7 @@ class Experimental:
     @staticmethod
     def should_use_mos_html():
         """Returns true if matlab-proxy should use MOS htmls to load MATLAB"""
-        return _is_env_set_to_true("MWI_USE_MOS") or Experimental.is_simulink_enabled()
+        return _is_env_set_to_true("MWI_USE_MOS")
 
     @staticmethod
     def should_use_mre_html():
