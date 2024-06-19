@@ -244,7 +244,7 @@ export function fetchServerStatus (requestTransferSession = false) {
         const isAuthEnabled = selectAuthEnabled(getState());
         const isAuthenticated = selectIsAuthenticated(getState());
         const clientIdInState = selectClientId(getState());
-        const clientId = clientIdInState || sessionStorage.getItem('MWI_CLIENT_ID');
+        const clientId = clientIdInState;
 
         dispatch(requestServerStatus());
         let url = './get_status';
@@ -269,7 +269,6 @@ export function fetchServerStatus (requestTransferSession = false) {
         dispatch(receiveServerStatus(data));
 
         if (clientId == null && data.clientId) {
-            sessionStorage.setItem('MWI_CLIENT_ID', data.clientId);
             dispatch(setClientId(data.clientId));
         }
         if ('isActiveClient' in data) {

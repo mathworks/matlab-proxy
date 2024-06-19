@@ -139,10 +139,9 @@ async def clear_client_id(req):
     Returns:
         Response: an empty response in JSON format
     """
-    # Sleep for one second prior to clearing the client id to ensure that any remaining get_status responses are fully processed first.
-    await asyncio.sleep(1)
     state = req.app["state"]
     state.active_client = None
+    logger.debug("Client Id was cleaned!!!")
     # This response is of no relevance to the front-end as the client has already exited
     return web.json_response({})
 
