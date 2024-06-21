@@ -6,21 +6,19 @@ import json
 import logging
 import os
 import time
+import uuid
 from collections import deque
 from datetime import datetime, timedelta, timezone
 from typing import Final, Optional
-import uuid
 
 from matlab_proxy import util
 from matlab_proxy.constants import (
     CONNECTOR_SECUREPORT_FILENAME,
-    MATLAB_LOGS_FILE_NAME,
     IS_CONCURRENCY_CHECK_ENABLED,
+    MATLAB_LOGS_FILE_NAME,
     USER_CODE_OUTPUT_FILE_NAME,
 )
-
 from matlab_proxy.settings import get_process_startup_timeout
-
 from matlab_proxy.util import mw, mwi, system, windows
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import token_auth
@@ -675,12 +673,6 @@ class AppState:
                 matlab_env["MLM_WEB_LICENSE"] = "true"
                 matlab_env["MLM_WEB_USER_CRED"] = access_token_data["token"]
                 matlab_env["MLM_WEB_ID"] = self.licensing["entitlement_id"]
-                matlab_env["MW_LOGIN_EMAIL_ADDRESS"] = self.licensing["email_addr"]
-                matlab_env["MW_LOGIN_FIRST_NAME"] = self.licensing["first_name"]
-                matlab_env["MW_LOGIN_LAST_NAME"] = self.licensing["last_name"]
-                matlab_env["MW_LOGIN_DISPLAY_NAME"] = self.licensing["display_name"]
-                matlab_env["MW_LOGIN_USER_ID"] = self.licensing["user_id"]
-                matlab_env["MW_LOGIN_PROFILE_ID"] = self.licensing["profile_id"]
 
                 matlab_env["MHLM_CONTEXT"] = (
                     "MATLAB_JAVASCRIPT_DESKTOP"
