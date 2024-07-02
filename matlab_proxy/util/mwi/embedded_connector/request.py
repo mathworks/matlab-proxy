@@ -12,7 +12,11 @@ from matlab_proxy.util import mwi
 
 logger = mwi.logger.get()
 
-from .helpers import get_data_for_ping_request, get_ping_endpoint
+from .helpers import (
+    get_data_for_ping_request,
+    get_data_for_matlab_busy_status_request,
+    get_ping_endpoint,
+)
 
 
 async def send_request(url: str, data: dict, method: str, headers: dict = None) -> dict:
@@ -84,30 +88,56 @@ async def get_state(mwi_server_url, headers=None):
             headers=headers,
         )
 
-        # Additional assert statements to catch any changes in response from embedded connector
-        # Tested from R2020b to R2023a
-        assert (
-            "messages" in resp
-        ), '"messages" key missing in response from embedded connector'
-        assert (
-            "PingResponse" in resp["messages"]
-        ), '"PingResponse" key missing in response from embedded connector'
-        assert (
-            type(resp["messages"]["PingResponse"]) == list
-        ), 'Was expecting an array in the "PingResponse" field in response'
-        assert (
-            len(resp["messages"]["PingResponse"]) == 1
-        ), 'Was expecting an array of length 1 in the "PingResponse" field in response'
-        assert (
-            "messageFaults" in resp["messages"]["PingResponse"][0]
-        ), 'Was expecting "messageFaults" field in response'
-
+        # Any changes in response from embedded connector would be caught by KeyError
         if not resp["messages"]["PingResponse"][0]["messageFaults"]:
             return "up"
+
+    except KeyError as key_err:
+        logger.error(f"Invalid Key Usage Detected! Check key: {key_err}")
+
+    except Exception as err:
+        logger.debug(
+            f"{err}: Embbeded connector is currently not responding to ping requests."
+        )
+
+    return "down"
+
+
+async def get_busy_state(mwi_server_url, headers=None):
+    """Returns the state of MATLAB's Embedded Connector.
+
+    Args:
+        port (int): The port on which the embedded connector is running at
+        headers: Headers to include with the request
+    Returns:
+        str: Either "idle" or "busy" when a valid response is received. Else None is returned.
+    """
+    data = get_data_for_matlab_busy_status_request()
+    url = get_ping_endpoint(mwi_server_url)
+
+    busy_status = None
+
+    try:
+        resp = await send_request(
+            url=url,
+            data=data,
+            method="POST",
+            headers=headers,
+        )
+
+        busy_status = resp["messages"]["GetMatlabStatusResponse"][0]["status"].lower()
+
+        assert busy_status in [
+            "idle",
+            "busy",
+        ], f"Was expecting MATLAB busy status to be either 'idle' or 'busy', but received {busy_status} instead."
+
+    except KeyError as key_err:
+        logger.error(f"Invalid Key Usage Detected! Check key: {key_err}")
+
     except Exception as err:
         logger.debug(
             f"{err}: Embedded connector is currently not responding to ping requests."
         )
-        pass
 
-    return "down"
+    return busy_status

@@ -194,6 +194,7 @@ def get_dev_settings(config):
         "mwa_login": f"https://login{ws_env_suffix}.mathworks.com",
         "mwi_custom_http_headers": mwi.custom_http_headers.get(),
         "env_config": mwi.validators.validate_env_config(config),
+        "integration_name": "MATLAB Desktop",
         "ssl_context": None,
         "mwi_logs_root_dir": get_mwi_logs_root_dir(dev=True),
         "mw_context_tags": get_mw_context_tags(matlab_proxy.get_default_config_name()),
@@ -209,6 +210,7 @@ def get_dev_settings(config):
         ),
         "warnings": [],
         "is_xvfb_available": False,
+        "mwi_idle_timeout": None,
     }
 
 
@@ -301,6 +303,14 @@ def get_server_settings(config_name):
     # log file validation check is already done in logger.py
     mwi_log_file = os.getenv(mwi_env.get_env_name_log_file(), None)
 
+    env_config = mwi.validators.validate_env_config(config_name)
+    short_desc = env_config["extension_name_short_description"]
+    integration_name = (
+        short_desc
+        if env_config["extension_name"] == matlab_proxy.get_default_config_name()
+        else f"{short_desc} - MATLAB Integration"
+    )
+
     return {
         "create_xvfb_cmd": create_xvfb_cmd,
         "base_url": mwi.validators.validate_base_url(
@@ -312,7 +322,8 @@ def get_server_settings(config_name):
         "app_port": mwi.validators.validate_app_port_is_free(
             os.getenv(mwi_env.get_env_name_app_port())
         ),
-        "env_config": mwi.validators.validate_env_config(config_name),
+        "env_config": env_config,
+        "integration_name": integration_name,
         "mwapikey": str(uuid.uuid4()),
         "matlab_protocol": "https",
         "matlab_config_file": mwi_config_folder / "proxy_app_config.json",
@@ -334,6 +345,10 @@ def get_server_settings(config_name):
             os.getenv(mwi_env.get_env_name_mwi_use_existing_license(), "")
         ),
         "ssl_context": _validate_ssl_files_and_get_ssl_context(mwi_config_folder),
+        # validate_idle_timeout converts the timeout from minutes to seconds
+        "mwi_idle_timeout": mwi.validators.validate_idle_timeout(
+            os.getenv(mwi_env.get_env_name_shutdown_on_idle_timeout())
+        ),
     }
 
 

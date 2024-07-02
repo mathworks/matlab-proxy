@@ -1,8 +1,8 @@
 // Copyright 2020-2024 The MathWorks, Inc.
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useInterval } from 'react-use';
+import { useInterval, useTimeoutFn } from 'react-use';
 import './App.css';
 import Confirmation from '../Confirmation';
 import OverlayTrigger from '../OverlayTrigger';
@@ -13,6 +13,7 @@ import Controls from '../Controls';
 import Information from '../Information';
 import Help from '../Help';
 import Error from '../Error';
+import ShutdownWarning from '../ShutdownWarning';
 import {
     selectOverlayVisible,
     selectFetchStatusPeriod,
@@ -32,18 +33,26 @@ import {
     selectUseMRE,
     selectIsConcurrent,
     selectWasEverActive,
-    selectIsConcurrencyEnabled
+    selectIsConcurrencyEnabled,
+    selectIsActiveClient,
+    selectIdleTimeoutDurationInMS,
+    selectIsMatlabBusy,
+    selectMatlabStarting,
+    selectIsIdleTimeoutEnabled,
+    selectMatlabStopping,
+    selectIntegrationName
 } from '../../selectors';
 
 import {
     setOverlayVisibility,
     fetchServerStatus,
     fetchEnvConfig,
-    updateAuthStatus
+    updateAuthStatus,
+    fetchShutdownIntegration
 } from '../../actionCreators';
 import blurredBackground from './MATLAB-env-blur.png';
 import EntitlementSelector from '../EntitlementSelector';
-import { MWI_AUTH_TOKEN_NAME_FOR_HTTP } from '../../constants';
+import { BUFFER_TIMEOUT_DURATION, MWI_AUTH_TOKEN_NAME_FOR_HTTP } from '../../constants';
 
 function App () {
     const dispatch = useDispatch();
@@ -65,8 +74,73 @@ function App () {
     const useMOS = useSelector(selectUseMOS);
     const useMRE = useSelector(selectUseMRE);
     const isSessionConcurrent = useSelector(selectIsConcurrent);
+    const isActiveClient = useSelector(selectIsActiveClient);
     const isConcurrencyEnabled = useSelector(selectIsConcurrencyEnabled);
     const wasEverActive = useSelector(selectWasEverActive);
+    const integrationName = useSelector(selectIntegrationName);
+
+    // Timeout duration is specified in seconds, but useTimeoutFn accepts timeout values in ms.
+    const idleTimeoutDurationInMS = useSelector(selectIdleTimeoutDurationInMS);
+    const isMatlabBusy = useSelector(selectIsMatlabBusy);
+    const isMatlabStarting = useSelector(selectMatlabStarting);
+    const isMatlabStopping = useSelector(selectMatlabStopping);
+    const isIdleTimeoutEnabled = useSelector(selectIsIdleTimeoutEnabled);
+
+    // Keep track of whether timers have expired.
+    const [idleTimerHasExpired, setIdleTimerHasExpired] = useState(false);
+    const [bufferTimerHasExpired, setBufferTimerHasExpired] = useState(false);
+
+    // Track events only if timeout is enabled and the client is active.
+    const shouldListenForEvents = isIdleTimeoutEnabled && isActiveClient;
+
+    // callback that will fire once the IDLE timer expires
+    function terminationFn () {
+        // Reset the timer if MATLAB is either starting or stopping or is busy
+        if (isMatlabStarting || isMatlabStopping || isMatlabBusy) {
+            idleTimerReset();
+            console.log('Resetting IDLE timer as MATLAB is either starting, stopping or busy');
+        } else if (!shouldListenForEvents) {
+            idleTimerCancel();
+            console.log('The IDLE timer has been cancelled.');
+        } else {
+            dispatch(setOverlayVisibility(true));
+            setIdleTimerHasExpired(true);
+            console.log('The IDLE timer has expired due to inactivity. Will display Shutdown Warning to the user.');
+            console.log('The additional BUFFER timer has started.');
+        }
+    }
+
+    const [, idleTimerCancel, idleTimerReset] = useTimeoutFn(terminationFn, idleTimeoutDurationInMS);
+
+    useEffect(() => {
+        if (isIdleTimeoutEnabled) {
+            idleTimerReset();
+        } else {
+            idleTimerCancel();
+        }
+
+        // cleanup function to ensure idle timer gets cancelled once the component unmounts
+        return () => { idleTimerCancel(); };
+    }, [idleTimerCancel, idleTimerReset, isIdleTimeoutEnabled]);
+
+    // BUFFER timer which runs for a BUFFER_TIMER_DURATION more seconds once the IDLE timer has expired to allow the ShutdownWarning
+    // dialog box to appear on the screen, such that the user is informed of an impending termination.
+    const [, bufferTimerCancel, bufferTimerReset] = useTimeoutFn(() => {
+        dispatch(fetchShutdownIntegration());
+        setBufferTimerHasExpired(true);
+    }, BUFFER_TIMEOUT_DURATION * 1000);
+
+    useEffect(() => {
+        if (idleTimerHasExpired) {
+            // Start BUFFER timer after IDLE timer has expired
+            bufferTimerReset();
+        } else {
+            bufferTimerCancel();
+        }
+
+        // cleanup function to ensure BUFFER timer gets cancelled once the component unmounts
+        return () => { bufferTimerCancel(); };
+    }, [bufferTimerCancel, bufferTimerReset, idleTimerHasExpired]);
 
     const baseUrl = useMemo(() => {
         const url = document.URL;
@@ -139,15 +213,15 @@ function App () {
     if (isConnectionError) {
         dialog = (
             <Error
-                message="Either this integration terminated or the session ended"
+                message={`Either this ${integrationName} terminated or the session ended`}
             >
                 <p>Attempt to <a href="../">return to a parent app</a></p>
             </Error>
         );
     } else if (error && error.type === 'MatlabInstallError') {
         dialog = <Error message={error.message} />;
+        // check user authentication before giving them the option to transfer the session.
     } else if ((!authEnabled || isAuthenticated) && isSessionConcurrent && isConcurrencyEnabled) {
-        // check the user authentication before giving them the option to transfer the session.
         // Transfer the session to this tab
         // setting the query parameter of requestTransferSession to true
         const transferSessionOnClick = () => {
@@ -238,8 +312,28 @@ function App () {
     // * Status Information
     let overlayContent;
 
-    if (dialog) {
-        // TODO Inline confirmation component build
+    // show an impending shutdown warning if IDLE timeout is enabled and the IDLE timer has expired.
+    // it should have the highest precedence, and should draw above all other windows.
+    if (isIdleTimeoutEnabled && idleTimerHasExpired) {
+        if (bufferTimerHasExpired) {
+            const msg = `The ${integrationName} has shutdown due to inactivity`;
+            overlayContent = <Error message={msg}> </Error>;
+            console.log(`BUFFER timer has also expired, proceeding with shutting down ${integrationName}`);
+        } else {
+            overlayContent = <ShutdownWarning
+                bufferTimeout={BUFFER_TIMEOUT_DURATION}
+                resumeCallback={() => {
+                // Restart IDLE timer
+                    idleTimerReset();
+                    setIdleTimerHasExpired(false);
+
+                    // Cancel BUFFER timer
+                    bufferTimerCancel();
+                    setBufferTimerHasExpired(false);
+                    console.log('Reset IDLE timer and cancelled BUFFER timer after user resumed activity.');
+                }} />;
+        }
+    } else if (dialog) {
         overlayContent = dialog;
     } else if ((!licensingProvided) && hasFetchedServerStatus && (!authEnabled || isAuthenticated)) {
         // Give precedence to token auth over licensing info ie. once after token auth is done, show licensing if not provided.
@@ -275,11 +369,17 @@ function App () {
         ? 'http://localhost:31515/index-jsd-cr.html'
         : `./${htmlToRenderMATLAB()}`;
 
+    // handler for user events (mouse clicks, key presses etc.)
+    const handleUserInteraction = useCallback(() => {
+        idleTimerReset();
+    }, [idleTimerReset]);
+
+    const MatlabJsdIframeRef = useRef(null);
     let matlabJsd = null;
     if (matlabUp) {
         matlabJsd = (!authEnabled || isAuthenticated)
-            ? (<MatlabJsd url={matlabUrl} />)
-            : <img style={{ objectFit: 'fill' }} src={blurredBackground} alt='Blurred MATLAB environment' />;
+            ? (<MatlabJsd handleUserInteraction={handleUserInteraction} url={matlabUrl} iFrameRef={MatlabJsdIframeRef} shouldListenForEvents={shouldListenForEvents} />)
+            : <img style={{ objectFit: 'fill' }}src={blurredBackground} alt='Blurred MATLAB environment'/>;
     }
 
     const overlayTrigger = overlayVisible ? null : <OverlayTrigger />;
@@ -296,7 +396,7 @@ function App () {
                     </Overlay>
                 )
                 : (
-                    <div data-testid="app" className="main">
+                    <div data-testid="app" className="main" >
                         {overlayTrigger}
                         {matlabJsd}
                         {overlay}

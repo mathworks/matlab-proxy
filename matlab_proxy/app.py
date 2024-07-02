@@ -94,9 +94,7 @@ def marshal_error(error):
         return {"message": error.__str__, "logs": "", "type": error.__class__.__name__}
 
 
-async def create_status_response(
-    app, loadUrl=None, client_id=None, is_active_client=None
-):
+def create_status_response(app, loadUrl=None, client_id=None, is_active_client=None):
     """Send a generic status response about the state of server, MATLAB, MATLAB Licensing and the client session status.
 
     Args:
@@ -111,7 +109,8 @@ async def create_status_response(
     state = app["state"]
     status = {
         "matlab": {
-            "status": await state.get_matlab_state(),
+            "status": state.get_matlab_state(),
+            "busyStatus": state.matlab_busy_state,
             "version": state.settings["matlab_version"],
         },
         "licensing": marshal_licensing_info(state.licensing),
@@ -144,6 +143,24 @@ async def clear_client_id(req):
     logger.debug("Client Id was cleaned!!!")
     # This response is of no relevance to the front-end as the client has already exited
     return web.json_response({})
+
+
+def reset_timer_decorator(endpoint):
+    """This decorator resets the IDLE timer if MWI_IDLE_TIMEOUT environment variable is supplied.
+
+    Args:
+        endpoint (callable): An asynchronous function which is a request handler.
+    """
+
+    async def reset_timer(req):
+        state = req.app["state"]
+
+        if state.is_idle_timeout_enabled:
+            await state.reset_timer()
+
+        return await endpoint(req)
+
+    return reset_timer
 
 
 @token_auth.authenticate_access_decorator
@@ -191,8 +208,11 @@ async def get_env_config(req):
 
     config["matlab"] = {
         "version": state.settings["matlab_version"],
-        "supported_versions": constants.SUPPORTED_MATLAB_VERSIONS,
+        "supportedVersions": constants.SUPPORTED_MATLAB_VERSIONS,
     }
+
+    # Send timeout duration for the idle timer as part of the response
+    config["idleTimeoutDuration"] = state.settings["mwi_idle_timeout"]
 
     return web.json_response(config)
 
@@ -200,6 +220,7 @@ async def get_env_config(req):
 # @token_auth.authenticate_access_decorator
 # Explicitly disabling authentication for this end-point,
 # because the front end requires this endpoint to be available at all times.
+@reset_timer_decorator
 async def get_status(req):
     """API Endpoint to get the generic status of the server, MATLAB and MATLAB Licensing.
 
@@ -219,7 +240,7 @@ async def get_status(req):
         is_desktop, client_id, transfer_session
     )
 
-    return await create_status_response(
+    return create_status_response(
         req.app, client_id=generated_client_id, is_active_client=is_active_client
     )
 
@@ -268,7 +289,7 @@ async def start_matlab(req):
     # Start MATLAB
     await state.start_matlab(restart_matlab=True)
 
-    return await create_status_response(req.app)
+    return create_status_response(req.app)
 
 
 @token_auth.authenticate_access_decorator
@@ -285,7 +306,7 @@ async def stop_matlab(req):
 
     await state.stop_matlab()
 
-    return await create_status_response(req.app)
+    return create_status_response(req.app)
 
 
 @token_auth.authenticate_access_decorator
@@ -336,7 +357,7 @@ async def set_licensing_info(req):
     # This is true for a user who has only one license associated with their account
     await __start_matlab_if_licensed(state)
 
-    return await create_status_response(req.app)
+    return create_status_response(req.app)
 
 
 @token_auth.authenticate_access_decorator
@@ -360,7 +381,7 @@ async def update_entitlement(req):
         await state.update_user_selected_entitlement_info(entitlement_id)
         await __start_matlab_if_licensed(state)
 
-    return await create_status_response(req.app)
+    return create_status_response(req.app)
 
 
 async def __start_matlab_if_licensed(state):
@@ -396,35 +417,36 @@ async def licensing_info_delete(req):
     # Persist config information
     state.persist_config_data()
 
-    return await create_status_response(req.app)
+    return create_status_response(req.app)
 
 
 @token_auth.authenticate_access_decorator
-async def termination_integration_delete(req):
-    """API Endpoint to terminate the Integration and shutdown the server.
+async def shutdown_integration_delete(req):
+    """API Endpoint to shutdown the Integration
 
     Args:
         req (HTTPRequest): HTTPRequest Object
     """
-    logger.debug("Terminating the integration...")
     state = req.app["state"]
 
+    logger.info(f"Going ahead with shutdown of {state.settings['integration_name']}...")
+
     # Send response manually because this has to happen before the application exits
-    res = await create_status_response(req.app, "../")
+    res = create_status_response(req.app, "../")
     await res.prepare(req)
     await res.write_eof()
 
-    logger.debug("Shutting down the server...")
-    # End termination with 0 exit code to indicate intentional termination
+    # Gracefully shutdown the server
     await req.app.shutdown()
     await req.app.cleanup()
-    """When testing with pytest, its not possible to catch sys.exit(0) using the construct
-    'with pytest.raises()', there by causing the test : test_termination_integration_delete()
-    to fail. In order to avoid this, adding the below if condition to check to skip sys.exit(0) when testing
-    """
-    logger.debug("Exiting with return code 0")
-    if not mwi_env.is_testing_mode_enabled():
-        sys.exit(0)
+
+    loop = util.get_event_loop()
+    # Run the current batch of coroutines in the event loop and then exit.
+    # This completes the loop.run_forever() blocking call and subsequent code
+    # in main() resumes execution.
+    loop.stop()
+
+    return res
 
 
 # @token_auth.authenticate_access_decorator
@@ -561,7 +583,7 @@ async def matlab_view(req):
         async with aiohttp.ClientSession(
             trust_env=True,
             cookies=req.cookies,
-            connector=aiohttp.TCPConnector(verify_ssl=False),
+            connector=aiohttp.TCPConnector(ssl=False),
         ) as client_session:
             try:
                 async with client_session.ws_connect(
@@ -627,7 +649,7 @@ async def matlab_view(req):
         timeout = aiohttp.ClientTimeout(total=None)
         async with aiohttp.ClientSession(
             trust_env=True,
-            connector=aiohttp.TCPConnector(verify_ssl=False),
+            connector=aiohttp.TCPConnector(ssl=False),
             timeout=timeout,
         ) as client_session:
             try:
@@ -753,7 +775,7 @@ async def matlab_starter(app):
     state = app["state"]
 
     try:
-        if state.is_licensed() and await state.get_matlab_state() == "down":
+        if state.is_licensed() and state.get_matlab_state() == "down":
             await state.start_matlab()
     except asyncio.CancelledError:
         # Ensure MATLAB is terminated
@@ -784,19 +806,9 @@ async def cleanup_background_tasks(app):
 
     await state.stop_matlab(force_quit=True)
 
-    # Stop any running async tasks
-    logger = mwi.logger.get()
-    tasks = state.tasks
-    if state.task_detect_client_status:
-        tasks["detect_client_status"] = state.task_detect_client_status
-    for task_name, task in tasks.items():
-        if not task.cancelled():
-            logger.debug(f"Cancelling MWI task: {task_name} : {task} ")
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
+    # Cleanup server tasks
+    all_tasks = state.server_tasks
+    await util.cancel_tasks(all_tasks)
 
 
 def configure_and_start(app):
@@ -892,7 +904,7 @@ def create_app(config_name=matlab_proxy.get_default_config_name()):
         "DELETE", f"{base_url}/set_licensing_info", licensing_info_delete
     )
     app.router.add_route(
-        "DELETE", f"{base_url}/terminate_integration", termination_integration_delete
+        "DELETE", f"{base_url}/shutdown_integration", shutdown_integration_delete
     )
     app.router.add_route("*", f"{base_url}/", root_redirect)
     app.router.add_route("*", f"{base_url}", root_redirect)

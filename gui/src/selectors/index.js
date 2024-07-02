@@ -19,8 +19,8 @@ export const selectServerStatusFetchFailCount = state => state.serverStatus.fetc
 export const selectLoadUrl = state => state.loadUrl;
 export const selectError = state => state.error;
 export const selectWarnings = state => state.warnings;
-export const selectUseMOS = state => state.useMOS === true;
-export const selectUseMRE = state => state.useMRE === true;
+export const selectUseMOS = state => state.matlab.useMOS === true;
+export const selectUseMRE = state => state.matlab.useMRE === true;
 export const selectAuthEnabled = state => state.authentication.enabled;
 export const selectAuthToken = state => state.authentication.token;
 export const selectIsAuthenticated = state => state.authentication.status === true;
@@ -28,6 +28,8 @@ export const selectIsActiveClient = state => state.sessionStatus.isActiveClient;
 export const selectIsConcurrencyEnabled = state => state.sessionStatus.isConcurrencyEnabled;
 export const selectWasEverActive = state => state.sessionStatus.wasEverActive;
 export const selectClientId = state => state.sessionStatus.clientId;
+export const selectIdleTimeoutDuration = state => state.idleTimeoutDuration;
+export const selectMatlabBusyStatus = state => state.matlab.busyStatus;
 
 export const selectTriggerPosition = createSelector(
     state => state.triggerPosition,
@@ -239,6 +241,34 @@ export const selectInformationDetails = createSelector(
             }
             default:
                 throw new Error(`Unknown MATLAB status: "${matlabStatus}".`);
+        }
+    }
+);
+
+export const selectIsMatlabBusy = createSelector(
+    selectMatlabBusyStatus,
+    matlabBusyStatus => matlabBusyStatus === 'busy'
+);
+
+export const selectIsIdleTimeoutEnabled = createSelector(
+    selectIdleTimeoutDuration,
+    idleTimeoutDuration => !!idleTimeoutDuration
+);
+
+export const selectIdleTimeoutDurationInMS = createSelector(
+    selectIsIdleTimeoutEnabled,
+    selectIdleTimeoutDuration,
+    (isTimeoutEnabled, idleTimeoutDuration) => { return isTimeoutEnabled ? idleTimeoutDuration * 1000 : undefined; }
+);
+
+export const selectIntegrationName = createSelector(
+    selectHasFetchedEnvConfig,
+    selectEnvConfig,
+    (hasFetchedEnvConfig, envConfig) => {
+        if (hasFetchedEnvConfig) {
+            return envConfig.extension_name === 'default_configuration_matlab_proxy' ? envConfig.extension_name_short_description : `${envConfig.extension_name_short_description} - MATLAB Integration`;
+        } else {
+            return '';
         }
     }
 );

@@ -7,7 +7,10 @@ import os
 import random
 import socket
 import tempfile
-from matlab_proxy.util.mwi.validators import validate_matlab_root_path
+from matlab_proxy.util.mwi.validators import (
+    validate_idle_timeout,
+    validate_matlab_root_path,
+)
 from matlab_proxy import constants
 from pathlib import Path
 
@@ -329,3 +332,29 @@ def test_validate_matlab_root_path_non_existent_versioninfo_file(tmp_path):
     # Assert
     assert actual_matlab_root is None
     assert actual_matlab_root_custom is None
+
+
+@pytest.mark.parametrize(
+    "timeout, validated_timeout",
+    [
+        (None, None),
+        ("abc", None),
+        (-10, None),
+        (123, 60 * 123),
+    ],
+    ids=[
+        "No IDLE timeout specified",
+        "Invalid IDLE timeout specified",
+        "Negative number supplied as IDLE timeout",
+        "Valid IDLE timeout specified",
+    ],
+)
+def test_validate_idle_timeout(timeout, validated_timeout):
+    # Arrange
+    # Nothing to arrange
+
+    # Act
+    actual_timeout = validate_idle_timeout(timeout)
+
+    # Assert
+    assert actual_timeout == validated_timeout

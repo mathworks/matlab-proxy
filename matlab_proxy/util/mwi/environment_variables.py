@@ -167,6 +167,11 @@ def get_env_name_custom_matlab_code():
     return "MWI_MATLAB_STARTUP_SCRIPT"
 
 
+def get_env_name_shutdown_on_idle_timeout():
+    """User specified timeout in minutes for shutdown on idle of matlab-proxy"""
+    return "MWI_SHUTDOWN_ON_IDLE_TIMEOUT"
+
+
 class Experimental:
     """This class houses functions which are undocumented APIs and Environment variables.
     Note: Never add any state to this class. Its only intended for use as an abstraction layer

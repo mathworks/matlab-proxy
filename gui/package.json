@@ -6,6 +6,7 @@
     "clsx": "^1.1.1",
     "cross-fetch": "^3.0.6",
     "crypto-js": "4.2.0",
+    "postcss": "^8.4.38",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-draggable": "^4.4.3",
@@ -16,7 +17,8 @@
     "react-use": "^15.3.4",
     "redux": "^4.0.5",
     "redux-thunk": "^2.3.0",
-    "reselect": "^4.0.0"
+    "reselect": "^4.0.0",
+    "resolve-url-loader": "^5.0.0"
   },
   "scripts": {
     "start": "react-scripts start",

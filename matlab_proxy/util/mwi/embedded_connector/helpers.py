@@ -46,6 +46,15 @@ def get_data_for_ping_request():
     return {"messages": {"Ping": [{}]}}
 
 
+def get_data_for_matlab_busy_status_request():
+    """Returns data required to send in the payload for a MATLAB busy/idle status request to the embedded connector
+
+    Returns:
+        dict: Payload data
+    """
+    return {"messages": {"GetMatlabStatus": [{}]}}
+
+
 def get_data_to_eval_mcode(m_code):
     """Returns the data required to send in the payload for evaluating mcode using eval function to the embedded connector.
 

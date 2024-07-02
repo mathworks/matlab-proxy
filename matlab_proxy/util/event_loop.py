@@ -1,8 +1,10 @@
-# Copyright 2020-2022 The MathWorks, Inc.
+# Copyright 2020-2024 The MathWorks, Inc.
+
+from typing import Dict, Set, Union
+from contextlib import suppress
 
 import asyncio
 
-from matlab_proxy import util
 from matlab_proxy.util import mwi, system, windows
 
 logger = mwi.logger.get()
@@ -30,16 +32,32 @@ def get_event_loop():
     return loop
 
 
-async def cancel_tasks(tasks):
+async def cancel_tasks(tasks: Union[Dict[str, asyncio.Task], Set[asyncio.Task]]):
     """Cancels asyncio tasks.
 
     Args:
-        tasks (asyncio.Task): Asyncio task
+        tasks: If a Dict[str, asyncio.Task], contains (task_name, task) as entries.
+               If a Set[asyncio.Task], contains a set of asyncio.Task objects.
     """
-    for task in tasks:
-        logger.debug(f"Calling cancel on task: {task}")
+    if isinstance(tasks, dict):
+        for name, task in list(tasks.items()):
+            if task:
+                await __cancel_task(task)
+                logger.debug(f"{name} task stopped successfully")
+
+    elif isinstance(tasks, set):
+        for task in tasks:
+            if task:
+                await __cancel_task(task)
+                logger.debug(f"Task stopped successfully")
+
+
+async def __cancel_task(task):
+    """Cancels a given asyncio task, suppressing CancelledError.
+
+    Args:
+        task (asyncio.Task): The asyncio task to be cancelled.
+    """
+    with suppress(asyncio.CancelledError):
         task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
+        await task

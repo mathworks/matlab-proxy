@@ -8,13 +8,13 @@ import {
     RECEIVE_SERVER_STATUS,
     REQUEST_SET_LICENSING,
     REQUEST_UPDATE_LICENSING,
-    REQUEST_TERMINATE_INTEGRATION,
+    REQUEST_SHUTDOWN_INTEGRATION,
     REQUEST_STOP_MATLAB,
     REQUEST_START_MATLAB,
     REQUEST_ENV_CONFIG,
     RECEIVE_SET_LICENSING,
     RECEIVE_UPDATE_LICENSING,
-    RECEIVE_TERMINATE_INTEGRATION,
+    RECEIVE_SHUTDOWN_INTEGRATION,
     RECEIVE_STOP_MATLAB,
     RECEIVE_START_MATLAB,
     RECEIVE_ERROR,
@@ -162,15 +162,15 @@ export function receiveUpdateLicensing (status) {
     };
 }
 
-export function requestTerminateIntegration () {
+export function requestShutdownIntegration () {
     return {
-        type: REQUEST_TERMINATE_INTEGRATION
+        type: REQUEST_SHUTDOWN_INTEGRATION
     };
 }
 
-export function receiveTerminateIntegration (status) {
+export function receiveShutdownIntegration (status) {
     return {
-        type: RECEIVE_TERMINATE_INTEGRATION,
+        type: RECEIVE_SHUTDOWN_INTEGRATION,
         status,
         loadUrl: '../'
     };
@@ -374,7 +374,7 @@ export function fetchUnsetLicensing () {
     };
 }
 
-export function fetchTerminateIntegration () {
+export function fetchShutdownIntegration () {
     return async function (dispatch, getState) {
         const options = {
             method: 'DELETE',
@@ -383,10 +383,10 @@ export function fetchTerminateIntegration () {
             credentials: 'same-origin'
         };
 
-        dispatch(requestTerminateIntegration());
-        const response = await fetchWithTimeout(dispatch, './terminate_integration', options, 15000);
+        dispatch(requestShutdownIntegration());
+        const response = await fetchWithTimeout(dispatch, './shutdown_integration', options, 15000);
         const data = await response.json();
-        dispatch(receiveTerminateIntegration(data));
+        dispatch(receiveShutdownIntegration(data));
     };
 }
 

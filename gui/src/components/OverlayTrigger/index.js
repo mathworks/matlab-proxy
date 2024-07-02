@@ -10,7 +10,7 @@ import {
     selectTriggerPosition,
     selectTutorialHidden,
     selectOverlayVisible,
-    selectEnvConfig
+    selectIntegrationName
 } from '../../selectors';
 import {
     setTriggerPosition,
@@ -22,11 +22,11 @@ import './OverlayTrigger.css';
 function OverlayTrigger () {
     const dispatch = useDispatch();
     const triggerPosition = useSelector(selectTriggerPosition);
-    const config = useSelector(selectEnvConfig);
+    const integrationName = useSelector(selectIntegrationName);
     const [dragging, setDragging] = useState(false);
     const triggerRef = useRef();
 
-    const dataTipMsg = config.extension_name === '' ? 'MATLAB Web Desktop' : `${config.extension_name_short_description} - MATLAB Integration`;
+    const dataTipMsg = `Open the ${integrationName} settings`;
 
     // Observe trigger position and react to it appearing offscreen
     useEffect(() => {
@@ -124,7 +124,7 @@ function OverlayTrigger () {
                             onMouseDown={e => e.stopPropagation()}
                             aria-label="Menu"
                             data-for="trigger-button-tooltip"
-                            data-tip={`Open the ${dataTipMsg} settings`}
+                            data-tip={dataTipMsg}
                         >
                             <span className="icon-custom-trigger"></span>
                         </button>

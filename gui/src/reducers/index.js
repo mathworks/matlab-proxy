@@ -10,13 +10,13 @@ import {
     REQUEST_SERVER_STATUS,
     RECEIVE_SERVER_STATUS,
     REQUEST_SET_LICENSING,
-    REQUEST_TERMINATE_INTEGRATION,
+    REQUEST_SHUTDOWN_INTEGRATION,
     REQUEST_STOP_MATLAB,
     REQUEST_START_MATLAB,
     REQUEST_ENV_CONFIG,
     REQUEST_SERVER_INITIALIZATION,
     RECEIVE_SET_LICENSING,
-    RECEIVE_TERMINATE_INTEGRATION,
+    RECEIVE_SHUTDOWN_INTEGRATION,
     RECEIVE_STOP_MATLAB,
     RECEIVE_START_MATLAB,
     RECEIVE_ERROR,
@@ -56,6 +56,16 @@ export function useMRE (state = false, action) {
     switch (action.type) {
         case RECEIVE_ENV_CONFIG:
             return action.config.useMRE;
+        default:
+            return state;
+    }
+}
+
+// Stores timeout duration for idle timer.
+export function idleTimeoutDuration (state = null, action) {
+    switch (action.type) {
+        case RECEIVE_ENV_CONFIG:
+            return parseInt(action.config.idleTimeoutDuration);
         default:
             return state;
     }
@@ -131,7 +141,7 @@ export function licensingInfo (state = {}, action) {
     switch (action.type) {
         case RECEIVE_SERVER_STATUS:
         case RECEIVE_SET_LICENSING:
-        case RECEIVE_TERMINATE_INTEGRATION:
+        case RECEIVE_SHUTDOWN_INTEGRATION:
         case RECEIVE_STOP_MATLAB:
         case RECEIVE_START_MATLAB:
             return {
@@ -146,7 +156,7 @@ export function matlabStatus (state = 'down', action) {
     switch (action.type) {
         case RECEIVE_SERVER_STATUS:
         case RECEIVE_SET_LICENSING:
-        case RECEIVE_TERMINATE_INTEGRATION:
+        case RECEIVE_SHUTDOWN_INTEGRATION:
         case RECEIVE_STOP_MATLAB:
         case RECEIVE_START_MATLAB:
             return action.status.matlab.status;
@@ -170,10 +180,24 @@ export function matlabVersionOnPath (state = null, action) {
     }
 }
 
+export function matlabBusyStatus (state = null, action) {
+    switch (action.type) {
+        case RECEIVE_SERVER_STATUS:
+            return action.status.matlab.busyStatus;
+        // busy status has no meaning if MATLAB is starting or down.
+        case RECEIVE_STOP_MATLAB:
+        case RECEIVE_START_MATLAB:
+            return null;
+
+        default:
+            return state;
+    }
+}
+
 export function supportedMatlabVersions (state = null, action) {
     switch (action.type) {
         case RECEIVE_ENV_CONFIG:
-            return action.config.matlab.supported_versions;
+            return action.config.matlab.supportedVersions;
         default:
             return state;
     }
@@ -191,7 +215,7 @@ export function wsEnv (state = null, action) {
     switch (action.type) {
         case RECEIVE_SERVER_STATUS:
         case RECEIVE_SET_LICENSING:
-        case RECEIVE_TERMINATE_INTEGRATION:
+        case RECEIVE_SHUTDOWN_INTEGRATION:
         case RECEIVE_STOP_MATLAB:
         case RECEIVE_START_MATLAB:
             return action.status.wsEnv;
@@ -204,7 +228,7 @@ export function isFetching (state = false, action) {
     switch (action.type) {
         case REQUEST_SERVER_STATUS:
         case REQUEST_SET_LICENSING:
-        case REQUEST_TERMINATE_INTEGRATION:
+        case REQUEST_SHUTDOWN_INTEGRATION:
         case REQUEST_STOP_MATLAB:
         case REQUEST_START_MATLAB:
         case REQUEST_ENV_CONFIG:
@@ -212,7 +236,7 @@ export function isFetching (state = false, action) {
             return true;
         case RECEIVE_SERVER_STATUS:
         case RECEIVE_SET_LICENSING:
-        case RECEIVE_TERMINATE_INTEGRATION:
+        case RECEIVE_SHUTDOWN_INTEGRATION:
         case RECEIVE_STOP_MATLAB:
         case RECEIVE_START_MATLAB:
         case RECEIVE_ERROR:
@@ -239,7 +263,7 @@ export function hasFetched (state = false, action) {
     switch (action.type) {
         case RECEIVE_SERVER_STATUS:
         case RECEIVE_SET_LICENSING:
-        case RECEIVE_TERMINATE_INTEGRATION:
+        case RECEIVE_SHUTDOWN_INTEGRATION:
         case RECEIVE_STOP_MATLAB:
         case RECEIVE_START_MATLAB:
             return true;
@@ -269,12 +293,12 @@ export function wasEverActive (state = false, action) {
 export function isSubmitting (state = false, action) {
     switch (action.type) {
         case REQUEST_SET_LICENSING:
-        case REQUEST_TERMINATE_INTEGRATION:
+        case REQUEST_SHUTDOWN_INTEGRATION:
         case REQUEST_STOP_MATLAB:
         case REQUEST_START_MATLAB:
             return true;
         case RECEIVE_SET_LICENSING:
-        case RECEIVE_TERMINATE_INTEGRATION:
+        case RECEIVE_SHUTDOWN_INTEGRATION:
         case RECEIVE_STOP_MATLAB:
         case RECEIVE_START_MATLAB:
         case RECEIVE_ERROR:
@@ -288,7 +312,7 @@ export function fetchFailCount (state = 0, action) {
     switch (action.type) {
         case RECEIVE_SERVER_STATUS:
         case RECEIVE_SET_LICENSING:
-        case RECEIVE_TERMINATE_INTEGRATION:
+        case RECEIVE_SHUTDOWN_INTEGRATION:
         case RECEIVE_STOP_MATLAB:
         case RECEIVE_START_MATLAB:
             return 0;
@@ -301,7 +325,7 @@ export function fetchFailCount (state = 0, action) {
 
 export function loadUrl (state = null, action) {
     switch (action.type) {
-        case RECEIVE_TERMINATE_INTEGRATION:
+        case RECEIVE_SHUTDOWN_INTEGRATION:
             return action.loadUrl;
         default:
             return state;
@@ -338,7 +362,7 @@ export function error (state = null, action) {
             };
         case RECEIVE_SERVER_STATUS:
         case RECEIVE_SET_LICENSING:
-        case RECEIVE_TERMINATE_INTEGRATION:
+        case RECEIVE_SHUTDOWN_INTEGRATION:
         case RECEIVE_STOP_MATLAB:
         case RECEIVE_START_MATLAB:
             return action.status.error
@@ -355,13 +379,13 @@ export function error (state = null, action) {
 
 export function envConfig (state = null, action) {
     switch (action.type) {
-        case RECEIVE_ENV_CONFIG: {
+        case RECEIVE_ENV_CONFIG:
             // Token authentication and matlab info is also sent as a response to /get_env_config endpoint.
             // The authentication and matlab pieces of redux state are updated accordingly for the RECEIVE_ENV_CONFIG action type.
             // Hence, storing the rest of the envConfig without authentication and matlab info.
+            // eslint-disable-next-line
             const { authentication, matlab, ...envConfig } = action.config;
             return envConfig;
-        }
         default:
             return state;
     }
@@ -385,7 +409,10 @@ export const authentication = combineReducers({
 export const matlab = combineReducers({
     status: matlabStatus,
     versionOnPath: matlabVersionOnPath,
-    supportedVersions: supportedMatlabVersions
+    supportedVersions: supportedMatlabVersions,
+    busyStatus: matlabBusyStatus,
+    useMOS,
+    useMRE
 });
 
 export const serverStatus = combineReducers({
@@ -415,8 +442,7 @@ export default combineReducers({
     error,
     warnings,
     envConfig,
-    useMOS,
-    useMRE,
     authentication,
-    matlab
+    matlab,
+    idleTimeoutDuration
 });

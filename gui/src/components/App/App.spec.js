@@ -143,13 +143,9 @@ describe('App Component', () => {
             initialState
         });
 
-        const paragraphElements = [...container.getElementsByTagName('pre')];
+        const paragraphElement = [...container.getElementsByTagName('pre')][0];
 
-        expect(
-            paragraphElements.some((p) =>
-                p.textContent.includes('integration terminated')
-            )
-        ).toBe(true);
+        expect(paragraphElement.textContent.includes('terminated or the session ended')).toBe(true);
     });
 
     it('should display MatlabInstallError', () => {

@@ -1,0 +1,46 @@
+/* Copyright 2024 The MathWorks, Inc. */
+
+#information .alert:not(.error-container) {
+    padding: 0;
+    margin-bottom: 0;
+    background: white;
+}
+
+#information .modal-header {
+    padding-left: 45px;
+}
+
+.modal-content,
+.alert {
+    border-radius: 10px;
+}
+
+#information .details {
+    margin: 0 30px;
+}
+
+#information .alert .alert_heading {
+    font-size: 18px;
+    margin-bottom: 0;
+}
+
+.flex-container {
+    display: flex;
+    margin-bottom: 1rem;
+    align-items: center;
+}
+
+.token-btn {
+    height: 2em;
+    padding-top: 5px;
+    padding-bottom: 0.3em;
+    max-width: 10ch;
+}
+
+.btn {
+    background-color: #3391BA;
+}
+
+#resume-button {
+    color: white;
+}

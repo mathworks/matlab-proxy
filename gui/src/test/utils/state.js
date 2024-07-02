@@ -10,6 +10,7 @@ const state = {
     tutorialHidden: true,
     loadUrl: '/',
     error: null,
+    warnings: [],
     serverStatus: {
         wsEnv: 'integ',
         isSubmitting: true,
@@ -38,7 +39,10 @@ const state = {
     matlab: {
         status: 'up',
         versionOnPath: 'R2023b',
-        supportedVersions: ['R2020b', 'R2023b']
+        supportedVersions: ['R2020b', 'R2023b'],
+        busyStatus: 'idle',
+        useMOS: false,
+        useMRE: false
     },
     authentication: {
         enabled: false,
@@ -51,6 +55,7 @@ const state = {
         wasEverActive: false,
         isConcurrencyEnabled: false,
         clientId: null
-    }
+    },
+    idleTimeoutDuration: null
 };
 export default state;

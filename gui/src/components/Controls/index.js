@@ -21,7 +21,7 @@ import {
 import {
     fetchStartMatlab,
     fetchStopMatlab,
-    fetchTerminateIntegration,
+    fetchShutdownIntegration,
     fetchUnsetLicensing
 } from '../../actionCreators';
 import './Controls.css';
@@ -99,7 +99,7 @@ function Controls ({
         TERMINATE: {
             type: 'confirmation',
             message: 'Are you sure you want to terminate MATLAB and the backing matlab-proxy server?',
-            callback: fetchTerminateIntegration
+            callback: fetchShutdownIntegration
         },
         SIGN_OUT: {
             type: 'confirmation',

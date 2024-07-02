@@ -36,7 +36,7 @@ describe.each([
     [actionCreators.requestSetLicensing, { type: actions.REQUEST_SET_LICENSING }],
     [actionCreators.requestStopMatlab, { type: actions.REQUEST_STOP_MATLAB, status: 'stopping' }],
     [actionCreators.requestStartMatlab, { type: actions.REQUEST_START_MATLAB, status: 'starting' }],
-    [actionCreators.requestTerminateIntegration, { type: actions.REQUEST_TERMINATE_INTEGRATION }]
+    [actionCreators.requestShutdownIntegration, { type: actions.REQUEST_SHUTDOWN_INTEGRATION }]
 ])('Test Request actionCreators', (method, expectedAction) => {
     test(`check if an action of type  ${expectedAction.type} is returned when method actionCreator.${method.name}() is called`, () => {
         expect(method()).toEqual(expectedAction);
@@ -48,7 +48,7 @@ describe.each([
     [actionCreators.receiveStopMatlab, { matlabStatus: 'down' }, { type: actions.RECEIVE_STOP_MATLAB, status: { matlabStatus: 'down' } }],
     [actionCreators.receiveStartMatlab, { matlabStatus: 'up' }, { type: actions.RECEIVE_START_MATLAB, status: { matlabStatus: 'up' } }],
     [actionCreators.receiveError, { message: 'ERROR: License Manager Error -9', logs: null }, { type: actions.RECEIVE_ERROR, error: { message: 'ERROR: License Manager Error -9', logs: null } }],
-    [actionCreators.receiveTerminateIntegration, { licensing: {} }, { type: actions.RECEIVE_TERMINATE_INTEGRATION, status: { licensing: {} }, loadUrl: '../' }]
+    [actionCreators.requestShutdownIntegration, {}, { type: actions.REQUEST_SHUTDOWN_INTEGRATION }]
 ])('Test Receive actionCreators', (method, input, expectedAction) => {
     test(`check if an action of type  ${expectedAction.type} is returned when method actionCreator.${method.name}() is called`, () => {
         expect(method(input)).toEqual(expectedAction);
@@ -427,32 +427,6 @@ describe('Test Async actionCreators', () => {
                 expectedActionTypes
             );
         });
-    });
-
-    it('should dispatch REQUEST_TERMINATE_INTEGRATION and RECEIVE_TERMINATE_INTEGRATION when we terminate the integration', () => {
-        fetchMock.deleteOnce('./terminate_integration', {
-            body: {
-                matlab: {
-                    status: 'down'
-                },
-                licensing: null
-            },
-            headers: { 'content-type': 'application/json' }
-        });
-
-        const expectedActionTypes = [
-            actions.REQUEST_TERMINATE_INTEGRATION,
-            actions.RECEIVE_TERMINATE_INTEGRATION
-        ];
-
-        return store
-            .dispatch(actionCreators.fetchTerminateIntegration())
-            .then(() => {
-                const receivedActions = store.getActions();
-                expect(receivedActions.map((action) => action.type)).toEqual(
-                    expectedActionTypes
-                );
-            });
     });
 
     it('should dispatch REQUEST_STOP_MATLAB AND RECEIVE_STOP_MATLAB when we stop matlab', () => {

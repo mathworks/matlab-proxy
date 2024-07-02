@@ -12,6 +12,7 @@ Exceptions are thrown to signal failure.
 """
 
 import errno
+import math
 import os
 import socket
 from pathlib import Path
@@ -344,3 +345,35 @@ def validate_matlab_root_path(matlab_root: Path, is_custom_matlab_root: bool):
         return None
 
     return matlab_root
+
+
+def validate_idle_timeout(timeout):
+    """Validate if IDLE timeout for matlab-proxy
+
+    Args:
+        timeout (None | int): IDLE timeout for shutdown of matlab-proxy.
+
+    Raises:
+        ValueError: If a non-numerical value is supplied other than None.
+
+    Returns:
+        None | int : The timeout value.
+    """
+    if not timeout:
+        return timeout
+
+    try:
+        # Convert timeout to seconds
+        timeout = math.ceil(float(timeout) * 60)
+
+        if timeout <= 0:
+            raise ValueError
+
+        logger.info(f"MATLAB IDLE timeout set to {timeout} seconds")
+        return timeout
+
+    except ValueError:
+        logger.warn(
+            f"Invalid value supplied for {mwi_env.get_env_name_shutdown_on_idle_timeout()}: {timeout}. Continuing without any IDLE timeout."
+        )
+        return None

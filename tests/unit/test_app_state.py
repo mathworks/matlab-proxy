@@ -1,5 +1,6 @@
 # Copyright 2023-2024 The MathWorks, Inc.
 
+import asyncio
 import json
 import os
 from dataclasses import dataclass
@@ -13,12 +14,13 @@ from matlab_proxy import settings
 from matlab_proxy.app_state import AppState
 from matlab_proxy.constants import MWI_AUTH_TOKEN_NAME_FOR_HTTP
 from matlab_proxy.util.mwi.exceptions import LicensingError, MatlabError
-from tests.unit.util import MockResponse
-
 from matlab_proxy.constants import (
     CONNECTOR_SECUREPORT_FILENAME,
     USER_CODE_OUTPUT_FILE_NAME,
 )
+
+from tests.unit.util import MockResponse
+from tests.unit.test_constants import CHECK_MATLAB_STATUS_INTERVAL, FIVE_MAX_TRIES
 
 
 @pytest.fixture
@@ -42,15 +44,19 @@ def sample_settings_fixture(tmp_path):
         "app_port": 12345,
         "mwapikey": "asdf",
         "has_custom_code_to_execute": False,
+        "mwi_idle_timeout": 100,
+        "mwi_is_token_auth_enabled": False,
+        "integration_name": "MATLAB Desktop",
     }
 
 
 @pytest.fixture
-def app_state_fixture(sample_settings_fixture):
+def app_state_fixture(sample_settings_fixture, loop):
     """A pytest fixture which returns an instance of AppState class with no errors.
 
     Args:
         sample_settings_fixture (dict): A dictionary of sample settings to be used by
+        loop : A pytest builtin fixture
 
     Returns:
         AppState: An object of the AppState class
@@ -58,7 +64,10 @@ def app_state_fixture(sample_settings_fixture):
     app_state = AppState(settings=sample_settings_fixture)
     app_state.processes = {"matlab": None, "xvfb": None}
     app_state.licensing = {"type": "existing_license"}
-    return app_state
+
+    yield app_state
+
+    loop.run_until_complete(app_state.stop_server_tasks())
 
 
 @pytest.fixture
@@ -95,12 +104,13 @@ def app_state_with_token_auth_fixture(
 
 
 @pytest.fixture
-def mocker_os_patching_fixture(mocker, platform):
+def mocker_os_patching_fixture(mocker, platform, loop):
     """A pytest fixture which patches the is_* functions in system.py module
 
     Args:
         mocker : Built in pytest fixture
         platform (str): A string representing "windows", "linux" or "mac"
+        loop : A pytest builtin fixture
 
     Returns:
         mocker: Built in pytest fixture with patched calls to system.py module.
@@ -109,6 +119,7 @@ def mocker_os_patching_fixture(mocker, platform):
     mocker.patch("matlab_proxy.app_state.system.is_windows", return_value=False)
     mocker.patch("matlab_proxy.app_state.system.is_mac", return_value=False)
     mocker.patch("matlab_proxy.app_state.system.is_posix", return_value=False)
+    mocker.patch("matlab_proxy.app_state.util.get_event_loop", return_value=loop)
 
     if platform == "linux":
         mocker.patch("matlab_proxy.app_state.system.is_linux", return_value=True)
@@ -139,6 +150,12 @@ class Mock_matlab:
 
     returncode: Optional[int]
     pid: Optional[int]
+
+    def is_running(self) -> bool:
+        return self.returncode is None
+
+    def wait(self) -> int:
+        return self.returncode
 
 
 @pytest.mark.parametrize(
@@ -265,6 +282,7 @@ def test_persist_config_data(licensing_data: dict, tmp_path):
         "error": None,
         "matlab_version": None,
         "warnings": [],
+        "mwi_idle_timeout": None,
     }
     app_state = AppState(settings=settings)
     app_state.licensing = licensing_data
@@ -344,89 +362,6 @@ def test_are_required_processes_ready(
 
     # Assert
     assert actual == expected
-
-
-get_matlab_status_based_on_connector_status_test_data = [
-    ("up", True, "up"),
-    ("down", True, "starting"),
-    ("up", False, "starting"),
-]
-
-
-@pytest.mark.parametrize(
-    "connector_status, ready_file_present, matlab_status",
-    get_matlab_status_based_on_connector_status_test_data,
-    ids=["connector_up", "connector_down", "connector_up_ready_file_not_present"],
-)
-async def test_get_matlab_status_based_on_connector_status(
-    mocker, app_state_fixture, connector_status, ready_file_present, matlab_status
-):
-    """Test to check matlab status based on connector status
-
-    Args:
-        mocker : Built in pytest fixture.
-        connector_status (str): Status of Embedded Connector.
-        ready_file_present (bool): Represents if the ready file has been created or not.
-        matlab_status (str): Represents the status of MATLAB process.
-    """
-    # Arrange
-    mocker.patch(
-        "matlab_proxy.app_state.mwi.embedded_connector.request.get_state",
-        return_value=connector_status,
-    )
-    mocker.patch.object(Path, "exists", return_value=ready_file_present)
-    app_state_fixture.settings["mwi_is_token_auth_enabled"] = False
-    app_state_fixture.matlab_session_files["matlab_ready_file"] = Path("dummy")
-
-    # Act
-    actual_matlab_status = await app_state_fixture._get_matlab_connector_status()
-
-    # Assert
-    assert actual_matlab_status == matlab_status
-
-
-@pytest.mark.parametrize(
-    "valid_processes, connector_status, expected",
-    [
-        (True, "up", "up"),
-        (False, "up", "down"),
-        (True, "down", "down"),
-    ],
-    ids=[
-        "valid_processes_connector_up",
-        "invalid_processes_connector_up",
-        "valid_processes_connector_down",
-    ],
-)
-async def test_get_matlab_state(
-    app_state_fixture, mocker, valid_processes, connector_status, expected
-):
-    """Test to check get_matlab_state returns the correct MATLAB state based on the connector status
-
-    Args:
-        app_state_fixture (AppState): Object of AppState class with defaults set
-        mocker : Built in pytest fixture
-        valid_processes (bool): Represents if the processes are valid or not
-        connector_status (str): Status of Embedded Connector.
-        expected (str): Expected status of MATLAB process.
-    """
-    # Arrange
-    mocker.patch.object(
-        AppState,
-        "_are_required_processes_ready",
-        return_value=valid_processes,
-    )
-    mocker.patch.object(
-        AppState,
-        "_get_matlab_connector_status",
-        return_value=connector_status,
-    )
-
-    # Act
-    actual_state = await app_state_fixture.get_matlab_state()
-
-    # Assert
-    assert actual_state == expected
 
 
 @pytest.mark.parametrize("platform", [("linux"), ("windows"), ("mac")])
@@ -517,47 +452,55 @@ async def test_setup_env_for_matlab(
     assert expected_output in matlab_env["MW_DIAGNOSTIC_DEST"]
 
 
-@pytest.mark.parametrize(
-    "function_to_call ,mock_response",
-    [
-        ("_get_matlab_connector_status", MockResponse(ok=True)),
-        (
-            "_AppState__send_stop_request_to_matlab",
-            MockResponse(
-                ok=True, payload={"messages": {"EvalResponse": [{"isError": None}]}}
-            ),
-        ),
-    ],
-    ids=["request matlab connector status", "send request to stop matlab"],
-)
 async def test_requests_sent_by_matlab_proxy_have_headers(
     app_state_with_token_auth_fixture,
-    function_to_call,
-    mock_response,
-    mocker,
     sample_token_headers_fixture,
+    mocker,
 ):
-    """Test to check if token headers are included in requests sent by matlab-proxy when authentication is enabled
+    """Test to check if token headers are included in requests sent by matlab-proxy when authentication is enabled.
+    Test checks if the headers are included in the request to stop matlab and get connector status.
 
     Args:
         app_state_fixture_with_token_auth (AppState): Instance of AppState class with token authentication enabled
+        sample_token_headers_fixture (dict): Dict which represents the token headers
         mocker : Built-in pytest fixture
     """
     # Arrange
-    mocked_request = mocker.patch(
-        "aiohttp.ClientSession.request", return_value=mock_response
+    mock_resp = MockResponse(
+        ok=True, payload={"messages": {"EvalResponse": [{"isError": None}]}}
     )
+    mocked_req = mocker.patch("aiohttp.ClientSession.request", return_value=mock_resp)
+
+    # Patching to make _are_required_processes_ready() to return True
+    mocker.patch.object(
+        AppState,
+        "_are_required_processes_ready",
+        return_value=True,
+    )
+    # Patching to make get_matlab_state() to return up
+    mocker.patch.object(
+        AppState,
+        "get_matlab_state",
+        return_value="up",
+    )
+    # Wait for _update_matlab_connector_status to run
+    await asyncio.sleep(CHECK_MATLAB_STATUS_INTERVAL)
 
     # Act
-    # Call the function passed as a string
-    method = getattr(app_state_with_token_auth_fixture, function_to_call)
-    _ = await method()
+    await app_state_with_token_auth_fixture._AppState__send_stop_request_to_matlab()
 
     # Assert
-    connector_status_request_headers = list(mocked_request.call_args_list)[0].kwargs[
+
+    # 1 request from _update_matlab_connector_status() and another from
+    # /stop_matlab request
+    connector_status_request_headers = list(mocked_req.call_args_list)[0].kwargs[
+        "headers"
+    ]
+    send_stop_matlab_request_headers = list(mocked_req.call_args_list)[1].kwargs[
         "headers"
     ]
     assert sample_token_headers_fixture == connector_status_request_headers
+    assert sample_token_headers_fixture == send_stop_matlab_request_headers
 
 
 async def test_start_matlab_without_xvfb(app_state_fixture, mocker):
@@ -696,3 +639,353 @@ def test_create_logs_dir_for_MATLAB(
         assert app_state_fixture.mwi_logs_dir == Path(session_file_path).parent
 
     assert len(app_state_fixture.matlab_session_files) == session_file_count
+
+
+async def test_check_idle_timer_started(app_state_fixture):
+    """Test to check if the IDLE timer starts automatically
+
+    Args:
+        app_state_fixture (AppState): Object of AppState class with defaults set
+    """
+    # Arrange
+    # Nothing to arrange
+
+    # Act
+    # constructor is called automatically
+
+    # Assert
+    assert app_state_fixture.is_idle_timeout_enabled is True
+    assert "decrement_idle_timer" in app_state_fixture.server_tasks
+    assert app_state_fixture.idle_timeout_lock is not None
+
+
+async def test_reset_timer(app_state_fixture):
+    """Test to check if the IDLE timer is reset to its initial value
+
+    Args:
+        app_state_fixture (AppState): Object of AppState class with defaults set
+    """
+    # Arrange
+    # Sleep for 1 second for the decrement_timer task to decrease IDLE timer by
+    # more than 1 second. This is for decreasing flakiness of this test on different platforms.
+    await asyncio.sleep(CHECK_MATLAB_STATUS_INTERVAL + CHECK_MATLAB_STATUS_INTERVAL)
+
+    # Act
+    await app_state_fixture.reset_timer()
+
+    # Assert
+    assert (
+        app_state_fixture.get_remaining_idle_timeout()
+        == app_state_fixture.settings["mwi_idle_timeout"]
+    )
+
+
+async def test_decrement_timer(app_state_fixture):
+    """Test to check if the IDLE timer value decrements automatically
+
+    Args:
+        app_state_fixture (AppState): Object of AppState class with defaults set
+    """
+    # Arrange
+    # Nothing to arrange
+    # decrement_timer task is started automatically by the constructor
+
+    # Sleep for 1 second for the decrement_timer task to decrease IDLE timer by
+    # more than 1 second. This is for decreasing flakiness of this test on different platforms.
+    await asyncio.sleep(CHECK_MATLAB_STATUS_INTERVAL + CHECK_MATLAB_STATUS_INTERVAL)
+
+    # Act
+    # Nothing to act
+
+    # Assert
+    assert (
+        app_state_fixture.get_remaining_idle_timeout()
+        < app_state_fixture.settings["mwi_idle_timeout"]
+    )
+
+
+async def test_decrement_timer_runs_out(sample_settings_fixture, mocker):
+    """Test to check if the IDLE timer eventually runs out.
+
+    Args:
+        app_state_fixture (AppState): Object of AppState class with defaults set
+    """
+    # Arrange
+    # Set the IDLE timeout to a low value
+    idle_timeout = 1
+    sample_settings_fixture["mwi_idle_timeout"] = idle_timeout
+    app_state = AppState(settings=sample_settings_fixture)
+    app_state.processes = {"matlab": None, "xvfb": None}
+    app_state.licensing = {"type": "existing_license"}
+
+    # mock util.get_event_loop() to return a new loop for the test to assert
+    mock_loop = asyncio.new_event_loop()
+    mocker.patch("matlab_proxy.app_state.util.get_event_loop", return_value=mock_loop)
+
+    # Act
+    # Wait for a little more time than idle_timeout to decrease flakiness of this test on different platforms.
+    # MATLAB state changes from down -> starting -> up -> down (idle timer runs out)
+    await asyncio.sleep(idle_timeout * FIVE_MAX_TRIES)
+
+    # Assert
+    assert not mock_loop.is_running()
+    assert app_state.get_matlab_state() == "down"
+
+    # Cleanup
+    mock_loop.stop()
+    await app_state.stop_server_tasks()
+
+
+@pytest.mark.parametrize(
+    "connector_status, matlab_status",
+    [("down", "starting"), ("up", "up")],
+    ids=["connector_down", "connector_up"],
+)
+async def test_update_matlab_state_based_on_connector_state(
+    app_state_fixture, connector_status, matlab_status
+):
+    """Test to check if MATLAB state is updated correctly based on connector state
+
+    Args:
+        app_state_fixture (AppState): Object of AppState class with defaults set
+        connector_status (str): Represents connector status
+        matlab_status (str): Represents expected MATLAB status
+    """
+    # Arrange
+    app_state_fixture.embedded_connector_state = connector_status
+
+    # Act
+    await app_state_fixture._AppState__update_matlab_state_based_on_connector_state()
+
+    # Assert
+    assert app_state_fixture.get_matlab_state() == matlab_status
+
+
+@pytest.mark.parametrize(
+    "matlab_status, matlab_busy_status",
+    [("starting", None), ("up", "busy"), ("up", "idle")],
+    ids=["No response from busy status endpoint", "MATLAB is busy", "MATLAB is idle"],
+)
+async def test_update_matlab_state_using_busy_endpoint(
+    mocker, app_state_fixture, matlab_status, matlab_busy_status
+):
+    """Test to check if MATLAB and its busy status updates correctly when the
+    busy status endpoint is used.
+
+    Args:
+        mocker (mocker): Built-in pytest fixture
+        app_state_fixture (AppState): Object of AppState class with defaults set
+        matlab_status (str): Represents MATLAB status
+        matlab_busy_status (str): Represents MATLAB busy status
+    """
+    # Arrange
+    mocker.patch(
+        "matlab_proxy.app_state.mwi.embedded_connector.request.get_busy_state",
+        return_value=matlab_busy_status,
+    )
+
+    # Act
+    await app_state_fixture._AppState__update_matlab_state_using_busy_status_endpoint()
+
+    # Assert
+    assert app_state_fixture.get_matlab_state() == matlab_status
+    assert app_state_fixture.matlab_busy_state == matlab_busy_status
+
+
+@pytest.mark.parametrize(
+    "connector_status, matlab_status, matlab_busy_status",
+    [("down", "starting", None), ("up", "up", "busy")],
+    ids=["connector_down", "connector_up"],
+)
+async def test_update_matlab_state_using_ping_endpoint(
+    mocker, app_state_fixture, connector_status, matlab_status, matlab_busy_status
+):
+    """Test to check if MATLAB and its busy status updates correctly when the
+    ping endpoint is used.
+
+    Args:
+        mocker (mocker): Built-in pytest fixture
+        app_state_fixture (AppState): Object of AppState class with defaults set
+        connector_status (str): Represents Connector status
+        matlab_status (str): Represents MATLAB status
+        matlab_busy_status (str): Represents MATLAB busy status
+    """
+    # Arrange
+    mocker.patch(
+        "matlab_proxy.app_state.mwi.embedded_connector.request.get_state",
+        return_value=connector_status,
+    )
+
+    # Act
+    await app_state_fixture._AppState__update_matlab_state_using_ping_endpoint()
+
+    # Assert
+    assert app_state_fixture.get_matlab_state() == matlab_status
+    assert app_state_fixture.matlab_busy_state == matlab_busy_status
+
+
+async def test_update_matlab_state_based_on_endpoint_to_use_required_processes_not_ready(
+    mocker, app_state_fixture
+):
+    """Test to check if MATLAB state is 'down' when the required processes are not ready
+
+    Args:
+        mocker (mocker): Built-in pytest fixture
+        app_state_fixture (AppState): Object of AppState class with defaults set
+    """
+    # Arrange
+    mocker.patch(
+        "matlab_proxy.app_state.mwi.embedded_connector.request.get_state",
+        return_value="up",
+    )
+
+    await app_state_fixture._AppState__update_matlab_state_based_on_endpoint_to_use(
+        app_state_fixture._AppState__update_matlab_state_using_ping_endpoint
+    )
+
+    assert app_state_fixture.get_matlab_state() == "down"
+
+
+async def test_update_matlab_state_based_on_endpoint_to_use_happy_path(
+    mocker, tmp_path, app_state_fixture
+):
+    """Test to check if MATLAB state is 'starting' when the required processes
+    are up but the ready file is not created yet.
+
+    Args:
+        mocker (mocker): Built-in pytest fixture
+        tmp_path (Path): Built-in pytest fixture
+        app_state_fixture (AppState): Object of AppState class with defaults set
+    """
+    # Arrange
+    mocker.patch.object(
+        AppState,
+        "_are_required_processes_ready",
+        return_value=True,
+    )
+    tmp_file = tmp_path / Path("dummy")
+    tmp_file.touch()
+    app_state_fixture.matlab_session_files["matlab_ready_file"] = tmp_file
+
+    # Act
+    await app_state_fixture._AppState__update_matlab_state_based_on_endpoint_to_use(
+        app_state_fixture._AppState__update_matlab_state_using_ping_endpoint
+    )
+
+    # Assert
+    await assert_matlab_state(app_state_fixture, "starting", FIVE_MAX_TRIES)
+
+
+async def assert_matlab_state(app_state_fixture, expected_matlab_status, count):
+    """Tries to assert the MATLAB state to expected_matlab_status for count times.
+    Will raise Assertion error after.
+
+    The count is needed to decrease flakiness of this tests when run on different platforms.
+
+    Args:
+        app_state_fixture (AppState): Instance of AppState class.
+        expected_matlab_status (str): Expected MATLAB status
+        count (int): Max tries for assertion before AssertionError is raised.
+
+    Raises:
+        AssertionError: Raised when assertion fails after 'count' tries
+    """
+    i = 0
+    while i < count:
+        try:
+            assert app_state_fixture.get_matlab_state() == expected_matlab_status
+            return
+
+        except:
+            await asyncio.sleep(CHECK_MATLAB_STATUS_INTERVAL)
+
+        i += 1
+
+    raise AssertionError(
+        f"MATLAB status failed to change to '{expected_matlab_status}'"
+    )
+
+
+@pytest.mark.parametrize(
+    "matlab_ready_file, expected_matlab_status",
+    [
+        (None, "down"),
+        (Path("dummy"), "starting"),
+    ],
+    ids=[
+        "no_matlab_ready_file_formed",
+        "no_matlab_ready_file_created",
+    ],
+)
+async def test_check_matlab_connector_status_auto_updates_based_on_matlab_ready_file(
+    mocker, app_state_fixture, matlab_ready_file, expected_matlab_status
+):
+    """Test to check if the status of MATLAB is updated automatically
+
+    Args:
+        mocker (mocker): Built-in pytest fixture
+        app_state_fixture (AppState): Object of AppState class with defaults set
+        matlab_ready_file (Path): Path to the ready file
+        expected_matlab_status (str): Expected MATLAB status
+    """
+    # Arrange
+    mocker.patch.object(
+        AppState,
+        "_are_required_processes_ready",
+        return_value=True,
+    )
+    app_state_fixture.matlab_session_files["matlab_ready_file"] = matlab_ready_file
+
+    # Act
+    # Nothing to act upon as the _update_matlab_state() is started automatically in the constructor.
+    # Have to wait here for the atleast the same interval as the __update_matlab_state_based_on_endpoint_to_use()
+    # for the MATLAB status to update from 'down'
+
+    # Assert
+    # MATLAB state should be 'down' first
+    assert app_state_fixture.get_matlab_state() == "down"
+    await asyncio.sleep(CHECK_MATLAB_STATUS_INTERVAL)
+
+    await assert_matlab_state(app_state_fixture, expected_matlab_status, FIVE_MAX_TRIES)
+
+
+async def test_update_matlab_state_switches_to_busy_endpoint(
+    mocker, tmp_path, app_state_fixture
+):
+    """Test to check if the endpoint to determine MATLAB state changes from the ping
+    endpoint to busy status endpoint after the first successful ping request.
+
+    Args:
+        mocker (mocker): Built-in pytest fixture
+        tmp_path (Path): Built-in pytest fixture
+        app_state_fixture (AppState): Object of AppState class with defaults set
+    """
+    # Arrange
+    # Setup mocks for the first ping request to be successful
+    mocker.patch.object(
+        AppState,
+        "_are_required_processes_ready",
+        return_value=True,
+    )
+    mocker.patch(
+        "matlab_proxy.app_state.mwi.embedded_connector.request.get_state",
+        return_value="up",
+    )
+    tmp_file = tmp_path / Path("dummy")
+    tmp_file.touch()
+    app_state_fixture.matlab_session_files["matlab_ready_file"] = tmp_file
+    mocked_busy_status_endpoint_function = mocker.patch.object(
+        app_state_fixture, "_AppState__update_matlab_state_using_busy_status_endpoint"
+    )
+
+    # Act
+    # Nothing to act upon as the _update_matlab_state() is started automatically in the constructor.
+    # Have to wait here for the atleast the same interval as the __update_matlab_state_based_on_endpoint_to_use()
+    # for the MATLAB status to update from 'down'
+
+    # Wait for the ping endpoint request. Waiting for more time than what
+    # is needed to decrease flakiness of this test on different platforms.
+    await asyncio.sleep(1 * FIVE_MAX_TRIES)
+
+    # Assert
+    assert mocked_busy_status_endpoint_function.call_count > 1

@@ -39,7 +39,7 @@ describe('reducers', () => {
         receiveActions.push(
             actions.RECEIVE_SERVER_STATUS,
             actions.RECEIVE_SET_LICENSING,
-            actions.RECEIVE_TERMINATE_INTEGRATION,
+            actions.RECEIVE_SHUTDOWN_INTEGRATION,
             actions.RECEIVE_STOP_MATLAB,
             actions.RECEIVE_START_MATLAB
         );
@@ -47,13 +47,17 @@ describe('reducers', () => {
         requestActions.push(
             actions.REQUEST_SERVER_STATUS,
             actions.REQUEST_SET_LICENSING,
-            actions.REQUEST_TERMINATE_INTEGRATION,
+            actions.REQUEST_SHUTDOWN_INTEGRATION,
             actions.REQUEST_STOP_MATLAB,
             actions.REQUEST_START_MATLAB
         );
     });
 
     describe('overlayVisibility', () => {
+        it('should return the intial state', () => {
+            expect(reducers.overlayVisibility(undefined, genericAction)).toEqual(false);
+        });
+
         it('should return the intial state', () => {
             expect(reducers.overlayVisibility(undefined, genericAction)).toEqual(false);
         });
@@ -362,9 +366,9 @@ describe('reducers', () => {
             expect(reducers.loadUrl(undefined, action)).toBeNull();
         });
 
-        it('should return loadUrl when action is RECEIVE_TERMINATE_INTEGRATION', () => {
+        it('should return loadUrl when action is RECEIVE_SHUTDOWN_INTEGRATION', () => {
             action = _.cloneDeep(genericAction);
-            action.type = actions.RECEIVE_TERMINATE_INTEGRATION;
+            action.type = actions.RECEIVE_SHUTDOWN_INTEGRATION;
             expect(reducers.loadUrl(undefined, action)).toEqual(action.loadUrl);
         });
     });
@@ -379,13 +383,12 @@ describe('reducers', () => {
             });
         });
 
-        const statusError = {
-            message: 'Matlab exited with exit code 9',
-            logs: 'Java AWT error',
-            type: 'java.awt.headlessexception'
-        };
-
         it('should return an error object containing (message, logs and type of error) if there is an error else return null', () => {
+            const statusError = {
+                message: 'Matlab exited with exit code 9',
+                logs: 'Java AWT error',
+                type: 'java.awt.headlessexception'
+            };
             for (let i = 0; i < receiveActions.length; i++) {
                 action = _.cloneDeep(genericAction);
                 action.type = receiveActions[i];

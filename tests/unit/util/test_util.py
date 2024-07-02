@@ -4,6 +4,9 @@ import asyncio
 import pytest
 import psutil
 
+import inspect
+
+from matlab_proxy import util
 from matlab_proxy.util import get_child_processes, system, add_signal_handlers, prettify
 from matlab_proxy.util import system
 from matlab_proxy.util.mwi.exceptions import (
@@ -136,3 +139,83 @@ def test_get_child_processes_parent_not_running(mocker):
         match="Can't check for child processes as the parent process is no longer running.",
     ):
         get_child_processes(parent_process)
+
+
+def test_get_caller_name():
+    """Test to check if caller name is not empty"""
+    # Arrange
+
+    # Act
+    caller_name = util.get_caller_name()
+
+    # Assert
+    assert caller_name is not None
+
+
+@pytest.fixture
+def tracking_lock():
+    """Pytest fixture which returns an instance of TrackingLock for testing purposes."""
+    return util.TrackingLock("test_purpose")
+
+
+async def test_TrackingLock(tracking_lock):
+    """Test to check various methods of TrackingLock class
+
+    Args:
+        tracking_lock (TrackingLock): Pytest fixture
+    """
+    name_of_current_fn = inspect.currentframe().f_code.co_name
+
+    await tracking_lock.acquire()
+    assert tracking_lock.acquired_by == name_of_current_fn
+    assert tracking_lock.locked()
+
+    await tracking_lock.release()
+    tracking_lock.acquired_by is None
+    assert not tracking_lock.locked()
+
+    assert tracking_lock.purpose is not None
+
+
+async def test_validate_lock_for_caller_when_not_locked(tracking_lock):
+    """Test to check if validate_lock_for_caller returns False when the lock is not acquired
+
+    Args:
+        tracking_lock (TrackingLock): Pytest fixture
+    """
+    assert not tracking_lock.validate_lock_for_caller("some_caller")
+
+
+async def test_validate_lock_for_caller_happy_path(tracking_lock):
+    """Test to check if validate_lock_for_caller returns True when the lock was acquired by the
+    same function as the caller.
+
+    Args:
+        tracking_lock (TrackingLock): Pytest fixture
+    """
+    name_of_current_fn = inspect.currentframe().f_code.co_name
+
+    await tracking_lock.acquire()
+    assert tracking_lock.validate_lock_for_caller(name_of_current_fn)
+    await tracking_lock.release()
+
+
+async def test_validate_lock_for_caller_lock_acquired_by_other_function(tracking_lock):
+    """Test to check if validate_lock_for_caller returns False when the lock was acquired by
+    some other function
+
+    Args:
+        tracking_lock (TrackingLock): Pytest fixture
+    """
+    # Arrange
+    name_of_current_fn = inspect.currentframe().f_code.co_name
+
+    # Acquire lock inside a nested function
+    def nested_fn():
+        tracking_lock.acquire()
+
+    # Act
+    nested_fn()
+
+    # Assert
+    assert not tracking_lock.validate_lock_for_caller(name_of_current_fn)

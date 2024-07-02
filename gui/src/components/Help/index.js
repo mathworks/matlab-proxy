@@ -7,7 +7,8 @@ import './Help.css';
 
 import {
     selectOverlayHidable,
-    selectEnvConfig
+    selectEnvConfig,
+    selectIntegrationName
 } from '../../selectors';
 
 function Help ({
@@ -15,6 +16,7 @@ function Help ({
     dismissAllHandler
 }) {
     const overlayHidable = useSelector(selectOverlayHidable);
+    const integrationName = useSelector(selectIntegrationName);
 
     const onCloseClick = event => {
         if (event.target === event.currentTarget) {
@@ -23,9 +25,8 @@ function Help ({
         }
     };
 
-    const config = useSelector(selectEnvConfig);
-    const url = config.doc_url;
-    const targetEnvMsg = config.extension_name === '' ? 'MATLAB Web Desktop' : `MATLAB Integration for ${config.extension_name_short_description}`;
+    const envConfig = useSelector(selectEnvConfig);
+    const url = envConfig.doc_url;
 
     return (
         <div className="modal show"
@@ -41,7 +42,7 @@ function Help ({
                         <h4 className="modal-title" id="confirmation-dialog-title">Help</h4>
                     </div>
                     <div className="modal-body help">
-                        <p>The status panel shows you options to manage the <a href={url} target="_blank" rel="noopener noreferrer">{targetEnvMsg}</a>.</p>
+                        <p>The status panel shows you options to manage the <a href={url} target="_blank" rel="noopener noreferrer">{integrationName}</a>.</p>
                         <p>Use the buttons in the status panel to:</p>
                         <div>
                             <p className="icon-custom-start">Start your MATLAB session. Available if MATLAB is stopped.</p>
@@ -51,7 +52,7 @@ function Help ({
                                 Sign out of MATLAB. Use this to stop MATLAB and to sign in with an alternative account. Available if using online licensing.<br />
                                 Unset network license manager server address. Use this to stop MATLAB and enter new licensing information. Available if using network license manager.
                             </p>
-                            <p className="icon-custom-feedback">{`Send feedback about the ${targetEnvMsg}. This action opens the matlab-proxy repository on github.com`}</p>
+                            <p className="icon-custom-feedback">{`Send feedback about the ${integrationName}. This action opens the matlab-proxy repository on github.com`}</p>
                         </div>
                     </div>
                     <div className="modal-footer">

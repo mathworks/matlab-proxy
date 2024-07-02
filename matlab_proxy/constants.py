@@ -28,3 +28,6 @@ SUPPORTED_MATLAB_VERSIONS: Final[List[str]] = [
 # This constant when set to True restricts the number of active sessions to one
 IS_CONCURRENCY_CHECK_ENABLED: Final[bool] = True
 MWI_AUTH_TOKEN_NAME_FOR_HTTP = "mwi-auth-token"
+
+# Interval in seconds to wait before querying the status of MATLAB.
+CHECK_MATLAB_STATUS_INTERVAL_SECONDS: Final[int] = 1
