@@ -9,6 +9,23 @@ on:
   workflow_call:
 
 jobs:
+  matlab_unit_tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v2
+
+      - name: Run tests
+        uses: matlab-actions/run-tests@v2
+
   node_tests:
     strategy:
       # fail-fast=false runs all the jobs in strategy matrix
