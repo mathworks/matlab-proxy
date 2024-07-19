@@ -1,0 +1,15 @@
+// Copyright 2024 The MathWorks, Inc.
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug matlab-proxy server",
+            "type": "debugpy",
+            "request": "launch",
+            // Always start debugging from the root file of the project
+            "program": "${workspaceFolder}/matlab_proxy/app.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
+    ]
+}

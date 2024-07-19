@@ -443,7 +443,7 @@ async def shutdown_integration_delete(req):
     loop = util.get_event_loop()
     # Run the current batch of coroutines in the event loop and then exit.
     # This completes the loop.run_forever() blocking call and subsequent code
-    # in main() resumes execution.
+    # in create_and_start_app() resumes execution.
     loop.stop()
 
     return res
@@ -807,8 +807,8 @@ async def cleanup_background_tasks(app):
     await state.stop_matlab(force_quit=True)
 
     # Cleanup server tasks
-    all_tasks = state.server_tasks
-    await util.cancel_tasks(all_tasks)
+    server_tasks = state.server_tasks
+    await util.cancel_tasks(server_tasks)
 
 
 def configure_and_start(app):
@@ -936,6 +936,11 @@ def configure_no_proxy_in_env():
 
 
 def create_and_start_app(config_name):
+    """Creates and start the web server. Will block until the server is interrupted or is shut down
+
+    Args:
+        config_name (str): Name of the configuration to use with matlab-proxy.
+    """
     configure_no_proxy_in_env()
 
     # Create, configure and start the app.
@@ -947,23 +952,25 @@ def create_and_start_app(config_name):
     # Add signal handlers for the current python process
     loop = util.add_signal_handlers(loop)
     try:
+        # Further execution is stopped here until an interrupt is raised
         loop.run_forever()
+
     except SystemExit:
         pass
 
-    async def shutdown():
-        """Shuts down the app in the event of a signal interrupt."""
-        logger.info("Shutting down MATLAB proxy-app")
-
-        await app.shutdown()
-        await app.cleanup()
-
-        # Shutdown any running tasks.
-        await util.cancel_tasks(asyncio.all_tasks())
-
+    # After handling the interrupt, proceed with shutting down the server gracefully.
     try:
-        loop.run_until_complete(shutdown())
-    except:
+        running_tasks = asyncio.all_tasks(loop)
+        loop.run_until_complete(
+            asyncio.gather(
+                app.shutdown(),
+                app.cleanup(),
+                util.cancel_tasks(running_tasks),
+                return_exceptions=False,
+            )
+        )
+
+    except Exception:
         pass
 
     logger.info("Finished shutting down. Thank you for using the MATLAB proxy.")
