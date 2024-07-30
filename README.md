@@ -163,7 +163,7 @@ $ pip install --upgrade matlab-proxy>=0.5.0
 
 ### Windows Subsystem for Linux (WSL 2)
 
-To install `matlab-proxy` in WSL 2, follow the steps mentioned in the [Installation Guide for WSL 2](./installation/wsl2/README.md).
+To install `matlab-proxy` in WSL 2, follow the steps mentioned in the [Installation Guide for WSL 2](./install_guides/wsl2/README.md).
 
 ## Using an already activated MATLAB with matlab-proxy
 `matlab-proxy` version `v0.7.0` introduces support for using an existing MATLAB license. Use the Existing License option only if you have an activated MATLAB. This allows you to start MATLAB without authenticating every time.
