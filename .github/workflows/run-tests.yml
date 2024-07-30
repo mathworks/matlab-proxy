@@ -11,14 +11,8 @@ on:
 
 jobs:
   # Runs unit tests
-  call-run-unit-tests-r000:
+  call-run-unit-tests:
     uses: ./.github/workflows/run-unit-tests.yml
-
-  call-run-unit-tests-r001:
-    uses: ./.github/workflows/run-unit-tests.yml
-
-  call-run-unit-tests-r002:
-      uses: ./.github/workflows/run-unit-tests.yml
 
   # Runs integration tests
   call-integration-tests:
