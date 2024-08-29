@@ -1,4 +1,4 @@
-# Copyright 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2024 The MathWorks, Inc.
 """Functions to access & control the logging behavior of the app
 """
 
@@ -52,7 +52,17 @@ def __set_logging_configuration():
     # query for user specified environment variables
     log_level = os.getenv(
         mwi_env.get_env_name_logging_level(), __get_default_log_level()
-    )
+    ).upper()
+
+    valid = __is_valid_log_level(log_level)
+
+    if not valid:
+        default_log_level = __get_default_log_level()
+        logging.warn(
+            f"Unknown log level '{log_level}' set. Defaulting to log level '{default_log_level}'..."
+        )
+        log_level = default_log_level
+
     log_file = os.getenv(mwi_env.get_env_name_log_file(), None)
 
     ## Set logging object
@@ -110,3 +120,13 @@ def __get_default_log_level():
         String: The default logging level
     """
     return "INFO"
+
+
+def __is_valid_log_level(log_level):
+    """Helper to check if the log level is valid.
+
+    Returns:
+        Boolean: Whether log level  exists
+    """
+
+    return hasattr(logging, log_level)
