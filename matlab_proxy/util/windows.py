@@ -49,10 +49,13 @@ async def start_matlab(matlab_cmd, matlab_env):
     """
     import psutil
 
+    # The stdout is used to suppress the MATLAB outputs from being shown in the terminal.
+    # We set it to DEVNULL instead of PIPE because PIPE has a limited buffer size and can
+    # block the process if the output exceeds the buffer limit.
     intermediate_proc = await asyncio.create_subprocess_exec(
         *matlab_cmd,
         env=matlab_env,
-        stdout=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.DEVNULL,
         stderr=asyncio.subprocess.STDOUT,
     )
 
