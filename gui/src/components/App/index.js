@@ -162,7 +162,7 @@ function App () {
     const htmlToRenderMATLAB = () => {
         let theHtmlToRenderMATLAB = useMOS ? 'index-matlabonlineserver.html' : 'index-jsd-cr.html';
         if (useMRE) {
-            theHtmlToRenderMATLAB += `?mre=${fullyQualifiedUrl}`;
+            theHtmlToRenderMATLAB += `?mre=${encodeURIComponent(fullyQualifiedUrl)}`;
         }
         return theHtmlToRenderMATLAB;
     };
