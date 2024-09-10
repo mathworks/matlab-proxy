@@ -493,7 +493,7 @@ def create_xvfb_cmd():
         str(dpipe[1]),
         "-screen",
         "0",
-        "1600x1200x24",
+        "3840x2160x24",
         "-dpi",
         "100",
         # "-ac",
