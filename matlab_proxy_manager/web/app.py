@@ -1,0 +1,447 @@
+# Copyright 2024 The MathWorks, Inc.
+
+import asyncio
+import os
+import re
+import signal
+import sys
+from collections import namedtuple
+from typing import Optional
+
+import aiohttp
+from aiohttp import ClientSession, client_exceptions, web
+
+import matlab_proxy.util.mwi.environment_variables as mwi_env
+import matlab_proxy.util.system as mwi_sys
+import matlab_proxy_manager.lib.api as mpm_lib
+from matlab_proxy.util.event_loop import get_event_loop
+from matlab_proxy_manager.utils import constants, helpers, logger
+from matlab_proxy_manager.utils import environment_variables as mpm_env
+from matlab_proxy_manager.utils.auth import authenticate_access_decorator
+from matlab_proxy_manager.web import watcher
+from matlab_proxy_manager.web.monitor import OrphanedProcessMonitor
+
+# We use __all__ to list down all the public-facing APIs exported by this module
+__all__ = ["proxy", "SHUTDOWN_EVENT"]
+
+SHUTDOWN_EVENT = None
+log = logger.get(init=True)
+
+
+def init_app() -> web.Application:
+    """
+    Initialize and configure the aiohttp web application.
+
+    This function sets up the web application with necessary configurations,
+    including creating the proxy manager data directory, setting up an idle
+    timeout monitor, and configuring client sessions.
+
+    Returns:
+        web.Application: The configured aiohttp web application.
+    """
+    app = web.Application()
+
+    # Create and get the proxy manager data directory
+    try:
+        data_dir = helpers.create_and_get_proxy_manager_data_dir()
+        app["data_dir"] = data_dir
+    except Exception as ex:
+        raise RuntimeError(f"Failed to create or get data directory: {ex}") from ex
+
+    # Setup idle timeout monitor for the app
+    monitor = OrphanedProcessMonitor(app)
+
+    async def start_idle_monitor(app):
+        """Start the idle timeout monitor."""
+        asyncio.create_task(monitor.start())
+
+    async def create_client_session(app):
+        """Create an aiohttp client session."""
+        app["session"] = ClientSession(
+            trust_env=True, connector=aiohttp.TCPConnector(ssl=False, ttl_dns_cache=600)
+        )
+
+    async def cleanup_client_session(app):
+        """Cleanup the aiohttp client session."""
+        await app["session"].close()
+
+    app.on_startup.append(start_idle_monitor)
+    app.on_startup.append(create_client_session)
+    app.on_cleanup.append(helpers.delete_dangling_servers)
+    app.on_cleanup.append(cleanup_client_session)
+
+    app.router.add_route("*", "/{tail:.*}", proxy)
+
+    return app
+
+
+async def start_app(env_vars: namedtuple):
+    """
+    Initialize and start the web application.
+
+    This function sets up logging, initializes the web application, and starts
+    the default matlab proxy. It also sets up signal handlers for graceful shutdown
+    and starts a file watcher in a separate thread.
+
+    Raises:
+        Exception: If any error occurs during the application startup or runtime.
+    """
+    # Async events are utilized to signal app termination from other modules,
+    # necessitating the use of a global variable. To avoid potential issues with variable attachment
+    # to other event loops in Python versions prior to 3.10, the variable is initialized locally
+    # rather than globally.
+    global SHUTDOWN_EVENT
+    app = init_app()
+
+    app["port"] = env_vars.mpm_port
+    app["auth_token"] = env_vars.mpm_auth_token
+    app["parent_pid"] = env_vars.mpm_parent_pid
+
+    # Start default matlab proxy
+    await _start_default_proxy(app)
+
+    web_logger = None if not mwi_env.is_web_logging_enabled() else log
+
+    # Run the app
+    runner = web.AppRunner(app, logger=web_logger, access_log=web_logger)
+    await runner.setup()
+    site = web.TCPSite(runner, port=env_vars.mpm_port)
+    await site.start()
+    log.debug("Proxy manager started at http://127.0.0.1:%d", site._port)
+
+    # Get the default event loop
+    loop = get_event_loop()
+
+    # Run the observer in a separate thread
+    loop.run_in_executor(None, watcher.start_watcher, app)
+
+    # Register signal handler for graceful shutdown
+    _register_signal_handler(loop)
+
+    SHUTDOWN_EVENT = asyncio.Event()
+
+    # Wait for receiving shutdown_event (set by interrupts or by monitoring process)
+    await SHUTDOWN_EVENT.wait()
+
+    # After receiving the shutdown signal, perform cleanup by stopping the web server
+    await runner.cleanup()
+
+
+def _register_signal_handler(loop):
+    """
+    Registers signal handlers for supported termination signals to allow for graceful shutdown
+    of the application.
+
+    Args:
+        loop (asyncio.AbstractEventLoop): The event loop to which the signal handlers
+        should be added.
+    """
+    signals = mwi_sys.get_supported_termination_signals()
+    for sig_name in signals:
+        if mwi_sys.is_posix():
+            loop.add_signal_handler(sig_name, catch_signals)
+        else:
+            # loop.add_signal_handler() is not yet supported in Windows.
+            # Using the 'signal' package instead.
+            signal.signal(sig_name, catch_signals)
+
+
+def catch_signals(*args):
+    """Handle termination signals for graceful shutdown."""
+    # Poll for parent process to clean up to avoid race conditions in cleanup of matlab proxies
+    helpers.poll_for_server_deletion()
+    SHUTDOWN_EVENT.set()
+
+
+async def _start_default_proxy(app):
+    """
+    Starts the default MATLAB proxy and updates the application state.
+
+    Args:
+        app : The aiohttp web application.
+    """
+    server_process = await mpm_lib.start_matlab_proxy_for_jsp(
+        parent_id=app.get("parent_pid"),
+        is_isolated_matlab=False,
+        mpm_auth_token=app.get("auth_token"),
+    )
+    if not server_process:
+        log.error("Failed to start default matlab proxy using Jupyter")
+        return
+
+    # Load existing matlab proxy servers into app state for consistency
+    app["servers"] = helpers.pre_load_from_state_file(app.get("data_dir"))
+
+    # Add the new/existing server to the app state
+    app["servers"][server_process.get("id")] = server_process
+
+
+@authenticate_access_decorator
+async def proxy(req):
+    """
+    Proxy incoming HTTP requests to the appropriate MATLAB proxy backend server.
+
+    This function handles requests by:
+    1. Redirecting paths ending with '/matlab/' to '/matlab/default/'.
+    2. Extracting client identifiers from the request path.
+    3. Routing the request to the appropriate MATLAB backend server based on the client identifier.
+    4. Handling various exceptions and providing appropriate HTTP responses.
+
+    Args:
+        req (aiohttp.web.Request): The incoming HTTP request.
+
+    Returns:
+        aiohttp.web.Response: The HTTP response from the backend server or an error page.
+
+    Raises:
+        aiohttp.web.HTTPFound: If the request path needs to be redirected.
+        aiohttp.web.HTTPServiceUnavailable: If the MATLAB proxy process is not running.
+        aiohttp.web.HTTPNotFound: If the request cannot be forwarded to the MATLAB proxy.
+    """
+    # Special keys for web socket requests
+    connection = "connection"
+    upgrade = "upgrade"
+    req_headers = req.headers.copy()
+    req_body = await req.read()
+
+    # Set content length in case of modification
+    req_headers["Content-Length"] = str(len(req_body))
+    req_headers["x-forwarded-proto"] = "http"
+    req_path = req.rel_url
+
+    # Redirect block to move /*/matlab to /*/matlab/default/
+    if str(req_path).endswith(f"{constants.MWI_BASE_URL_PREFIX}"):
+        return _redirect_to_default(req_path)
+
+    match = re.compile(r".*?/matlab/([^/]+)/(.*)").match(str(req.rel_url))
+
+    if not match:
+        # Path doesn't contain /matlab/default|<id> in the request path
+        # redirect to error page
+        log.debug("Regex match not found, match: %s", match)
+        return _render_error_page(
+            "Incorrect request path in the URL, please try with correct URL."
+        )
+
+    ident = match.group(1).rstrip("/")
+    log.debug("Client identifier for proxy: %s", ident)
+
+    ctx = req_headers.get(constants.HEADER_MWI_MPM_CONTEXT)
+    if not ctx:
+        log.debug("MPM Context header not found in the request")
+        return _render_error_page(
+            "Required header (MWI-MPM-CONTEXT) not found in the request"
+        )
+
+    client_key = f"{ctx}_{ident}"
+    default_key = f"{ctx}_default"
+    group_two_rel_url = match.group(2)
+
+    backend_server = _get_backend_server(req, client_key, default_key)
+    proxy_url = f'{backend_server.get("absolute_url")}/{group_two_rel_url}'
+    log.debug("Proxy URL: %s", proxy_url)
+
+    if (
+        req_headers.get(connection, "").lower() == upgrade
+        and req_headers.get(upgrade, "").lower() == "websocket"
+        and req.method == "GET"
+    ):
+        return await _handle_websocket_request(req, proxy_url)
+    try:
+        return await _handle_http_request(req, req_body, proxy_url, backend_server)
+    except web.HTTPFound:
+        log.debug("Redirection to path with /default")
+        raise
+
+    # Handles any pending HTTP requests from the browser when the MATLAB proxy process is
+    # terminated before responding to them.
+    except (
+        client_exceptions.ServerDisconnectedError,
+        client_exceptions.ClientConnectionError,
+    ) as ex:
+        log.debug("MATLAB proxy process may not be running.")
+        raise web.HTTPServiceUnavailable() from ex
+    except Exception as err:
+        log.error("Failed to forward HTTP request to MATLAB proxy with error: %s", err)
+        raise web.HTTPNotFound() from err
+
+
+async def _handle_websocket_request(
+    req: web.Request, proxy_url: str
+) -> web.WebSocketResponse:
+    """Handles a websocket request to the backend matlab proxy server
+
+    Args:
+        req (web.Request): websocket request from the client
+        proxy_url (str): backend matlab proxy server URL
+
+    Raises:
+        ValueError: when an unexpected websocket message type is received
+        aiohttp.WebSocketError: For any exception raised while forwarding request from src to dest
+
+    Returns:
+        web.WebSocketResponse: The response from the backend server
+    """
+    ws_server = web.WebSocketResponse()
+    await ws_server.prepare(req)
+
+    async with aiohttp.ClientSession(
+        trust_env=True,
+        cookies=req.cookies,
+        connector=aiohttp.TCPConnector(ssl=False),
+    ) as client_session:
+        try:
+            async with client_session.ws_connect(proxy_url) as ws_client:
+
+                async def ws_forward(ws_src, ws_dest):
+                    async for msg in ws_src:
+                        msg_type = msg.type
+                        msg_data = msg.data
+
+                        # When a websocket is closed by the MATLAB JSD, it sends out a few
+                        # http requests to the Embedded Connector about the events that had occurred
+                        # (figureWindowClosed etc.) The Embedded Connector responds by sending a
+                        # message of type 'Error' with close code as Abnormal closure. When this
+                        # happens, matlab-proxy can safely exit out of the loop and close the
+                        # websocket connection it has with the Embedded Connector (ws_client)
+                        if (
+                            msg_type == aiohttp.WSMsgType.ERROR
+                            and ws_src.close_code
+                            == aiohttp.WSCloseCode.ABNORMAL_CLOSURE
+                        ):
+                            log.debug(
+                                "Src: %s, msg_type= %s, ws_src.close_code= %s",
+                                ws_src,
+                                msg_type,
+                                ws_src.close_code,
+                            )
+                            break
+                        if msg_type == aiohttp.WSMsgType.TEXT:
+                            await ws_dest.send_str(msg_data)
+                        elif msg_type == aiohttp.WSMsgType.BINARY:
+                            await ws_dest.send_bytes(msg_data)
+                        elif msg_type == aiohttp.WSMsgType.PING:
+                            await ws_dest.ping()
+                        elif msg_type == aiohttp.WSMsgType.PONG:
+                            await ws_dest.pong()
+                        elif ws_dest.closed:
+                            log.debug("Destination: %s closed", ws_dest)
+                            await ws_dest.close(
+                                code=ws_dest.close_code, message=msg.extra
+                            )
+                        else:
+                            raise ValueError(f"Unexpected message type: {msg}")
+
+                await asyncio.wait(
+                    [
+                        asyncio.create_task(ws_forward(ws_server, ws_client)),
+                        asyncio.create_task(ws_forward(ws_client, ws_server)),
+                    ],
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+
+                return ws_server
+        except Exception as err:
+            log.error("Failed to create web socket connection with error: %s", err)
+
+            code, message = (
+                aiohttp.WSCloseCode.INTERNAL_ERROR,
+                "Failed to establish websocket connection with the backend server",
+            )
+            await ws_server.close(code=code, message=message.encode("utf-8"))
+            raise aiohttp.WebSocketError(code=code, message=message)
+
+
+# Helper private functions
+
+
+async def _handle_http_request(
+    req: web.Request, req_body: Optional[bytes], proxy_url: str, backend_server: dict
+) -> web.Response:
+    """
+    Forwards an incoming HTTP request to a specified backend server.
+
+    Returns:
+        web.Response: The response from the backend server, including headers, status, and body.
+    """
+    client_session = req.app.get("session")
+    async with client_session.request(
+        req.method,
+        proxy_url,
+        allow_redirects=True,
+        data=req_body,
+        headers=backend_server.get("headers"),
+    ) as res:
+        headers = res.headers.copy()
+        body = await res.read()
+        return web.Response(headers=headers, status=res.status, body=body)
+
+
+def _get_backend_server(req: web.Request, client_key: str, default_key: str) -> dict:
+    """
+    Retrieves the backend server configuration for a given client key.
+    """
+    app = req.app
+    backend_server = app["servers"].get(client_key)
+    # Route to default matlab if the specified path doesn't exist
+    if not backend_server:
+        log.debug("Client not found in the current servers, using default matlab proxy")
+        backend_server = app["servers"].get(default_key)
+    return backend_server
+
+
+def _redirect_to_default(req_path) -> None:
+    """
+    Redirects the request to the default path.
+
+    This function constructs a new URL by appending '/default/' to the given request path
+    and raises an HTTPFound exception to redirect the client.
+
+    Raises:
+        web.HTTPFound: Redirects the client to the new URL.
+    """
+    new_redirect_url = f'{str(req_path).rstrip("/")}/default/'
+    log.info("Redirecting to %s", new_redirect_url)
+    raise web.HTTPFound(new_redirect_url)
+
+
+def _render_error_page(error_msg: str) -> web.Response:
+    """Returns 503 with error text"""
+    return web.HTTPServiceUnavailable(text=f"Error: {error_msg}")
+
+
+def main() -> None:
+    """
+    The main entry point of the application. Starts the app and run until the shutdown
+    signal to terminate the app is received.
+    """
+    env_vars: namedtuple = _fetch_and_validate_required_env_vars()
+    loop: asyncio.AbstractEventLoop | asyncio.ProactorEventLoop = get_event_loop()
+    loop.run_until_complete(start_app(env_vars))
+
+
+def _fetch_and_validate_required_env_vars() -> namedtuple:
+    EnvVars = namedtuple("EnvVars", ["mpm_port", "mpm_auth_token", "mpm_parent_pid"])
+
+    port = os.getenv(mpm_env.get_env_name_mwi_mpm_port())
+    mpm_auth_token = os.getenv(mpm_env.get_env_name_mwi_mpm_auth_token())
+    ctx = os.getenv(mpm_env.get_env_name_mwi_mpm_parent_pid())
+
+    if not ctx or not port or not mpm_auth_token:
+        print("Error: One or more required environment variables are missing.")
+        sys.exit(1)
+
+    try:
+        mwi_mpm_port: int = int(port)
+        return EnvVars(
+            mpm_port=mwi_mpm_port, mpm_auth_token=mpm_auth_token, mpm_parent_pid=ctx
+        )
+    except ValueError as ve:
+        print("Error: Invalid type for port: ", ve)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    # This ensures that the app is not created when the module is imported and
+    # is only started when the script is run directly or via executable invocation
+    main()

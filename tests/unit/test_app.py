@@ -447,7 +447,7 @@ async def test_matlab_proxy_404(proxy_payload, test_server):
     count = 0
     while True:
         resp = await test_server.post(
-            "./1234.html", data=json.dumps(proxy_payload), headers=headers
+            "/1234.html", data=json.dumps(proxy_payload), headers=headers
         )
         if resp.status == HTTPStatus.SERVICE_UNAVAILABLE:
             time.sleep(test_constants.ONE_SECOND_DELAY)

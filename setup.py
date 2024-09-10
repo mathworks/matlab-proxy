@@ -7,6 +7,7 @@ import setuptools
 from setuptools.command.install import install
 
 import matlab_proxy
+import matlab_proxy_manager
 from matlab_proxy.default_configuration import config
 
 
@@ -69,6 +70,7 @@ INSTALL_REQUIRES = [
     "importlib-metadata",
     "importlib-resources",
     "psutil",
+    "watchdog",
 ]
 
 HERE = Path(__file__).parent.resolve()
@@ -115,6 +117,7 @@ setuptools.setup(
         "console_scripts": [
             f"{matlab_proxy.get_executable_name()} = matlab_proxy.app:main",
             f"{matlab_proxy.get_executable_name()}-list-servers = matlab_proxy.util.list_servers:print_server_info",
+            f"{matlab_proxy_manager.get_executable_name()} = matlab_proxy_manager.web.app:main",
         ],
     },
     include_package_data=True,
