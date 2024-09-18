@@ -18,7 +18,7 @@ from matlab_proxy_manager.utils import logger
 log = logger.get()
 
 
-def is_server_ready(url: str, retries: int = 2) -> bool:
+def is_server_ready(url: str, retries: int = 2, backoff_factor=None) -> bool:
     """
     Check if the server at the given URL is ready.
 
@@ -30,7 +30,9 @@ def is_server_ready(url: str, retries: int = 2) -> bool:
     """
     try:
         matlab_proxy_index_page_identifier = "MWI_MATLAB_PROXY_IDENTIFIER"
-        resp = requests_retry_session(retries=retries).get(f"{url}", verify=False)
+        resp = requests_retry_session(
+            retries=retries, backoff_factor=backoff_factor
+        ).get(f"{url}", verify=False)
         log.debug("Response status code from server readiness: %s", resp.status_code)
         return (
             resp.status_code == requests.codes.OK

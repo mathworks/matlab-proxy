@@ -143,7 +143,7 @@ async def _start_subprocess_and_check_for_readiness(
     server_process = None
 
     # Check for the matlab proxy server readiness
-    if helpers.is_server_ready(f"{url}{mwi_base_url}"):
+    if helpers.is_server_ready(url=f"{url}{mwi_base_url}", backoff_factor=0.5):
         log.debug("Matlab proxy process info: %s, %s", url, mwi_base_url)
         server_process = ServerProcess(
             server_url=url,
