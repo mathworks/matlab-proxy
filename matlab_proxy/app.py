@@ -429,7 +429,7 @@ async def shutdown_integration_delete(req):
     """
     state = req.app["state"]
 
-    logger.info(f"Going ahead with shutdown of {state.settings['integration_name']}...")
+    logger.info(f"Shutting down {state.settings['integration_name']}...")
 
     # Send response manually because this has to happen before the application exits
     res = create_status_response(req.app, "../")
