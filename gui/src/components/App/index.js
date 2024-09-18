@@ -294,14 +294,18 @@ function App () {
     }, [loadUrl]);
 
     useEffect(() => {
-        const queryParams = parseQueryParams(window.location);
-        const token = queryParams.get(MWI_AUTH_TOKEN_NAME_FOR_HTTP);
+        // Send authenticate request only after env config is fetched,
+        // fixes https://github.com/mathworks/matlab-proxy/issues/37
+        if (hasFetchedEnvConfig) {
+            const queryParams = parseQueryParams(window.location);
+            const token = queryParams.get(MWI_AUTH_TOKEN_NAME_FOR_HTTP);
 
-        if (token) {
-            dispatch(updateAuthStatus(token));
+            if (token) {
+                dispatch(updateAuthStatus(token));
+            }
+            window.history.replaceState(null, '', `${baseUrl}index.html`);
         }
-        window.history.replaceState(null, '', `${baseUrl}index.html`);
-    }, [dispatch, baseUrl]);
+    }, [dispatch, baseUrl, hasFetchedEnvConfig]);
 
     // Display one of:
     // * Confirmation
