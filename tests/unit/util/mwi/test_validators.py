@@ -1,7 +1,6 @@
-# Copyright 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2024 The MathWorks, Inc.
 
-"""Tests for functions in matlab_proxy/util/mwi_validators.py
-"""
+"""Tests for functions in matlab_proxy/util/mwi_validators.py"""
 
 import os
 import random
@@ -185,8 +184,8 @@ def test_validate_env_config_true():
 def test_validate_env_config_false():
     """Passing a non existent config should raise FatalError exception"""
 
-    with pytest.raises(FatalError) as e:
-        config = validators.validate_env_config(str(random.randint(10, 100)))
+    with pytest.raises(FatalError):
+        validators.validate_env_config(str(random.randint(10, 100)))
 
 
 def test_get_configs():

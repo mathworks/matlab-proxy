@@ -179,30 +179,31 @@ def validate_env_config(config):
     Returns:
         Dict: Containing data specific to the environment in which MATLAB proxy is being used in.
     """
-    available_configs = __get_configs()
+    from matlab_proxy.default_configuration import get_required_config
+
+    available_configs: dict = __get_configs()
     config = config.lower()
 
     # Check if supplied config is present in the available configs
     if config in available_configs:
-        # Check if all keys are present in the supplied config
-        default_config_keys = available_configs[
-            matlab_proxy.get_default_config_name()
-        ].keys()
         env_config = available_configs[config]
+        required_keys = get_required_config()
 
-        for key in default_config_keys:
-            if not key in env_config:
-                error_message = f"{key} missing in the provided {config} configuration"
-                logger.error(error_message)
-                raise FatalError(error_message)
+        # Check if all required keys are present in the supplied config
+        valid = all(key in env_config for key in required_keys)
+        if not valid:
+            error_message = (
+                f"Required key/s missing in the provided {config} configuration"
+            )
+            logger.error(error_message)
+            raise FatalError(error_message)
 
-        logger.debug(f"Successfully validated provided {config} configuration")
+        logger.debug("Successfully validated provided %s configuration", config)
         return env_config
 
-    else:
-        error_message = f"{config} is not a valid config. Available configs are : {list(available_configs.keys())}"
-        logger.error(error_message)
-        raise FatalError(error_message)
+    error_message = f"{config} is not a valid config. Available configs are : {list(available_configs.keys())}"
+    logger.error(error_message)
+    raise FatalError(error_message)
 
 
 def __get_configs():
