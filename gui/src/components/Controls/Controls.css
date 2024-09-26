@@ -1,4 +1,4 @@
-/* Copyright (c) 2020-2022 The MathWorks, Inc. */
+/* Copyright 2020-2024 The MathWorks, Inc. */
 
 #controls {
     display: flex;
@@ -10,7 +10,7 @@
     display: flex;
     align-items: center;
     width: 120px;
-    min-width: 110px;
+    min-width: 100px;
     padding: 10px 5px;
 }
 
@@ -55,7 +55,7 @@
     background-image: url(sign-out.svg);
 }
 
-.icon-custom-terminate {
+.icon-custom-shutdown {
     background-image: url(terminate.svg);
 }
 

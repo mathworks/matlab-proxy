@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022 The MathWorks, Inc.
+# Copyright 2020-2024 The MathWorks, Inc.
 import matlab_proxy
 
 # Configure matlab_proxy
@@ -15,4 +15,6 @@ config = {
     # This value will be used in various places on the website UI.
     # Ensure that this is not more than 3 words.
     "extension_name_short_description": "MATLAB Desktop",
+    # Show the shutdown button in the UI for matlab-proxy
+    "should_show_shutdown_button": True,
 }

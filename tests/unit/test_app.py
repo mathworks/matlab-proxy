@@ -317,6 +317,7 @@ async def test_get_env_config(test_server):
         "doc_url": "foo",
         "extension_name": "bar",
         "extension_name_short_description": "foobar",
+        "should_show_shutdown_button": True,
         "isConcurrencyEnabled": "foobar",
         "idleTimeoutDuration": 100,
     }

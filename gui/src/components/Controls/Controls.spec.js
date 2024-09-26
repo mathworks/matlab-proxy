@@ -104,4 +104,35 @@ describe('Controls Component', () => {
         const tableData = container.querySelector('.details');
         expect(tableData.innerHTML).toContain('Starting. This may take several minutes');
     });
+
+    it('should show shutdown button for matlab-proxy', () => {
+        // Hide the tutorial and make the overlay visible.
+        initialState.tutorialHidden = true;
+        initialState.overlayVisibility = true;
+
+        const { getByTestId } = render(<Controls callback={callbackFn} />, {
+            initialState
+        });
+
+        const btn = getByTestId('shutdownBtn');
+
+        expect(btn).toBeInTheDocument();
+    });
+
+    it('should not show shutdown button for non matlab-proxy environments', () => {
+        // Hide the tutorial and make the overlay visible.
+        initialState.tutorialHidden = true;
+        initialState.overlayVisibility = true;
+
+        // Update the envConfig to not show shutdown button
+        initialState.envConfig.should_show_shutdown_button = false;
+
+        const { container } = render(<Controls callback={callbackFn} />, {
+            initialState
+        });
+
+        const btn = container.querySelector('#shutdownMatlabandMatlabProxy');
+
+        expect(btn).not.toBeInTheDocument();
+    });
 });

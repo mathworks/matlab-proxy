@@ -75,6 +75,6 @@ describe('OverlayTrigger Component', () => {
             initialState
         });
         const buttonElement = getByRole('button', { name: 'Menu' });
-        expect(buttonElement).toHaveAttribute('data-tip', 'Open the MATLAB Desktop - MATLAB Integration settings');
+        expect(buttonElement).toHaveAttribute('data-tip', 'Open the MATLAB Desktop settings');
     });
 });

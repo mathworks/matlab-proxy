@@ -13,7 +13,8 @@ describe('selectors', () => {
         serverStatus,
         loadUrl,
         error,
-        authentication
+        authentication,
+        envConfig
     } = state;
 
     const {
@@ -63,7 +64,10 @@ describe('selectors', () => {
         selectMatlabPending,
         selectOverlayVisible,
         selectInformationDetails,
-        selectIsConcurrent
+        selectIsConcurrent,
+        selectEnvConfig,
+        selectHasFetchedEnvConfig,
+        selectShouldShowShutdownButton
     } = selectors;
 
     describe.each([
@@ -80,6 +84,7 @@ describe('selectors', () => {
         [selectAuthEnabled, authEnabled],
         [selectIsAuthenticated, authStatus],
         [selectAuthToken, authToken],
+        [selectEnvConfig, envConfig],
         [getFetchAbortController, fetchAbortController]
     ])('Test simple selectors',
         (selector, expected) => {
@@ -365,6 +370,27 @@ describe('selectors', () => {
 
             expect(selectInformationDetails(modifiedState).icon.toLowerCase()).toContain('warning');
             expect(selectInformationDetails(modifiedState).label.toLowerCase()).toContain('unknown');
+        });
+
+        test('selectHasFetchedEnvConfig should return true when envConfig is not null', () => {
+            modifiedState = _.cloneDeep(state);
+            expect(selectHasFetchedEnvConfig(modifiedState)).toBe(true);
+        });
+
+        test('selectHasFetchedEnvConfig should return false when envConfig is null', () => {
+            modifiedState = _.cloneDeep(state);
+            modifiedState.envConfig = null;
+            expect(selectHasFetchedEnvConfig(modifiedState)).toBe(false);
+        });
+
+        test('selectShouldShowShutdownButton should return true when its corresponding value is set to true in the configuration file', () => {
+            expect(selectShouldShowShutdownButton(state)).toBe(true);
+        });
+
+        test('selectShouldShowShutdownButton should return true when its corresponding value is set to true in the configuration file, else false', () => {
+            modifiedState = _.cloneDeep(state);
+            modifiedState.envConfig.should_show_shutdown_button = false;
+            expect(selectShouldShowShutdownButton(modifiedState)).toBe(false);
         });
 
         describe.each([

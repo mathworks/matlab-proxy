@@ -272,3 +272,11 @@ export const selectIntegrationName = createSelector(
         }
     }
 );
+
+export const selectShouldShowShutdownButton = createSelector(
+    selectHasFetchedEnvConfig,
+    selectEnvConfig,
+    (hasFetchedEnvConfig, envConfig) => {
+        return hasFetchedEnvConfig ? envConfig.should_show_shutdown_button : false;
+    }
+);

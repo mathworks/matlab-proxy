@@ -183,7 +183,7 @@ class AppState:
     async def __decrement_idle_timer(self):
         """Decrements the IDLE timer by 1 after acquiring a lock."""
         this_task = "decrement_idle_timer"
-        logger.info(f"{this_task}: Starting task...")
+        logger.debug(f"{this_task}: Starting task...")
 
         while self.get_remaining_idle_timeout() > 0:
             # If MATLAB is either starting, stopping or busy, reset the IDLE timer.
@@ -456,7 +456,7 @@ class AppState:
     async def __update_matlab_state(self) -> None:
         """An indefinitely running asyncio task which determines the status of MATLAB to be down/starting/up."""
         this_task = "update_matlab_state"
-        logger.info(f"{this_task}: Starting task...")
+        logger.debug(f"{this_task}: Starting task...")
 
         # Start with using the ping endpoint to update matlab and its 'busy' state.
         function_to_call = self.__update_matlab_state_using_ping_endpoint

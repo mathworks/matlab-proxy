@@ -1,6 +1,6 @@
 // Copyright 2020-2024 The MathWorks, Inc.
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useSelector } from 'react-redux';
 import ReactTooltip from 'react-tooltip';
@@ -16,7 +16,8 @@ import {
     selectIsAuthenticated,
     selectAuthEnabled,
     selectLicensingIsMhlm,
-    selectIsEntitled
+    selectIsEntitled,
+    selectShouldShowShutdownButton
 } from '../../selectors';
 import {
     fetchStartMatlab,
@@ -51,6 +52,13 @@ function Controls ({
     // then start, stop & signout buttons should be disabled.
     const licensingIsMhlm = useSelector(selectLicensingIsMhlm);
     const isEntitled = useSelector(selectIsEntitled);
+
+    const shouldShowShutdownButton = useSelector(selectShouldShowShutdownButton);
+
+    // Adds tooltips back for conditionally rendered buttons.
+    useEffect(() => {
+        ReactTooltip.rebuild();
+    }, [shouldShowShutdownButton, licensed]);
 
     let licensingData, licensingConfirmationMessage;
     switch (licensingInfo?.type) {
@@ -96,9 +104,9 @@ function Controls ({
             message: 'Are you sure you want to stop MATLAB?',
             callback: fetchStopMatlab
         },
-        TERMINATE: {
+        SHUTDOWN: {
             type: 'confirmation',
-            message: 'Are you sure you want to terminate MATLAB and the backing matlab-proxy server?',
+            message: 'Are you sure you want to shut down MATLAB and MATLAB Proxy?',
             callback: fetchShutdownIntegration
         },
         SIGN_OUT: {
@@ -162,18 +170,18 @@ function Controls ({
                 <span className='icon-custom-sign-out'></span>
                 <span className='btn-label'>{licensingData.label}</span>
             </button>
-            {/* <button
-                id="terminateIntegration"
-                className="btn btn_color_mediumgray companion_btn"
-                style={{display: 'none'}}
-                onClick={() => callback(Confirmations.TERMINATE)}
-                disabled={!canTerminateIntegration}
+            {shouldShowShutdownButton && <button
+                id="shutdownMatlabandMatlabProxy"
+                data-testid='shutdownBtn'
+                className={getBtnClass('shutdown')}
+                onClick={() => callback(Confirmations.SHUTDOWN)}
+                disabled={!canResetLicensing || (authEnabled && !isAuthenticated)}
                 data-for="control-button-tooltip"
-                data-tip="Terminate your MATLAB and MATLAB in Jupyter sessions"
+                data-tip= "Stop MATLAB and MATLAB Proxy"
             >
-                <span className='icon-custom-terminate'></span>
-                <span className='btn-label'>End Session</span>
-            </button> */}
+                <span className='icon-custom-shutdown'></span>
+                <span className='btn-label'>Shut Down</span>
+            </button>}
             <a
                 id="feedback"
                 data-testid='feedbackLink'
