@@ -65,7 +65,7 @@ TESTS_REQUIRES = [
 ]
 
 INSTALL_REQUIRES = [
-    "aiohttp>=3.7.4",
+    "aiohttp>=3.7.4, <=3.10.5",
     "aiohttp_session[secure]",
     "importlib-metadata",
     "importlib-resources",
