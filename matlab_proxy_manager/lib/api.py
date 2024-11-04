@@ -3,7 +3,7 @@ import asyncio
 import os
 import secrets
 import subprocess
-from typing import Optional
+from typing import List, Optional, Tuple
 
 import matlab_proxy
 import matlab_proxy.util.system as mwi_sys
@@ -20,7 +20,7 @@ log = logger.get(init=True)
 
 
 async def start_matlab_proxy_for_kernel(
-    caller_id: str, parent_id: str, is_isolated_matlab: bool
+    caller_id: str, parent_id: str, is_shared_matlab: bool
 ):
     """
     Starts a MATLAB proxy server specifically for MATLAB Kernel.
@@ -29,12 +29,12 @@ async def start_matlab_proxy_for_kernel(
     set to None, for starting the MATLAB proxy server via proxy manager.
     """
     return await _start_matlab_proxy(
-        caller_id=caller_id, ctx=parent_id, is_isolated_matlab=is_isolated_matlab
+        caller_id=caller_id, ctx=parent_id, is_shared_matlab=is_shared_matlab
     )
 
 
 async def start_matlab_proxy_for_jsp(
-    parent_id: str, is_isolated_matlab: bool, mpm_auth_token: str
+    parent_id: str, is_shared_matlab: bool, mpm_auth_token: str
 ):
     """
     Starts a MATLAB proxy server specifically for Jupyter Server Proxy (JSP) - Open MATLAB launcher.
@@ -45,7 +45,7 @@ async def start_matlab_proxy_for_jsp(
     return await _start_matlab_proxy(
         caller_id="jsp",
         ctx=parent_id,
-        is_isolated_matlab=is_isolated_matlab,
+        is_shared_matlab=is_shared_matlab,
         mpm_auth_token=mpm_auth_token,
     )
 
@@ -60,7 +60,7 @@ async def _start_matlab_proxy(**options) -> Optional[dict]:
     Args (keyword arguments):
         - caller_id (str): The identifier for the caller (kernel id for kernels, "jsp" for JSP).
         - ctx (str): The context in which the server is being started (parent pid).
-        - is_isolated_matlab (bool, optional): Whether to start an isolated MATLAB proxy instance.
+        - is_shared_matlab (bool, optional): Whether to start a shared MATLAB proxy instance.
         Defaults to False.
         - mpm_auth_token (str, optional): The MATLAB proxy manager token. If not provided,
         a new token is generated. Defaults to None.
@@ -69,16 +69,23 @@ async def _start_matlab_proxy(**options) -> Optional[dict]:
         ServerProcess: The process representing the MATLAB proxy server.
 
     Raises:
-        ValueError: If `caller_id` is "default" and `is_isolated_matlab` is True.
+        ValueError: If `caller_id` is "default" and `is_shared_matlab` is False.
     """
-    caller_id: str = options.get("caller_id")
-    ctx: str = options.get("ctx")
-    is_isolated_matlab: bool = options.get("is_isolated_matlab", False)
+    # Validate arguments
+    required_args: List[str] = ["caller_id", "ctx", "is_shared_matlab"]
+    missing_args: List[str] = [arg for arg in required_args if arg not in options]
+
+    if missing_args:
+        raise ValueError(f"Missing required arguments: {', '.join(missing_args)}")
+
+    caller_id: str = options["caller_id"]
+    ctx: str = options["ctx"]
+    is_shared_matlab: bool = options.get("is_shared_matlab", True)
     mpm_auth_token: Optional[str] = options.get("mpm_auth_token", None)
 
-    if is_isolated_matlab and caller_id == "default":
+    if not is_shared_matlab and caller_id == "default":
         raise ValueError(
-            "Caller id cannot be default when isolated_matlab is set to true"
+            "Caller id cannot be default when matlab proxy is not shareable"
         )
 
     mpm_auth_token = mpm_auth_token or secrets.token_hex(32)
@@ -86,9 +93,9 @@ async def _start_matlab_proxy(**options) -> Optional[dict]:
     # Cleanup stale entries before starting new instance of matlab proxy server
     helpers._are_orphaned_servers_deleted(ctx)
 
-    ident = caller_id if is_isolated_matlab else "default"
+    ident = caller_id if not is_shared_matlab else "default"
     key = f"{ctx}_{ident}"
-    log.debug("Starting matlab proxy using %s, %s, %s", ctx, ident, is_isolated_matlab)
+    log.debug("Starting matlab proxy using %s, %s, %s", ctx, ident, is_shared_matlab)
 
     data_dir = helpers.create_and_get_proxy_manager_data_dir()
     server_process = ServerProcess.find_existing_server(data_dir, key)
@@ -101,10 +108,8 @@ async def _start_matlab_proxy(**options) -> Optional[dict]:
 
     # Create a new matlab proxy server
     else:
-        server_process: ServerProcess | None = (
-            await _start_subprocess_and_check_for_readiness(
-                ident, ctx, key, is_isolated_matlab, mpm_auth_token
-            )
+        server_process = await _start_subprocess_and_check_for_readiness(
+            ident, ctx, key, is_shared_matlab, mpm_auth_token
         )
 
         # Store the newly created server into filesystem
@@ -115,7 +120,7 @@ async def _start_matlab_proxy(**options) -> Optional[dict]:
 
 
 async def _start_subprocess_and_check_for_readiness(
-    server_id: str, ctx: str, key: str, isolated: bool, mpm_auth_token: str
+    server_id: str, ctx: str, key: str, is_shared_matlab: bool, mpm_auth_token: str
 ) -> Optional[ServerProcess]:
     """
     Starts a MATLAB proxy server.
@@ -136,10 +141,12 @@ async def _start_subprocess_and_check_for_readiness(
     matlab_proxy_cmd, matlab_proxy_env = _prepare_cmd_and_env_for_matlab_proxy()
 
     # Start the matlab proxy process
-    process_id, url, mwi_base_url = await _start_subprocess(
-        matlab_proxy_cmd, matlab_proxy_env, server_id
-    )
+    result = await _start_subprocess(matlab_proxy_cmd, matlab_proxy_env, server_id)
+    if not result:
+        log.error("Could not start matlab proxy")
+        return None
 
+    process_id, url, mwi_base_url = result
     server_process = None
 
     # Check for the matlab proxy server readiness
@@ -151,14 +158,14 @@ async def _start_subprocess_and_check_for_readiness(
             headers=helpers.convert_mwi_env_vars_to_header_format(
                 matlab_proxy_env, "MWI"
             ),
-            pid=process_id,
+            pid=str(process_id),
             parent_pid=ctx,
             id=key,
-            type="named" if isolated else "shared",
+            type="shared" if is_shared_matlab else "named",
             mpm_auth_token=mpm_auth_token,
         )
     else:
-        log.error("Could not start matlab proxy")
+        log.error("matlab-proxy server never became ready")
 
     return server_process
 
@@ -189,7 +196,7 @@ def _prepare_cmd_and_env_for_matlab_proxy():
     return matlab_proxy_cmd, matlab_proxy_env
 
 
-async def _start_subprocess(cmd, env, server_id) -> Optional[int]:
+async def _start_subprocess(cmd, env, server_id) -> Optional[Tuple[int, str, str]]:
     """
     Initializes and starts a subprocess using the specified command and provided environment.
 
@@ -199,38 +206,67 @@ async def _start_subprocess(cmd, env, server_id) -> Optional[int]:
     process = None
     mwi_base_url: str = f"{constants.MWI_BASE_URL_PREFIX}{server_id}"
 
-    # Get a free port, closer to starting the matlab proxy appx
-    port: str = helpers.find_free_port()
-    env.update(
-        {
-            "MWI_APP_PORT": port,
-            "MWI_BASE_URL": mwi_base_url,
-        }
-    )
-
-    # Using loopback address so that DNS resolution doesn't add latency in Windows
-    url: str = f"http://127.0.0.1:{port}"
-
-    if mwi_sys.is_posix():
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            env=env,
+    # Get a free port and corresponding bound socket
+    with helpers.find_free_port() as (port, _):
+        env.update(
+            {
+                "MWI_APP_PORT": port,
+                "MWI_BASE_URL": mwi_base_url,
+            }
         )
-        log.debug("Started matlab proxy subprocess for posix")
-    else:
-        process = subprocess.Popen(
-            cmd,
-            env=env,
-        )
-        log.debug("Started matlab proxy subprocess for windows")
+
+        # Using loopback address so that DNS resolution doesn't add latency in Windows
+        url: str = f"http://127.0.0.1:{port}"
+
+        process = await _initialize_process_based_on_os_type(cmd, env)
 
     if not process:
-        log.error("Matlab proxy process not created %d", process.returncode)
+        log.error("Matlab proxy process not created due to some error")
         return None
 
     process_pid = process.pid
     log.debug("MATLAB proxy info: pid = %s, rc = %s", process_pid, process.returncode)
     return process_pid, url, mwi_base_url
+
+
+async def _initialize_process_based_on_os_type(cmd, env):
+    """
+    Initializes and starts a subprocess based on the operating system.
+
+    This function attempts to create a subprocess using the provided command and
+    environment variables. It handles both POSIX and Windows systems differently.
+
+    Args:
+        cmd (List[str]): The command to execute in the subprocess.
+        env (Dict[str, str]): The environment variables for the subprocess.
+
+    Returns:
+        Union[Process, None, Popen[bytes]]: The created subprocess object if successful,
+        or None if an error occurs during subprocess creation.
+
+    Raises:
+        Exception: If there's an error creating the subprocess (caught and logged).
+    """
+    if mwi_sys.is_posix():
+        log.debug("Starting matlab proxy subprocess for posix")
+        try:
+            return await asyncio.create_subprocess_exec(
+                *cmd,
+                env=env,
+            )
+        except Exception as e:
+            log.error("Failed to create posix subprocess: %s", e)
+            return None
+    else:
+        try:
+            log.debug("Starting matlab proxy subprocess for windows")
+            return subprocess.Popen(
+                cmd,
+                env=env,
+            )
+        except Exception as e:
+            log.error("Failed to create windows subprocess: %s", e)
+            return None
 
 
 async def shutdown(parent_pid: str, caller_id: str, mpm_auth_token: str):

@@ -36,10 +36,9 @@ class OrphanedProcessMonitor:
         """
         Triggers the shutdown process by setting the shutdown event.
         """
-        from matlab_proxy_manager.web.app import SHUTDOWN_EVENT
 
         try:
             # Set the shutdown async event to signal app shutdown to the app runner
-            SHUTDOWN_EVENT.set()
+            self.app.get("shutdown_event").set()
         except Exception as ex:
             log.debug("Unable to set proxy manager shutdown event, err: %s", ex)

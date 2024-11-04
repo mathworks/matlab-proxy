@@ -51,4 +51,15 @@ def start_watcher(app: web.Application):
     observer = Observer()
     observer.schedule(event_handler, path_to_watch, recursive=True)
     observer.start()
+    app["observer"] = observer
     return observer
+
+
+def stop_watcher(app):
+    """
+    Stop the file system watcher associated with the application.
+    This function stops and joins the observer thread if it exists in the application.
+    """
+    if "observer" in app:
+        app["observer"].stop()
+        app["observer"].join()

@@ -1,14 +1,23 @@
 # Copyright 2024 The MathWorks, Inc.
 import asyncio
 
-import pytest
 from pytest_mock import MockerFixture
 
 from matlab_proxy_manager.web.monitor import OrphanedProcessMonitor
 
 
-@pytest.mark.asyncio
 async def test_parent_process_exists(mocker: MockerFixture):
+    """
+    Test that the OrphanedProcessMonitor continues running when the parent process exists.
+
+    This test mocks the does_process_exist function to return True, simulating
+    an existing parent process. It then verifies that the start method
+    of OrphanedProcessMonitor continues running without triggering a shutdown.
+
+    The test asserts that:
+    1. The does_process_exist function is called with the correct parent PID.
+    2. The monitor continues running for a short period without interruption.
+    """
     mock_does_process_exist = mocker.patch(
         "matlab_proxy_manager.utils.helpers.does_process_exist", return_value=True
     )
@@ -24,8 +33,18 @@ async def test_parent_process_exists(mocker: MockerFixture):
     mock_does_process_exist.assert_called_with(app["parent_pid"])
 
 
-@pytest.mark.asyncio
 async def test_parent_process_does_not_exist_triggers_shutdown(mocker: MockerFixture):
+    """
+    Test that the OrphanedProcessMonitor triggers shutdown when the parent process does not exist.
+
+    This test mocks the does_process_exist function to return False, simulating
+    a non-existent parent process. It then verifies that the start method
+    of OrphanedProcessMonitor calls the shutdown method when this condition is detected.
+
+    The test asserts that:
+    1. The does_process_exist function is called with the correct parent PID.
+    2. The shutdown method of the monitor is called once.
+    """
     mock_does_process_exist = mocker.patch(
         "matlab_proxy_manager.utils.helpers.does_process_exist", return_value=False
     )
@@ -46,8 +65,17 @@ async def test_parent_process_does_not_exist_triggers_shutdown(mocker: MockerFix
     mock_shutdown.assert_awaited_once()
 
 
-@pytest.mark.asyncio
 async def test_exception_handling_in_start(mocker: MockerFixture):
+    """
+    Test exception handling in the start method of OrphanedProcessMonitor.
+
+    This test ensures that exceptions raised during the process existence check
+    are properly handled without interrupting the monitoring loop.
+
+    The test mocks the does_process_exist function to raise an exception,
+    then verifies that the start method continues running without triggering
+    a shutdown, demonstrating resilience to transient errors.
+    """
     mock_does_process_exist = mocker.patch(
         "matlab_proxy_manager.utils.helpers.does_process_exist",
         side_effect=Exception("Test Exception"),
@@ -68,20 +96,25 @@ async def test_exception_handling_in_start(mocker: MockerFixture):
     mock_shutdown.assert_not_awaited()
 
 
-@pytest.mark.asyncio
 async def test_exception_handling_in_shutdown(mocker: MockerFixture):
-    mocker.patch(
-        "matlab_proxy_manager.web.app.SHUTDOWN_EVENT", return_value=asyncio.Event()
-    )
-    mock_shutdown_event_set = mocker.patch(
-        "matlab_proxy_manager.web.app.SHUTDOWN_EVENT.set",
-        side_effect=Exception("Test Exception"),
-    )
-    app = {"parent_pid": 1234}
+    """
+    Test exception handling in the shutdown method of OrphanedProcessMonitor.
+
+    This test ensures that exceptions raised during the shutdown process
+    are properly handled without interrupting the shutdown procedure.
+
+    The test mocks the shutdown_event and forces it to raise an exception
+    when set. It then verifies that the shutdown method completes and
+    that the event's set method was called despite the exception.
+    """
+    mock_event = mocker.Mock(spec=asyncio.Event())
+    mock_event.set.side_effect = Exception("Test Exception")
+
+    app = {"parent_pid": 1234, "shutdown_event": mock_event}
     monitor = OrphanedProcessMonitor(app)
 
     # Call shutdown directly to test exception handling
     await monitor.shutdown()
 
     # Assert that the exception was handled
-    mock_shutdown_event_set.assert_called_once()
+    mock_event.set.assert_called_once()

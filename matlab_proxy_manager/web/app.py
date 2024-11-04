@@ -14,17 +14,18 @@ from aiohttp import ClientSession, client_exceptions, web
 import matlab_proxy.util.mwi.environment_variables as mwi_env
 import matlab_proxy.util.system as mwi_sys
 import matlab_proxy_manager.lib.api as mpm_lib
-from matlab_proxy.util.event_loop import get_event_loop
 from matlab_proxy_manager.utils import constants, helpers, logger
 from matlab_proxy_manager.utils import environment_variables as mpm_env
 from matlab_proxy_manager.utils.auth import authenticate_access_decorator
 from matlab_proxy_manager.web import watcher
 from matlab_proxy_manager.web.monitor import OrphanedProcessMonitor
 
-# We use __all__ to list down all the public-facing APIs exported by this module
-__all__ = ["proxy", "SHUTDOWN_EVENT"]
+# List of public-facing APIs exported by this module.
+# This list contains the names of functions or classes that are intended to be
+# used by external code importing this module. Only items listed here will be
+# directly accessible when using "from module import *".
+__all__ = ["proxy"]
 
-SHUTDOWN_EVENT = None
 log = logger.get(init=True)
 
 
@@ -40,6 +41,8 @@ def init_app() -> web.Application:
         web.Application: The configured aiohttp web application.
     """
     app = web.Application()
+    # Async event is utilized to signal app termination from this and other modules
+    app["shutdown_event"] = asyncio.Event()
 
     # Create and get the proxy manager data directory
     try:
@@ -53,7 +56,7 @@ def init_app() -> web.Application:
 
     async def start_idle_monitor(app):
         """Start the idle timeout monitor."""
-        asyncio.create_task(monitor.start())
+        app["monitor_task"] = asyncio.create_task(monitor.start())
 
     async def create_client_session(app):
         """Create an aiohttp client session."""
@@ -65,10 +68,34 @@ def init_app() -> web.Application:
         """Cleanup the aiohttp client session."""
         await app["session"].close()
 
+    async def cleanup_monitor(app):
+        """Cancel the idle timeout monitor task."""
+        if "monitor_task" in app:
+            app["monitor_task"].cancel()
+            try:
+                await app["monitor_task"]
+            except asyncio.CancelledError:
+                pass
+
+    async def cleanup_watcher(app):
+        """Cleanup the filesystem watcher."""
+        if "observer" in app:
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, watcher.stop_watcher, app)
+
+        if "watcher_future" in app:
+            app["watcher_future"].cancel()
+            try:
+                await app["watcher_future"]
+            except asyncio.CancelledError:
+                pass
+
     app.on_startup.append(start_idle_monitor)
     app.on_startup.append(create_client_session)
     app.on_cleanup.append(helpers.delete_dangling_servers)
     app.on_cleanup.append(cleanup_client_session)
+    app.on_cleanup.append(cleanup_monitor)
+    app.on_cleanup.append(cleanup_watcher)
 
     app.router.add_route("*", "/{tail:.*}", proxy)
 
@@ -86,11 +113,6 @@ async def start_app(env_vars: namedtuple):
     Raises:
         Exception: If any error occurs during the application startup or runtime.
     """
-    # Async events are utilized to signal app termination from other modules,
-    # necessitating the use of a global variable. To avoid potential issues with variable attachment
-    # to other event loops in Python versions prior to 3.10, the variable is initialized locally
-    # rather than globally.
-    global SHUTDOWN_EVENT
     app = init_app()
 
     app["port"] = env_vars.mpm_port
@@ -110,47 +132,51 @@ async def start_app(env_vars: namedtuple):
     log.debug("Proxy manager started at http://127.0.0.1:%d", site._port)
 
     # Get the default event loop
-    loop = get_event_loop()
+    loop = asyncio.get_running_loop()
 
-    # Run the observer in a separate thread
-    loop.run_in_executor(None, watcher.start_watcher, app)
+    # Run the observer in a separate thread and store the future
+    app["watcher_future"] = loop.run_in_executor(None, watcher.start_watcher, app)
 
     # Register signal handler for graceful shutdown
-    _register_signal_handler(loop)
-
-    SHUTDOWN_EVENT = asyncio.Event()
+    _register_signal_handler(loop, app)
 
     # Wait for receiving shutdown_event (set by interrupts or by monitoring process)
-    await SHUTDOWN_EVENT.wait()
+    await app.get("shutdown_event").wait()
 
     # After receiving the shutdown signal, perform cleanup by stopping the web server
     await runner.cleanup()
 
 
-def _register_signal_handler(loop):
+def _register_signal_handler(loop, app):
     """
-    Registers signal handlers for supported termination signals to allow for graceful shutdown
-    of the application.
+    Registers signal handlers for graceful shutdown of the application.
+
+    This function sets up handlers for supported termination signals to allow
+    the application to shut down gracefully. It uses different methods for
+    POSIX and non-POSIX systems to add the signal handlers.
 
     Args:
         loop (asyncio.AbstractEventLoop): The event loop to which the signal handlers
-        should be added.
+            should be added.
+        app (aiohttp.web.Application): The web application instance.
     """
     signals = mwi_sys.get_supported_termination_signals()
     for sig_name in signals:
         if mwi_sys.is_posix():
-            loop.add_signal_handler(sig_name, catch_signals)
+            loop.add_signal_handler(sig_name, lambda: _catch_signals(app))
         else:
             # loop.add_signal_handler() is not yet supported in Windows.
             # Using the 'signal' package instead.
-            signal.signal(sig_name, catch_signals)
+            # signal module expects a handler function that takes two arguments:
+            # the signal number and the current stack frame
+            signal.signal(sig_name, lambda s, f: _catch_signals(app))
 
 
-def catch_signals(*args):
+def _catch_signals(app):
     """Handle termination signals for graceful shutdown."""
     # Poll for parent process to clean up to avoid race conditions in cleanup of matlab proxies
     helpers.poll_for_server_deletion()
-    SHUTDOWN_EVENT.set()
+    app.get("shutdown_event").set()
 
 
 async def _start_default_proxy(app):
@@ -162,7 +188,7 @@ async def _start_default_proxy(app):
     """
     server_process = await mpm_lib.start_matlab_proxy_for_jsp(
         parent_id=app.get("parent_pid"),
-        is_isolated_matlab=False,
+        is_shared_matlab=True,
         mpm_auth_token=app.get("auth_token"),
     )
     if not server_process:
@@ -230,7 +256,7 @@ async def proxy(req):
     if not ctx:
         log.debug("MPM Context header not found in the request")
         return _render_error_page(
-            "Required header (MWI-MPM-CONTEXT) not found in the request"
+            f"Required header: ${constants.HEADER_MWI_MPM_CONTEXT} not found in the request"
         )
 
     client_key = f"{ctx}_{ident}"
@@ -264,6 +290,9 @@ async def proxy(req):
     except Exception as err:
         log.error("Failed to forward HTTP request to MATLAB proxy with error: %s", err)
         raise web.HTTPNotFound() from err
+
+
+# Helper private functions
 
 
 async def _handle_websocket_request(
@@ -352,9 +381,6 @@ async def _handle_websocket_request(
             raise aiohttp.WebSocketError(code=code, message=message)
 
 
-# Helper private functions
-
-
 async def _handle_http_request(
     req: web.Request, req_body: Optional[bytes], proxy_url: str, backend_server: dict
 ) -> web.Response:
@@ -410,16 +436,6 @@ def _render_error_page(error_msg: str) -> web.Response:
     return web.HTTPServiceUnavailable(text=f"Error: {error_msg}")
 
 
-def main() -> None:
-    """
-    The main entry point of the application. Starts the app and run until the shutdown
-    signal to terminate the app is received.
-    """
-    env_vars: namedtuple = _fetch_and_validate_required_env_vars()
-    loop: asyncio.AbstractEventLoop | asyncio.ProactorEventLoop = get_event_loop()
-    loop.run_until_complete(start_app(env_vars))
-
-
 def _fetch_and_validate_required_env_vars() -> namedtuple:
     EnvVars = namedtuple("EnvVars", ["mpm_port", "mpm_auth_token", "mpm_parent_pid"])
 
@@ -428,7 +444,7 @@ def _fetch_and_validate_required_env_vars() -> namedtuple:
     ctx = os.getenv(mpm_env.get_env_name_mwi_mpm_parent_pid())
 
     if not ctx or not port or not mpm_auth_token:
-        print("Error: One or more required environment variables are missing.")
+        log.error("Error: One or more required environment variables are missing.")
         sys.exit(1)
 
     try:
@@ -437,8 +453,17 @@ def _fetch_and_validate_required_env_vars() -> namedtuple:
             mpm_port=mwi_mpm_port, mpm_auth_token=mpm_auth_token, mpm_parent_pid=ctx
         )
     except ValueError as ve:
-        print("Error: Invalid type for port: ", ve)
+        log.error("Error: Invalid type for port: %s", ve)
         sys.exit(1)
+
+
+def main() -> None:
+    """
+    The main entry point of the application. Starts the app and run until the shutdown
+    signal to terminate the app is received.
+    """
+    env_vars: namedtuple = _fetch_and_validate_required_env_vars()
+    asyncio.run(start_app(env_vars))
 
 
 if __name__ == "__main__":

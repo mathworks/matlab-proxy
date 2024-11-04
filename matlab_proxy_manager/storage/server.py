@@ -20,8 +20,8 @@ class ServerProcess:
     mwi_base_url: Optional[str] = None
     headers: Optional[dict] = None
     errors: Optional[list] = None
-    pid: Optional[int] = None
-    parent_pid: Optional[int] = None
+    pid: Optional[str] = None
+    parent_pid: Optional[str] = None
     absolute_url: Optional[str] = field(default=None)
     id: Optional[str] = None
     type: Optional[str] = None

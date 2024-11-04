@@ -1,7 +1,7 @@
 # Copyright 2024 The MathWorks, Inc.
 import pytest
 
-from matlab_proxy_manager.lib import api as api
+from matlab_proxy_manager.lib import api as mpm_api
 from matlab_proxy_manager.storage.server import ServerProcess
 
 
@@ -14,26 +14,39 @@ def mock_server_process(mocker):
     return mock
 
 
-# Test for _start_matlab_proxy with ValueError
-@pytest.mark.asyncio
 async def test_start_matlab_proxy_value_error():
+    """
+    Test case for starting a MATLAB proxy with a ValueError.
+
+    This test verifies that the _start_matlab_proxy function raises a ValueError
+    when the caller_id is "default" and is_shared_matlab is set to False. It
+    checks if the correct error message is raised.
+    """
     caller_id = "default"
     parent_id = "test_parent"
-    is_isolated_matlab = True
+    is_shared_matlab = False
 
     with pytest.raises(
         ValueError,
-        match="Caller id cannot be default when isolated_matlab is set to true",
+        match="Caller id cannot be default when matlab proxy is not shareable",
     ):
-        await api._start_matlab_proxy(caller_id, parent_id, is_isolated_matlab)
+        await mpm_api._start_matlab_proxy(
+            caller_id=caller_id, ctx=parent_id, is_shared_matlab=is_shared_matlab
+        )
 
 
-# Test for _start_matlab_proxy with mock dependencies
-@pytest.mark.asyncio
 async def test_start_matlab_proxy_without_existing_server(mocker, mock_server_process):
+    """
+    Test case for starting a MATLAB proxy without an existing server.
+
+    This test mocks various dependencies and verifies the behavior of the
+    _start_matlab_proxy function when no existing server is found. It checks
+    if the function correctly creates a new server process and returns its
+    information.
+    """
     mock_delete_dangling_servers = mocker.patch(
-        "matlab_proxy_manager.utils.helpers.delete_dangling_servers",
-        return_value=None,
+        "matlab_proxy_manager.utils.helpers._are_orphaned_servers_deleted",
+        return_value=True,
     )
     mock_create_state_file = mocker.patch(
         "matlab_proxy_manager.utils.helpers.create_state_file", return_value=None
@@ -53,11 +66,13 @@ async def test_start_matlab_proxy_without_existing_server(mocker, mock_server_pr
 
     caller_id = "test_caller"
     parent_id = "test_parent"
-    is_isolated_matlab = False
+    is_shared_matlab = True
 
-    result = await api._start_matlab_proxy(caller_id, parent_id, is_isolated_matlab)
+    result = await mpm_api._start_matlab_proxy(
+        caller_id=caller_id, ctx=parent_id, is_shared_matlab=is_shared_matlab
+    )
 
-    mock_delete_dangling_servers.assert_awaited_once_with(None)
+    mock_delete_dangling_servers.assert_called_once_with(parent_id)
     mock_create_proxy_manager_dir.assert_called_once()
     mock_find_existing_server.assert_called_once()
     mock_start_subprocess.assert_awaited_once()
@@ -67,10 +82,17 @@ async def test_start_matlab_proxy_without_existing_server(mocker, mock_server_pr
     assert result == mock_server_process.as_dict()
 
 
-@pytest.mark.asyncio
 async def test_start_matlab_proxy_with_existing_server(mocker, mock_server_process):
+    """
+    Test case for starting a MATLAB proxy with an existing server.
+
+    This test mocks various dependencies and verifies the behavior of the
+    _start_matlab_proxy function when an existing server is found. It checks
+    if the function correctly returns the existing server's information
+    without starting a new subprocess.
+    """
     mock_delete_dangling_servers = mocker.patch(
-        "matlab_proxy_manager.utils.helpers.delete_dangling_servers",
+        "matlab_proxy_manager.utils.helpers._are_orphaned_servers_deleted",
         return_value=None,
     )
     mock_create_state_file = mocker.patch(
@@ -91,11 +113,13 @@ async def test_start_matlab_proxy_with_existing_server(mocker, mock_server_proce
 
     caller_id = "test_caller"
     parent_id = "test_parent"
-    is_isolated_matlab = False
+    is_shared_matlab = True
 
-    result = await api._start_matlab_proxy(caller_id, parent_id, is_isolated_matlab)
+    result = await mpm_api._start_matlab_proxy(
+        caller_id=caller_id, ctx=parent_id, is_shared_matlab=is_shared_matlab
+    )
 
-    mock_delete_dangling_servers.assert_awaited_once_with(None)
+    mock_delete_dangling_servers.assert_called_once_with(parent_id)
     mock_create_proxy_manager_dir.assert_called_once()
     mock_find_existing_server.assert_called_once()
     mock_start_subprocess.assert_not_called()
@@ -105,12 +129,19 @@ async def test_start_matlab_proxy_with_existing_server(mocker, mock_server_proce
     assert result == mock_server_process.as_dict()
 
 
-@pytest.mark.asyncio
 async def test_start_matlab_proxy_returns_none_if_server_not_created(
     mocker, mock_server_process
 ):
+    """
+    Test case for starting a MATLAB proxy when server creation fails.
+
+    This test mocks various dependencies and verifies the behavior of the
+    _start_matlab_proxy function when no existing server is found and
+    a new server cannot be created. It checks if the function correctly
+    returns None and calls the expected methods.
+    """
     mock_delete_dangling_servers = mocker.patch(
-        "matlab_proxy_manager.utils.helpers.delete_dangling_servers",
+        "matlab_proxy_manager.utils.helpers._are_orphaned_servers_deleted",
         return_value=None,
     )
     mock_create_state_file = mocker.patch(
@@ -131,11 +162,13 @@ async def test_start_matlab_proxy_returns_none_if_server_not_created(
 
     caller_id = "test_caller"
     parent_id = "test_parent"
-    is_isolated_matlab = False
+    is_shared_matlab = True
 
-    result = await api._start_matlab_proxy(caller_id, parent_id, is_isolated_matlab)
+    result = await mpm_api._start_matlab_proxy(
+        caller_id=caller_id, ctx=parent_id, is_shared_matlab=is_shared_matlab
+    )
 
-    mock_delete_dangling_servers.assert_awaited_once_with(None)
+    mock_delete_dangling_servers.assert_called_once_with(parent_id)
     mock_create_proxy_manager_dir.assert_called_once()
     mock_find_existing_server.assert_called_once()
     mock_start_subprocess.assert_awaited_once()
@@ -145,22 +178,50 @@ async def test_start_matlab_proxy_returns_none_if_server_not_created(
 
 
 # Test for shutdown with missing arguments
-@pytest.mark.asyncio
 async def test_shutdown_missing_args(mocker, mock_server_process):
+    """
+    Test the shutdown function with missing arguments.
+
+    This test mocks the necessary dependencies and verifies that the shutdown
+    function behaves correctly when called with None values for all arguments.
+
+    Args:
+        mocker: pytest-mock fixture for mocking dependencies
+        mock_server_process: mock object for the server process
+
+    The test checks if:
+    1. The delete method is not called on the repository
+    2. The shutdown method is not called on the server process
+    """
     mock_repo = mocker.patch(
         "matlab_proxy_manager.lib.api.FileRepository", autospec=True
     )
     mock_repo.return_value.get.return_value = ("path", mock_server_process)
 
-    await api.shutdown(None, None, None)
+    await mpm_api.shutdown(None, None, None)
 
     mock_repo.return_value.delete.assert_not_called()
     mock_server_process.shutdown.assert_not_called()
 
 
 # Test for shutdown with valid arguments
-@pytest.mark.asyncio
 async def test_shutdown(mocker, mock_server_process, tmp_path):
+    """
+    Test the shutdown function of the API.
+
+    This test mocks the necessary dependencies and verifies that the shutdown
+    function correctly deletes the server process information and calls the
+    shutdown method on the server process.
+
+    Args:
+        mocker: pytest-mock fixture for mocking dependencies
+        mock_server_process: mock object for the server process
+        tmp_path: pytest fixture for creating a temporary directory
+
+    The test checks if:
+    1. The correct file is deleted from the repository
+    2. The shutdown method is called on the server process
+    """
     mock_repo = mocker.patch(
         "matlab_proxy_manager.lib.api.FileRepository", autospec=True
     )
@@ -174,7 +235,7 @@ async def test_shutdown(mocker, mock_server_process, tmp_path):
     caller_id = "caller_id"
     mpm_auth_token = "valid_token"
 
-    await api.shutdown(parent_pid, caller_id, mpm_auth_token)
+    await mpm_api.shutdown(parent_pid, caller_id, mpm_auth_token)
 
     mock_repo.return_value.delete.assert_called_once_with(
         f"{parent_pid}_{caller_id}.info"

@@ -1,9 +1,12 @@
 # Copyright 2024 The MathWorks, Inc.
+import http
 import os
 import socket
 import time
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Generator, Optional, Tuple
+from urllib.parse import urlparse
 
 import psutil
 import requests
@@ -18,7 +21,7 @@ from matlab_proxy_manager.utils import logger
 log = logger.get()
 
 
-def is_server_ready(url: str, retries: int = 2, backoff_factor=None) -> bool:
+def is_server_ready(url: Optional[str], retries: int = 2, backoff_factor=None) -> bool:
     """
     Check if the server at the given URL is ready.
 
@@ -29,13 +32,19 @@ def is_server_ready(url: str, retries: int = 2, backoff_factor=None) -> bool:
         bool: True if the server is ready, False otherwise.
     """
     try:
+        # Validate URL
+        parsed_url = urlparse(url)
+        if not all([parsed_url.scheme, parsed_url.netloc]):
+            log.debug("Invalid URL provided: %s", url)
+            return False
+
         matlab_proxy_index_page_identifier = "MWI_MATLAB_PROXY_IDENTIFIER"
         resp = requests_retry_session(
             retries=retries, backoff_factor=backoff_factor
         ).get(f"{url}", verify=False)
         log.debug("Response status code from server readiness: %s", resp.status_code)
         return (
-            resp.status_code == requests.codes.OK
+            resp.status_code == http.HTTPStatus.OK
             and matlab_proxy_index_page_identifier in resp.text
         )
     except Exception as e:
@@ -71,16 +80,14 @@ def requests_retry_session(
     return session
 
 
-def does_process_exist(pid: int) -> bool:
+def does_process_exist(pid: Optional[str]) -> bool:
     """
     Checks if the parent process is alive.
 
     Returns:
         bool: True if the parent process is alive, False otherwise.
     """
-    parent_status = pid is not None and psutil.pid_exists(int(pid))
-    log.debug("Parent liveness check returned: %s", parent_status)
-    return parent_status
+    return bool(pid and psutil.pid_exists(int(pid)))
 
 
 def convert_mwi_env_vars_to_header_format(
@@ -124,11 +131,11 @@ async def delete_dangling_servers(app: web.Application) -> None:
     Args:
         app (web.Application): aiohttp web application
     """
-    is_delete_successful = _are_orphaned_servers_deleted(None)
+    is_delete_successful = _are_orphaned_servers_deleted()
     log.debug("Deleted dangling matlab proxy servers: %s", is_delete_successful)
 
 
-def _are_orphaned_servers_deleted(predicate: str) -> bool:
+def _are_orphaned_servers_deleted(predicate: Optional[str] = "") -> bool:
     """
     Get all the files under the proxy manager directory, check the status of the servers,
     and delete orphaned servers and their corresponding files.
@@ -163,7 +170,7 @@ def _are_orphaned_servers_deleted(predicate: str) -> bool:
     return _delete_server_and_file(storage, servers)
 
 
-def _delete_server_and_file(storage, servers):
+def _delete_server_and_file(storage, servers) -> bool:
     is_server_deleted = False
     for filename, server in servers.items():
         if not server.is_server_alive():
@@ -201,7 +208,7 @@ def poll_for_server_deletion() -> None:
     start_time = time.time()
 
     while time.time() - start_time < timeout_in_seconds:
-        is_server_deleted = _are_orphaned_servers_deleted(None)
+        is_server_deleted = _are_orphaned_servers_deleted()
         if is_server_deleted:
             log.debug("Servers deleted, breaking out of loop")
             break
@@ -210,21 +217,31 @@ def poll_for_server_deletion() -> None:
         time.sleep(0.5)
 
 
-def find_free_port() -> str:
+@contextmanager
+def find_free_port() -> Generator[Tuple[str, socket.socket], None, None]:
     """
-    Find a free port on the system.
+    Context manager for finding a free port on the system.
 
-    This function creates a socket, binds it to an available port, retrieves
-    the port number, and then closes the socket.
+    This function creates a socket, binds it to an available port, and yields
+    the port number along with the socket object. The socket is automatically
+    closed when exiting the context.
 
-    Returns:
-        str: The free port number as a string.
+    Yields:
+        Tuple[str, socket.socket]: A tuple containing:
+            - str: The free port number as a string.
+            - socket.socket: The socket object.
     """
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("", 0))
     port = str(s.getsockname()[1])
-    s.close()
-    return port
+    try:
+        yield port, s
+    finally:
+        try:
+            s.close()
+        except OSError as ex:
+            # Socket already closed, log and ignore the exception
+            log.debug("Failed to close socket: %s", ex)
 
 
 def pre_load_from_state_file(data_dir: str) -> Dict[str, str]:
