@@ -6,7 +6,7 @@
     "clsx": "^1.1.1",
     "cross-fetch": "^3.0.6",
     "crypto-js": "4.2.0",
-    "postcss": "^8.4.38",
+    "postcss": "^8.4.39",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-draggable": "^4.4.3",
