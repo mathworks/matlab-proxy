@@ -259,14 +259,14 @@ class TestProxy:
             "matlab_proxy_manager.web.app._get_backend_server",
             return_value={"absolute_url": "http://server1"},
         )
-        mock_handle_websocket = mocker.patch(
-            "matlab_proxy_manager.web.app._handle_websocket_request",
+        mock_forward_websocket = mocker.patch(
+            "matlab_proxy_manager.web.app._forward_websocket_request",
             return_value=web.WebSocketResponse(),
         )
 
         await app.proxy(mock_req)
 
-        mock_handle_websocket.assert_called_once()
+        mock_forward_websocket.assert_called_once()
 
     async def test_proxy_http_request(self, mocker):
         """
@@ -284,16 +284,16 @@ class TestProxy:
 
         mocker.patch(
             "matlab_proxy_manager.web.app._get_backend_server",
-            return_value={"absolute_url": "http://server"},
+            return_value={"absolute_url": "http://server", "headers": {}},
         )
-        mock_handle_http = mocker.patch(
-            "matlab_proxy_manager.web.app._handle_http_request",
+        mock_forward_http = mocker.patch(
+            "matlab_proxy_manager.web.app._forward_http_request",
             return_value=web.Response(),
         )
 
         await app.proxy(mock_req)
 
-        mock_handle_http.assert_called_once()
+        mock_forward_http.assert_called_once()
 
     async def test_proxy_server_disconnected(self, mocker):
         """
@@ -310,10 +310,10 @@ class TestProxy:
 
         mocker.patch(
             "matlab_proxy_manager.web.app._get_backend_server",
-            return_value={"absolute_url": "http://backend"},
+            return_value={"absolute_url": "http://backend", "headers": {}},
         )
         mocker.patch(
-            "matlab_proxy_manager.web.app._handle_http_request",
+            "matlab_proxy_manager.web.app._forward_http_request",
             side_effect=client_exceptions.ServerDisconnectedError,
         )
 
@@ -339,12 +339,54 @@ class TestProxy:
             return_value={"absolute_url": "http://backend"},
         )
         mocker.patch(
-            "matlab_proxy_manager.web.app._handle_http_request",
+            "matlab_proxy_manager.web.app._forward_http_request",
             side_effect=Exception("Unexpected error"),
         )
 
         with pytest.raises(web.HTTPNotFound):
             await app.proxy(mock_req)
+
+    async def test_proxy_correct_req_headers_are_forwarded(self, mocker):
+        """
+        Test that the correct request headers are forwarded to the backend server.
+
+        This test ensures that the proxy function correctly forwards the necessary
+        headers to the backend server, including the MWI-MPM-CONTEXT header.
+        """
+        mock_req = mocker.AsyncMock()
+        mock_req.read = mocker.AsyncMock(return_value=b"request_body")
+        mock_req.rel_url = "/matlab/default/some/path"
+        mock_req.headers = {
+            "JSESSION-ID": "123456789",
+            "MWI-MPM-CONTEXT": "test_context",
+        }
+        mock_req.method = "GET"
+
+        mocker.patch(
+            "matlab_proxy_manager.web.app._get_backend_server",
+            return_value={
+                "absolute_url": "http://server1",
+                "headers": {"MWI-AUTH-TOKEN": "token"},
+            },
+        )
+        mock_forward_http = mocker.patch(
+            "matlab_proxy_manager.web.app._forward_http_request",
+            return_value=web.Response(),
+        )
+        await app.proxy(mock_req)
+        mock_forward_http.assert_called_once_with(
+            mock_req,
+            b"request_body",
+            "http://server1/some/path",
+            {
+                **mock_req.headers,
+                **{
+                    "MWI-AUTH-TOKEN": "token",
+                    "Content-Length": "12",
+                    "X-Forwarded-Proto": "http",
+                },
+            },
+        )
 
 
 @pytest.fixture

@@ -232,7 +232,7 @@ async def proxy(req):
 
     # Set content length in case of modification
     req_headers["Content-Length"] = str(len(req_body))
-    req_headers["x-forwarded-proto"] = "http"
+    req_headers["X-Forwarded-Proto"] = "http"
     req_path = req.rel_url
 
     # Redirect block to move /*/matlab to /*/matlab/default/
@@ -272,9 +272,11 @@ async def proxy(req):
         and req_headers.get(upgrade, "").lower() == "websocket"
         and req.method == "GET"
     ):
-        return await _handle_websocket_request(req, proxy_url)
+        return await _forward_websocket_request(req, proxy_url)
     try:
-        return await _handle_http_request(req, req_body, proxy_url, backend_server)
+        return await _forward_http_request(
+            req, req_body, proxy_url, _collate_headers(req_headers, backend_server)
+        )
     except web.HTTPFound:
         log.debug("Redirection to path with /default")
         raise
@@ -295,7 +297,20 @@ async def proxy(req):
 # Helper private functions
 
 
-async def _handle_websocket_request(
+def _collate_headers(req_headers: dict, backend_server: dict) -> dict:
+    """Combines request headers with backend server (matlab-proxy) headers.
+
+    Args:
+        req_headers (dict): The headers from the incoming request.
+        backend_server (dict): The backend server configuration.
+
+    Returns:
+        dict: A new dictionary containing all headers from both sources.
+    """
+    return {**req_headers, **backend_server.get("headers")}
+
+
+async def _forward_websocket_request(
     req: web.Request, proxy_url: str
 ) -> web.WebSocketResponse:
     """Handles a websocket request to the backend matlab proxy server
@@ -381,8 +396,11 @@ async def _handle_websocket_request(
             raise aiohttp.WebSocketError(code=code, message=message)
 
 
-async def _handle_http_request(
-    req: web.Request, req_body: Optional[bytes], proxy_url: str, backend_server: dict
+async def _forward_http_request(
+    req: web.Request,
+    req_body: Optional[bytes],
+    proxy_url: str,
+    headers: dict,
 ) -> web.Response:
     """
     Forwards an incoming HTTP request to a specified backend server.
@@ -396,7 +414,7 @@ async def _handle_http_request(
         proxy_url,
         allow_redirects=True,
         data=req_body,
-        headers=backend_server.get("headers"),
+        headers=headers,
     ) as res:
         headers = res.headers.copy()
         body = await res.read()
