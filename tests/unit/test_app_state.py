@@ -364,9 +364,23 @@ def test_are_required_processes_ready(
     assert actual == expected
 
 
-@pytest.mark.parametrize("platform", [("linux"), ("windows"), ("mac")])
-async def test_track_embedded_connector(mocker_os_patching_fixture, app_state_fixture):
-    """Test to check track_embedded_connector task
+# The test: test_track_embedded_connector has been split into:
+# 1) test_track_embedded_connector_posix: Test to check if stop_matlab is called on posix systems.
+# 2) test_track_embedded_connector : Test to check if stop_matlab is not called in windows.
+
+# In windows, errors are shown as UI windows and calling stop_matlab() if MATLAB had not started in
+# PROCESS_TIMEOUT seconds would remove the window thereby leaving the user without knowing why MATLAB
+# failed to start.
+
+
+@pytest.mark.parametrize("platform", [("linux"), ("mac")])
+async def test_track_embedded_connector_posix(
+    mocker_os_patching_fixture, app_state_fixture
+):
+    """Test to check track_embedded_connector task for posix platforms.
+
+    Checks if stop_matlab() has been called when the embedded connector doesn't respond
+    even after PROCESS_TIMEOUT seconds of starting MATLAB.
 
     Args:
         mocker_os_patching_fixture (mocker): Custom pytest fixture for mocking
@@ -374,7 +388,16 @@ async def test_track_embedded_connector(mocker_os_patching_fixture, app_state_fi
     """
 
     # Arrange
-    # patching embedded_connector_start_time to EPOCH+1 seconds and state to be "down"
+    # Patching embedded_connector_start_time to EPOCH+1 seconds and state to be "down".
+
+    # For this test, the embedded_connector_start_time can be patched to ant value 600(default PROCESS_TIMEOUT) seconds
+    # before the current time.
+
+    # To always ensure that the time difference between the embedded_connector_start_time
+    # and the current time is greater than PROCESS_TIMEOUT, the embedded_connector_start_time is patched to
+    # EPOCH + 1 seconds so that the time_diff = current_time -  embedded_connector_start_time is greater
+    # than PROCESS_TIMEOUT always evaluates to True.
+
     mocker_os_patching_fixture.patch.object(
         app_state_fixture, "embedded_connector_start_time", new=float(1.0)
     )
@@ -390,6 +413,58 @@ async def test_track_embedded_connector(mocker_os_patching_fixture, app_state_fi
 
     # Assert
     spy.assert_called_once()
+
+
+@pytest.mark.parametrize("platform", [("windows")])
+async def test_track_embedded_connector(mocker_os_patching_fixture, app_state_fixture):
+    """Test to check track_embedded_connector task on windows.
+
+    In windows, since errors are shown in native UI windows , calling stop_matlab() would remove them,
+    thereby not knowing the error with which MATLAB failed to start.
+
+    Hence, this test checks that stop_matlab() is not called.
+
+    Args:
+        mocker_os_patching_fixture (mocker): Custom pytest fixture for mocking
+        app_state_fixture (AppState): Object of AppState class with defaults set
+    """
+    # Arrange
+    # Patching embedded_connector_start_time to EPOCH+1 seconds and state to be "down".
+
+    # For this test, the embedded_connector_start_time can be patched to any value 600(default PROCESS_TIMEOUT) seconds
+    # before the current time.
+
+    # To always ensure that the time difference between the embedded_connector_start_time
+    # and the current time is greater than PROCESS_TIMEOUT, the embedded_connector_start_time is patched to
+    # EPOCH + 1 seconds so that the time_diff = current_time -  embedded_connector_start_time is greater
+    # than PROCESS_TIMEOUT always evaluates to True.
+
+    mocker_os_patching_fixture.patch.object(
+        app_state_fixture, "embedded_connector_start_time", new=float(1.0)
+    )
+    mocker_os_patching_fixture.patch.object(
+        app_state_fixture, "embedded_connector_state", return_value="down"
+    )
+
+    spy = mocker_os_patching_fixture.spy(app_state_fixture, "stop_matlab")
+
+    # Act
+
+    # Unlike the posix test (test_track_embedded_connector_posix) where the task track_embedded_connector_state()
+    # would exit automatically after stopping MATLAB, in windows, the task will never exit(until the user checks the error
+    # manually and clicks on "Stop MATLAB").
+
+    # So, the task is manually stopped by raising a timeout error(set to 3 seconds). This is a generous amount of
+    # time for the error to be set as a MatlabError in CI systems.
+    with pytest.raises(asyncio.TimeoutError):
+        await asyncio.wait_for(
+            app_state_fixture._AppState__track_embedded_connector_state(),
+            timeout=3,  # timeout of 3 seconds to account for CI systems. This is to wait for the error to be set as MatlabError.
+        )
+
+    # Assert
+    spy.assert_not_called()  # In windows, MATLAB process should not be stopped so that the UI error window is not closed.
+    assert isinstance(app_state_fixture.error, MatlabError)
 
 
 @pytest.mark.parametrize(

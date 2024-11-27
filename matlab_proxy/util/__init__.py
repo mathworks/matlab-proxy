@@ -98,7 +98,7 @@ def prepare_site(app, runner):
                 )
                 break
             except:
-                logger.info(f"Failed to launch the site on port {p}")
+                logger.error(f"Failed to launch the site on port {p}")
 
     return site
 

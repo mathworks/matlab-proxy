@@ -326,7 +326,7 @@ def validate_matlab_root_path(matlab_root: Path, is_custom_matlab_root: bool):
 
     try:
         __validate_if_paths_exist([matlab_root])
-        logger.info(
+        logger.debug(
             f"MATLAB root path: {matlab_root} exists, continuing to verify its validity..."
         )
 

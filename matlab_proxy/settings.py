@@ -103,7 +103,7 @@ def get_matlab_executable_and_root_path():
     # Note, error messages are formatted as multi-line strings and the front end displays them as is.
     error_message = "Unable to find MATLAB on the system PATH. Add MATLAB to the system PATH, and restart matlab-proxy."
 
-    logger.info(error_message)
+    logger.error(error_message)
     raise MatlabInstallError(error_message)
 
 
