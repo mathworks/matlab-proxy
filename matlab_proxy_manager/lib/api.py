@@ -253,6 +253,11 @@ async def _initialize_process_based_on_os_type(cmd, env):
             return await asyncio.create_subprocess_exec(
                 *cmd,
                 env=env,
+                # kernel sporadically ends up cleaning the child matlab-proxy process during the
+                # restart workflow. This is a workaround to handle that race condition which leads
+                # to starting matlab-proxy in a new process group and is not counted for deletion.
+                # https://github.com/ipython/ipykernel/blob/main/ipykernel/kernelbase.py#L1283
+                start_new_session=True,
             )
         except Exception as e:
             log.error("Failed to create posix subprocess: %s", e)

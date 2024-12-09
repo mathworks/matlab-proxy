@@ -153,7 +153,7 @@ def _are_orphaned_servers_deleted(predicate: Optional[str] = "") -> bool:
     servers: dict = storage.get_all()
 
     def _matches_predicate(filename: str) -> bool:
-        return filename.split("_")[0] == predicate
+        return filename.split("_")[0] == str(predicate)
 
     # Checks only a subset of servers (that matches the parent_pid of the caller)
     # to reduce the MATLAB proxy startup time
@@ -161,7 +161,7 @@ def _are_orphaned_servers_deleted(predicate: Optional[str] = "") -> bool:
         servers = {
             filename: server
             for filename, server in servers.items()
-            if _matches_predicate(filename)
+            if _matches_predicate(Path(filename).stem)
         }
         if not servers:
             log.debug("Parent pid not matched, nothing to cleanup")
