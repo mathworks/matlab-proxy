@@ -32,11 +32,13 @@ jobs:
     if: success()
     # windows container is not required here
     runs-on: ubuntu-latest
-    # Specifying a GitHub environment is optional, but strongly encouraged
-    environment: release
     permissions:
       # IMPORTANT: this permission is mandatory for trusted publishing
       id-token: write
+    # Specifying a GitHub environment is optional, but strongly encouraged
+    environment: 
+      name: release
+      url: https://pypi.org/project/matlab-proxy
 
     steps:
       - name: Checkout
@@ -44,5 +46,23 @@ jobs:
         with:
           ref: ${{github.sha}}
 
-      - name: Build and Publish in PyPi
-        uses: ./.github/actions/build_and_publish_pypi
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+  
+      - name: Install Python build dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install wheel
+        shell: bash
+  
+      - name: Build Source and Binary wheel distributions
+        run: python3 setup.py bdist_wheel sdist
+        shell: bash
+  
+      - name: Publish to PyPI.
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+# pypa/gh-action-pypi-publish does not support composite action from v1.12.0 onwards.
+# For more information, see : https://github.com/pypa/gh-action-pypi-publish/issues/299 
