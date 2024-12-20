@@ -1427,11 +1427,26 @@ class AppState:
                 else:
                     logger.debug("Sending HTTP request to stop the MATLAB process...")
                     try:
+                        import sys
+
                         # Send HTTP request
                         await self.__send_stop_request_to_matlab()
 
+                        # Close the stderr stream to prevent indefinite hanging on it due to a child
+                        # process inheriting it, fixes https://github.com/mathworks/matlab-proxy/issues/44
+                        stderr_stream = matlab._transport.get_pipe_transport(
+                            sys.stderr.fileno()
+                        )
+                        if stderr_stream:
+                            logger.debug(
+                                "Closing matlab process stderr stream: %s",
+                                stderr_stream,
+                            )
+                            stderr_stream.close()
+
                         # Wait for matlab to shutdown gracefully
                         await matlab.wait()
+
                         assert (
                             matlab.returncode == 0
                         ), "Failed to gracefully shutdown MATLAB via the embedded connector"
