@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 
 name: Generate Code Coverage XML
 description: |
@@ -49,7 +49,7 @@ runs:
       shell: bash
 
     - name: Generate code coverage for Javascript code
-      run: npm --prefix gui test -- --coverage --watchAll=false
+      run: npm --prefix gui test -- --coverage
       shell: bash
 
     - name: Upload Javscript coverage report to Codecov

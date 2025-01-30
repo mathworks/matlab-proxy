@@ -415,7 +415,7 @@ async def test_track_embedded_connector_posix(
     spy.assert_called_once()
 
 
-@pytest.mark.parametrize("platform", [("windows")])
+@pytest.mark.parametrize("platform", ["windows"])
 async def test_track_embedded_connector(mocker_os_patching_fixture, app_state_fixture):
     """Test to check track_embedded_connector task on windows.
 

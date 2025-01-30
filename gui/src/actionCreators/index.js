@@ -1,4 +1,4 @@
-// Copyright 2020-2024 The MathWorks, Inc.
+// Copyright 2020-2025 The MathWorks, Inc.
 
 import {
     SET_TRIGGER_POSITION,
@@ -108,7 +108,7 @@ export function requestSessionStatus () {
 }
 
 export function receiveSessionStatus (status) {
-    return function (dispatch, getState) {
+    return function (dispatch) {
         return dispatch({
             type: RECEIVE_SESSION_STATUS,
             status
@@ -281,7 +281,7 @@ export function fetchServerStatus (requestTransferSession = false) {
 }
 
 export function fetchEnvConfig () {
-    return async function (dispatch, getState) {
+    return async function (dispatch) {
         dispatch(requestEnvConfig());
         const response = await fetchWithTimeout(dispatch, './get_env_config', {}, 10000);
         const data = await response.json();
@@ -291,7 +291,7 @@ export function fetchEnvConfig () {
 
 export function updateAuthStatus (token) {
     // make response consistent with rest of reducers (data)
-    return async function (dispatch, getState) {
+    return async function (dispatch) {
         const tokenHash = sha256(token);
         const options = {
             method: 'POST',
@@ -308,7 +308,7 @@ export function updateAuthStatus (token) {
 
 export function getAuthToken () {
     // make response consistent with rest of reducers (data)
-    return async function (dispatch, getState) {
+    return async function (dispatch) {
         const options = {
             method: 'GET'
         };
@@ -319,7 +319,7 @@ export function getAuthToken () {
 }
 
 export function fetchSetLicensing (info) {
-    return async function (dispatch, getState) {
+    return async function (dispatch) {
         const options = {
             method: 'PUT',
             mode: 'same-origin',
@@ -339,7 +339,7 @@ export function fetchSetLicensing (info) {
 }
 
 export function fetchUpdateLicensing (info) {
-    return async function (dispatch, getState) {
+    return async function (dispatch) {
         const options = {
             method: 'PUT',
             mode: 'same-origin',
@@ -359,7 +359,7 @@ export function fetchUpdateLicensing (info) {
 }
 
 export function fetchUnsetLicensing () {
-    return async function (dispatch, getState) {
+    return async function (dispatch) {
         const options = {
             method: 'DELETE',
             mode: 'same-origin',
@@ -375,7 +375,7 @@ export function fetchUnsetLicensing () {
 }
 
 export function fetchShutdownIntegration () {
-    return async function (dispatch, getState) {
+    return async function (dispatch) {
         const options = {
             method: 'DELETE',
             mode: 'same-origin',
@@ -391,7 +391,7 @@ export function fetchShutdownIntegration () {
 }
 
 export function fetchStopMatlab () {
-    return async function (dispatch, getState) {
+    return async function (dispatch) {
         const options = {
             method: 'DELETE',
             mode: 'same-origin',
@@ -407,7 +407,7 @@ export function fetchStopMatlab () {
 }
 
 export function fetchStartMatlab () {
-    return async function (dispatch, getState) {
+    return async function (dispatch) {
         const options = {
             method: 'PUT',
             mode: 'same-origin',

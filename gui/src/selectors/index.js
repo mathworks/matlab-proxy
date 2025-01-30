@@ -1,4 +1,4 @@
-// Copyright 2020-2024 The MathWorks, Inc.
+// Copyright 2020-2025 The MathWorks, Inc.
 
 import { createSelector } from 'reselect';
 import { STATUS_REQUEST_INTERVAL_MS, MAX_REQUEST_FAIL_COUNT } from '../constants';
@@ -33,7 +33,9 @@ export const selectMatlabBusyStatus = state => state.matlab.busyStatus;
 
 export const selectTriggerPosition = createSelector(
     state => state.triggerPosition,
-    pos => pos === null ? undefined : pos
+    pos => pos === null
+        ? undefined
+        : pos
 );
 
 export const selectHasFetchedEnvConfig = createSelector(
@@ -136,7 +138,9 @@ export const selectLicensingIsMhlm = createSelector(
 export const selectLicensingMhlmUsername = createSelector(
     selectLicensingInfo,
     selectLicensingIsMhlm,
-    (licensingInfo, isMhlm) => isMhlm ? licensingInfo.emailAddress : ''
+    (licensingInfo, isMhlm) => isMhlm
+        ? licensingInfo.emailAddress
+        : ''
 );
 
 // Selector to check if the license type is mhlm and entitlements property is not empty
@@ -258,7 +262,9 @@ export const selectIsIdleTimeoutEnabled = createSelector(
 export const selectIdleTimeoutDurationInMS = createSelector(
     selectIsIdleTimeoutEnabled,
     selectIdleTimeoutDuration,
-    (isTimeoutEnabled, idleTimeoutDuration) => { return isTimeoutEnabled ? idleTimeoutDuration * 1000 : undefined; }
+    (isTimeoutEnabled, idleTimeoutDuration) => { return isTimeoutEnabled
+        ? idleTimeoutDuration * 1000
+        : undefined; }
 );
 
 export const selectIntegrationName = createSelector(
@@ -266,7 +272,9 @@ export const selectIntegrationName = createSelector(
     selectEnvConfig,
     (hasFetchedEnvConfig, envConfig) => {
         if (hasFetchedEnvConfig) {
-            return envConfig.extension_name === 'default_configuration_matlab_proxy' ? envConfig.extension_name_short_description : `${envConfig.extension_name_short_description} - MATLAB Integration`;
+            return envConfig.extension_name === 'default_configuration_matlab_proxy'
+                ? envConfig.extension_name_short_description
+                : `${envConfig.extension_name_short_description} - MATLAB Integration`;
         } else {
             return '';
         }
@@ -277,6 +285,8 @@ export const selectShouldShowShutdownButton = createSelector(
     selectHasFetchedEnvConfig,
     selectEnvConfig,
     (hasFetchedEnvConfig, envConfig) => {
-        return hasFetchedEnvConfig ? envConfig.should_show_shutdown_button : false;
+        return hasFetchedEnvConfig
+            ? envConfig.should_show_shutdown_button
+            : false;
     }
 );

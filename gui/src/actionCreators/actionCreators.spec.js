@@ -1,4 +1,4 @@
-// Copyright 2020-2024 The MathWorks, Inc.
+// Copyright 2020-2025 The MathWorks, Inc.
 
 import configureMockStore from 'redux-mock-store';
 import thunk from 'redux-thunk';
@@ -125,7 +125,7 @@ describe('Test fetchWithTimeout method', () => {
         // This should trigger the abort() method of the AbortController()
         fetchMock.getOnce('/get_status', new Promise(resolve => setTimeout(() => resolve({ body: 'ok' }), 1000 + timeout)));
 
-        const abortSpy = jest.spyOn(global.AbortController.prototype, 'abort');
+        const abortSpy = vi.spyOn(global.AbortController.prototype, 'abort');
         const expectedActions = [
             actions.RECEIVE_ERROR
         ];

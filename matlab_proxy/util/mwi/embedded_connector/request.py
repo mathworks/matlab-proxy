@@ -1,6 +1,6 @@
 # Copyright 2020-2024 The MathWorks, Inc.
 
-""" 
+"""
 This file contains the methods to communicate with the embedded connector.
 """
 

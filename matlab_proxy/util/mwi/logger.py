@@ -1,6 +1,5 @@
 # Copyright 2020-2024 The MathWorks, Inc.
-"""Functions to access & control the logging behavior of the app
-"""
+"""Functions to access & control the logging behavior of the app"""
 
 import logging
 import os

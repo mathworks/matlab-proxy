@@ -1,4 +1,4 @@
-// Copyright 2024 The MathWorks, Inc.
+// Copyright 2024-2025 The MathWorks, Inc.
 
 // Time Interval in milliseconds between subsequent 'get_status' requests
 export const STATUS_REQUEST_INTERVAL_MS = 1000;

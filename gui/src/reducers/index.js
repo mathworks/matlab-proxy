@@ -1,4 +1,4 @@
-// Copyright 2020-2024 The MathWorks, Inc.
+// Copyright 2020-2025 The MathWorks, Inc.
 
 import { combineReducers } from 'redux';
 
@@ -336,7 +336,9 @@ export function warnings (state = null, action) {
     switch (action.type) {
         case RECEIVE_SERVER_STATUS: {
             const warnings = action.status.warnings;
-            return warnings.length > 0 ? warnings : null;
+            return warnings.length > 0
+                ? warnings
+                : null;
         }
         default:
             return state;

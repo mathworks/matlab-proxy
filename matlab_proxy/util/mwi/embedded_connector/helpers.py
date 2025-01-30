@@ -1,7 +1,7 @@
 # Copyright 2020-2024 The MathWorks, Inc.
 
-""" This file contains helper methods which return the details required for sending
-a HTTP request to the Embedded Connector. """
+"""This file contains helper methods which return the details required for sending
+a HTTP request to the Embedded Connector."""
 
 
 from matlab_proxy.util import mwi
