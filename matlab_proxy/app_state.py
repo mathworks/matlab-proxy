@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 
 import asyncio
 import contextlib
@@ -436,8 +436,10 @@ class AppState:
 
             else:
                 await self.matlab_state_updater_lock.release()
-                await self._update_matlab_state_based_on_ready_file_and_connector_status(
-                    matlab_endpoint_to_use
+                await (
+                    self._update_matlab_state_based_on_ready_file_and_connector_status(
+                        matlab_endpoint_to_use
+                    )
                 )
                 logger.debug(
                     f"{this_task}: Required processes are ready, Embedded Connector status is '{self.get_matlab_state()}'"
@@ -1243,7 +1245,7 @@ class AppState:
             delay (int): time delay in seconds before retrying the file read operation
         """
         logger.debug(
-            f'updating matlab_port information from {self.matlab_session_files["matlab_ready_file"]}'
+            f"updating matlab_port information from {self.matlab_session_files['matlab_ready_file']}"
         )
         try:
             await asyncio.wait_for(
@@ -1415,6 +1417,10 @@ class AppState:
         waiters = []
         if matlab is not None:
             if system.is_posix() and matlab.returncode is None:
+                # Close the stderr stream to prevent indefinite hanging on it due to a child
+                # process inheriting it, fixes https://github.com/mathworks/matlab-proxy/issues/44
+                self._close_matlab_stderr_stream(matlab)
+
                 # Sending an exit request to the embedded connector takes time.
                 # When MATLAB is in a "starting" state (implies the Embedded connector is not up)
                 # OR
@@ -1427,22 +1433,8 @@ class AppState:
                 else:
                     logger.debug("Sending HTTP request to stop the MATLAB process...")
                     try:
-                        import sys
-
                         # Send HTTP request
                         await self.__send_stop_request_to_matlab()
-
-                        # Close the stderr stream to prevent indefinite hanging on it due to a child
-                        # process inheriting it, fixes https://github.com/mathworks/matlab-proxy/issues/44
-                        stderr_stream = matlab._transport.get_pipe_transport(
-                            sys.stderr.fileno()
-                        )
-                        if stderr_stream:
-                            logger.debug(
-                                "Closing matlab process stderr stream: %s",
-                                stderr_stream,
-                            )
-                            stderr_stream.close()
 
                         # Wait for matlab to shutdown gracefully
                         await matlab.wait()
@@ -1461,9 +1453,10 @@ class AppState:
                         try:
                             matlab.terminate()
                             await matlab.wait()
-                        except:
-                            pass
-
+                        except Exception as ex:
+                            logger.debug(
+                                "Received an exception while terminating matlab: %s", ex
+                            )
             else:
                 # In a windows system
                 if system.is_windows() and matlab.is_running():
@@ -1532,6 +1525,23 @@ class AppState:
         # Update matlab_port information in the event of intentionally stopping MATLAB
         self.matlab_port = None
         logger.debug("Completed Shutdown!!!")
+
+    def _close_matlab_stderr_stream(self, matlab):
+        """
+        This method attempts to close the stderr stream associated with the MATLAB process
+        to prevent potential resource leaks. It logs a debug message if the stream is
+        successfully closed.
+
+        Args:
+            matlab: The MATLAB process reference.
+        """
+        stderr_stream = matlab._transport.get_pipe_transport(sys.stderr.fileno())
+        if stderr_stream:
+            logger.debug(
+                "Closing matlab process stderr stream: %s",
+                stderr_stream,
+            )
+            stderr_stream.close()
 
     async def handle_matlab_output(self):
         """Parse MATLAB output from stdout and raise errors if any."""
