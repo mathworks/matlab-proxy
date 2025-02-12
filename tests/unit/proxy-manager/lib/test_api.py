@@ -1,4 +1,4 @@
-# Copyright 2024 The MathWorks, Inc.
+# Copyright 2024-2025 The MathWorks, Inc.
 import pytest
 
 from matlab_proxy_manager.lib import api as mpm_api
@@ -173,6 +173,66 @@ async def test_start_matlab_proxy_returns_none_if_server_not_created(
     mock_find_existing_server.assert_called_once()
     mock_start_subprocess.assert_awaited_once()
     mock_create_state_file.assert_not_called()
+
+    assert result is None
+
+
+async def test_matlab_proxy_is_cleaned_up_if_server_was_not_ready(mocker):
+    """
+    Test case for cleaning up MATLAB proxy when server is not ready.
+
+    This test mocks various dependencies and verifies the behavior of the
+    _start_matlab_proxy function when no existing server is found and
+    a new server is created but not ready. It checks if the function correctly
+    returns None, calls the expected methods, and cleans up the server.
+    """
+    mock_find_existing_server = mocker.patch(
+        "matlab_proxy_manager.storage.server.ServerProcess.find_existing_server",
+        return_value=None,
+    )
+    mock_shutdown = mocker.patch(
+        "matlab_proxy_manager.storage.server.ServerProcess.shutdown",
+        return_value=None,
+    )
+    mock_delete_dangling_servers = mocker.patch(
+        "matlab_proxy_manager.utils.helpers._are_orphaned_servers_deleted",
+        return_value=None,
+    )
+    mock_create_state_file = mocker.patch(
+        "matlab_proxy_manager.utils.helpers.create_state_file", return_value=None
+    )
+    mock_create_proxy_manager_dir = mocker.patch(
+        "matlab_proxy_manager.utils.helpers.create_and_get_proxy_manager_data_dir",
+        return_value=None,
+    )
+    mock_is_server_ready = mocker.patch(
+        "matlab_proxy_manager.utils.helpers.is_server_ready", return_value=False
+    )
+    mock_prep_cmd_and_env = mocker.patch(
+        "matlab_proxy_manager.lib.api._prepare_cmd_and_env_for_matlab_proxy",
+        return_value=([], {}),
+    )
+    mock_start_subprocess = mocker.patch(
+        "matlab_proxy_manager.lib.api._start_subprocess",
+        return_value=(1, "dummy", "dummy"),
+    )
+
+    caller_id = "test_caller"
+    parent_id = "test_parent"
+    is_shared_matlab = True
+
+    result = await mpm_api._start_matlab_proxy(
+        caller_id=caller_id, ctx=parent_id, is_shared_matlab=is_shared_matlab
+    )
+
+    mock_delete_dangling_servers.assert_called_once_with(parent_id)
+    mock_create_proxy_manager_dir.assert_called_once()
+    mock_find_existing_server.assert_called_once()
+    mock_create_state_file.assert_not_called()
+    mock_prep_cmd_and_env.assert_called_once()
+    mock_start_subprocess.assert_awaited_once()
+    mock_is_server_ready.assert_called_once()
+    mock_shutdown.assert_called_once()
 
     assert result is None
 

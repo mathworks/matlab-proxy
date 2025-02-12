@@ -1,4 +1,4 @@
-# Copyright 2024 The MathWorks, Inc.
+# Copyright 2024-2025 The MathWorks, Inc.
 from pathlib import Path
 
 import pytest
@@ -52,6 +52,9 @@ def test_shutdown_exception(mocker, server_process):
     mock_req_retry_session.return_value.delete.side_effect = Exception(
         "Server unreachable"
     )
+    mock_psutil_process = mocker.patch(
+        "psutil.Process", return_value=mocker.MagicMock()
+    )
 
     shutdown_response = server_process.shutdown()
 
@@ -61,6 +64,7 @@ def test_shutdown_exception(mocker, server_process):
         headers={"Dummy_header": "Dummy_value"},
     )
     assert shutdown_response is None
+    mock_psutil_process.return_value.kill.assert_called()
 
 
 def test_server_process_instantiation_from_string_correctly():

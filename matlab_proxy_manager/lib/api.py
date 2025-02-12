@@ -1,4 +1,4 @@
-# Copyright 2024 The MathWorks, Inc.
+# Copyright 2024-2025 The MathWorks, Inc.
 import asyncio
 import os
 import secrets
@@ -147,27 +147,28 @@ async def _start_subprocess_and_check_for_readiness(
         return None
 
     process_id, url, mwi_base_url = result
-    server_process = None
+
+    log.debug("Matlab proxy process info: %s, %s", url, mwi_base_url)
+    matlab_proxy_process = ServerProcess(
+        server_url=url,
+        mwi_base_url=mwi_base_url,
+        headers=helpers.convert_mwi_env_vars_to_header_format(matlab_proxy_env, "MWI"),
+        pid=str(process_id),
+        parent_pid=ctx,
+        id=key,
+        type="shared" if is_shared_matlab else "named",
+        mpm_auth_token=mpm_auth_token,
+    )
 
     # Check for the matlab proxy server readiness
-    if helpers.is_server_ready(url=f"{url}{mwi_base_url}", backoff_factor=0.5):
-        log.debug("Matlab proxy process info: %s, %s", url, mwi_base_url)
-        server_process = ServerProcess(
-            server_url=url,
-            mwi_base_url=mwi_base_url,
-            headers=helpers.convert_mwi_env_vars_to_header_format(
-                matlab_proxy_env, "MWI"
-            ),
-            pid=str(process_id),
-            parent_pid=ctx,
-            id=key,
-            type="shared" if is_shared_matlab else "named",
-            mpm_auth_token=mpm_auth_token,
-        )
-    else:
-        log.error("matlab-proxy server never became ready")
+    if not helpers.is_server_ready(
+        url=matlab_proxy_process.absolute_url, retries=7, backoff_factor=0.5
+    ):
+        log.error("MATLAB Proxy Server unavailable: matlab-proxy-app failed to start or has timed out.")
+        matlab_proxy_process.shutdown()
+        matlab_proxy_process = None
 
-    return server_process
+    return matlab_proxy_process
 
 
 def _prepare_cmd_and_env_for_matlab_proxy():

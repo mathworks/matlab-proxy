@@ -1,8 +1,10 @@
-# Copyright 2024 The MathWorks, Inc.
+# Copyright 2024-2025 The MathWorks, Inc.
 import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Optional
+
+import psutil
 
 from matlab_proxy_manager.utils import helpers, logger
 
@@ -96,7 +98,30 @@ class ServerProcess:
             return shutdown_resp
         except Exception as e:
             log.debug("Exception while shutting down matlab proxy: %s", e)
+
+            # Force kill matlab-proxy and its process tree if termination
+            # via shutdown_integration endpoint fails
+            matlab_proxy_process = psutil.Process(int(self.pid))
+            self.terminate_process_tree(matlab_proxy_process)
             return None
+
+    def terminate_process_tree(self, matlab_proxy_process):
+        """
+        Terminates the process tree of the MATLAB proxy server.
+
+        This method terminates all child processes of the MATLAB proxy process,
+        waits for a short period, and then forcefully kills any remaining processes.
+        Finally, it kills the main MATLAB proxy process itself.
+        """
+        matlab_proxy_child_processes = matlab_proxy_process.children(recursive=True)
+        for child_process in matlab_proxy_child_processes:
+            child_process.terminate()
+        _, alive = psutil.wait_procs(matlab_proxy_child_processes, timeout=5)
+        for process in alive:
+            # Kill the processes which are alive even after waiting for 5 seconds
+            process.kill()
+        matlab_proxy_process.kill()
+        log.debug("Killed matlab-proxy process with PID: %s", self.pid)
 
     def is_server_alive(self) -> bool:
         """
