@@ -164,7 +164,9 @@ async def _start_subprocess_and_check_for_readiness(
     if not helpers.is_server_ready(
         url=matlab_proxy_process.absolute_url, retries=7, backoff_factor=0.5
     ):
-        log.error("MATLAB Proxy Server unavailable: matlab-proxy-app failed to start or has timed out.")
+        log.error(
+            "MATLAB Proxy Server unavailable: matlab-proxy-app failed to start or has timed out."
+        )
         matlab_proxy_process.shutdown()
         matlab_proxy_process = None
 
