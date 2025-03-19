@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 
 """Tests for functions in matlab_proxy/util/mwi_validators.py"""
 
@@ -295,7 +295,7 @@ def test_validate_matlab_root_path(tmp_path):
     assert actual_matlab_root_custom == matlab_root
 
 
-def test_validate_matlab_root_path_invalid_root_path(tmp_path):
+def test_validate_matlab_root_path_non_existent_root_path(tmp_path):
     """Checks if validate_matlab_root_path raises MatlabInstallError when non-existent path is supplied"""
     # Arrange
     matlab_root = Path(tmp_path) / "MATLAB"
@@ -315,22 +315,27 @@ def test_validate_matlab_root_path_invalid_root_path(tmp_path):
 
 
 def test_validate_matlab_root_path_non_existent_versioninfo_file(tmp_path):
-    """Checks if validate_matlab_root_path does not raise any exceptions even if VersionInfo.xml file does not exist"""
+    """Checks if validate_matlab_root_path does not raise any exceptions even if VersionInfo.xml file does not exist
+    when matlab wrapper is used and raises an exception when custom matlab root is used.
+    """
     # Arrange
     matlab_root = Path(tmp_path) / "MATLAB"
     os.mkdir(matlab_root)
 
     # Act
+    # Location of VersionInfo.xml can't be determined with matlab wrapper script
+    # and error should not be raised
     actual_matlab_root = validate_matlab_root_path(
         matlab_root, is_custom_matlab_root=False
     )
-    actual_matlab_root_custom = validate_matlab_root_path(
-        matlab_root, is_custom_matlab_root=True
-    )
+
+    # Location of VersionInfo.xml must be determinable when custom MATLAB root is supplied.
+    # If not, an exception must be raised
+    with pytest.raises(MatlabInstallError):
+        validate_matlab_root_path(matlab_root, is_custom_matlab_root=True)
 
     # Assert
     assert actual_matlab_root is None
-    assert actual_matlab_root_custom is None
 
 
 @pytest.mark.parametrize(

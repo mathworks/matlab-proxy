@@ -1,4 +1,4 @@
-# Copyright 2023-2024 The MathWorks, Inc.
+# Copyright 2023-2025 The MathWorks, Inc.
 
 import asyncio
 import json
@@ -13,7 +13,11 @@ from matlab_proxy import settings
 from matlab_proxy import settings
 from matlab_proxy.app_state import AppState
 from matlab_proxy.constants import MWI_AUTH_TOKEN_NAME_FOR_HTTP
-from matlab_proxy.util.mwi.exceptions import LicensingError, MatlabError
+from matlab_proxy.util.mwi.exceptions import (
+    LicensingError,
+    MatlabError,
+    MatlabInstallError,
+)
 from matlab_proxy.constants import (
     CONNECTOR_SECUREPORT_FILENAME,
     USER_CODE_OUTPUT_FILE_NAME,
@@ -609,6 +613,29 @@ async def test_start_matlab_without_xvfb(app_state_fixture, mocker):
     assert app_state_fixture.processes["xvfb"] is None
     # Check if Matlab started
     assert app_state_fixture.processes["matlab"] is mock_matlab
+
+
+async def test_start_matlab_without_xvfb_and_matlab(app_state_fixture):
+    """Test to check if MATLAB doesn't start and sets the error variable to MatlabInstallError when
+    there is not MATLAB on system PATH
+
+    Args:
+        app_state_fixture (AppState): Object of AppState class with defaults set
+    """
+    # Arrange
+    app_state_fixture.settings["is_xvfb_available"] = False
+    app_state_fixture.settings["matlab_cmd"] = None
+
+    # Act
+    await app_state_fixture.start_matlab()
+
+    # Assert
+    # Check if Xvfb has not started
+    assert app_state_fixture.processes["xvfb"] is None
+    # Check if Matlab has not started
+    assert app_state_fixture.processes["matlab"] is None
+    # Check if MatlabInstallError is set as the error
+    assert isinstance(app_state_fixture.error, MatlabInstallError)
 
 
 @pytest.mark.parametrize(

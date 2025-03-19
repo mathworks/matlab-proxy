@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 """This file contains validators for various runtime artifacts.
 A validator is defined as a function which verifies the input and
 returns it unchanged if validation passes.
@@ -320,9 +320,10 @@ def validate_matlab_root_path(matlab_root: Path, is_custom_matlab_root: bool):
     Raises:
         MatlabInstallError
     """
-    warn_string = ""
-    if is_custom_matlab_root:
-        warn_string += f"""Edit the environment variable {mwi_env.get_env_name_custom_matlab_root()} to the correct path, and restart matlab-proxy."""
+
+    # When Custom MATLAB root is provided, validate the existence of the
+    # VersionInfo.xml file at the specified path else, its optional (for matlab wrapper usecase)
+    custom_matlab_root_warn_str = f"Edit the environment variable {mwi_env.get_env_name_custom_matlab_root()} to the correct path, and restart matlab-proxy. "
 
     try:
         __validate_if_paths_exist([matlab_root])
@@ -332,18 +333,25 @@ def validate_matlab_root_path(matlab_root: Path, is_custom_matlab_root: bool):
 
     except OSError as exc:
         logger.error(". ".join(exc.args))
-        raise MatlabInstallError(warn_string)
+        raise MatlabInstallError(
+            custom_matlab_root_warn_str if is_custom_matlab_root else ""
+        )
 
     version_info_file_path = matlab_root / VERSION_INFO_FILE_NAME
 
     if not version_info_file_path.is_file():
-        log_warn_string = (
-            warn_string + f"Unable to locate {VERSION_INFO_FILE_NAME} at {matlab_root}"
-        )
-        logger.warn(log_warn_string)
+        warn_str = f"Unable to locate {VERSION_INFO_FILE_NAME} at {matlab_root}"
+        # If VersionInfo.xml file is missing when a custom MATLAB root is provided, then
+        # raise an error with a detailed message
+        if is_custom_matlab_root:
+            log_error_string = custom_matlab_root_warn_str + warn_str
+            raise MatlabInstallError(log_error_string)
 
-        # Returning None as matlab_root could not be determined
-        return None
+        else:
+            # No VersionInfo.xml file is present and its not a custom MATLAB root, implies a matlab wrapper is
+            # being used, so warn the user and return None as MATLAB root could not be determined
+            logger.warning(warn_str)
+            return None
 
     return matlab_root
 

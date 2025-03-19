@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 
 import datetime
 import os
@@ -47,7 +47,7 @@ def get_process_startup_timeout():
             return int(custom_startup_timeout)
 
         else:
-            logger.warn(
+            logger.warning(
                 f"The value set for {mwi_env.get_env_name_process_startup_timeout()}:{custom_startup_timeout} is not a number. Using {constants.DEFAULT_PROCESS_START_TIMEOUT} as the default value"
             )
             return constants.DEFAULT_PROCESS_START_TIMEOUT
@@ -74,7 +74,7 @@ def get_matlab_executable_and_root_path():
         matlab_root_path = Path(custom_matlab_root_path)
 
         # Terminate process if invalid Custom Path was provided!
-        mwi.validators.validate_matlab_root_path(
+        matlab_root_path = mwi.validators.validate_matlab_root_path(
             matlab_root_path, is_custom_matlab_root=True
         )
 
@@ -101,10 +101,9 @@ def get_matlab_executable_and_root_path():
 
     # Control only gets here if custom matlab root was not set AND which matlab returned no results.
     # Note, error messages are formatted as multi-line strings and the front end displays them as is.
-    error_message = "Unable to find MATLAB on the system PATH. Add MATLAB to the system PATH, and restart matlab-proxy."
-
-    logger.error(error_message)
-    raise MatlabInstallError(error_message)
+    raise MatlabInstallError(
+        "Unable to find MATLAB on the system PATH. Add MATLAB to the system PATH, and restart matlab-proxy."
+    )
 
 
 def get_matlab_version(matlab_root_path):
@@ -126,7 +125,16 @@ def get_matlab_version(matlab_root_path):
     tree = ET.parse(version_info_file_path)
     root = tree.getroot()
 
-    return root.find("release").text
+    matlab_version = root.find("release").text
+
+    # If the matlab on system PATH is a wrapper script, then it would not be possible to determine MATLAB root (inturn not being able to determine MATLAB version)
+    # unless MWI_CUSTOM_MATLAB_ROOT is set. Raising only a warning as the matlab version is only required for communicating with MHLM.
+    if not matlab_version:
+        logger.warning(
+            f"Could not determine MATLAB version from MATLAB root path: {matlab_root_path}. Set {mwi_env.get_env_name_custom_matlab_root()} to a valid MATLAB root path"
+        )
+
+    return matlab_version
 
 
 def get_ws_env_settings():
@@ -270,15 +278,7 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
             logger.warning(warning)
             settings["warnings"].append(warning)
 
-        try:
-            # Update settings with matlab specific values.
-            settings.update(get_matlab_settings())
-        except UIVisibleFatalError as error:
-            logger.error(f"Exception raised during initialization: {error}")
-            settings["error"] = error
-            # Exceptions of this kind must propagate to the UI.
-            # Returning settings that have been created without exceptions
-            pass
+        settings.update(get_matlab_settings())
 
     return settings
 
@@ -362,84 +362,33 @@ def get_matlab_settings():
     Unless they are of type UIVisibleFatalError
     """
 
-    matlab_executable_path, matlab_root_path = get_matlab_executable_and_root_path()
-
     ws_env, ws_env_suffix = get_ws_env_settings()
+    mw_licensing_urls = _get_mw_licensing_urls(ws_env_suffix)
+    nlm_conn_str = _get_nlm_conn_str()
+    has_custom_code_to_execute, code_to_execute = _get_matlab_code_to_execute()
+    err = None
 
-    # MATLAB Proxy gives precedence to the licensing information conveyed
-    # by the user. If MLM_LICENSE_FILE is set, it should be prioritised over
-    # other ways of licensing. But existence of license_info.xml in matlab/licenses
-    # folder may cause hinderance in this workflow. So specifying -licmode as 'file'
-    # overrides license_info.xml and enforces MLM_LICENSE_FILE to be the topmost priority
+    try:
+        matlab_executable_path, matlab_root_path = get_matlab_executable_and_root_path()
 
-    # NLM Connection String provided by MLM_LICENSE_FILE environment variable
-    nlm_conn_str = mwi.validators.validate_mlm_license_file(
-        os.environ.get(mwi_env.get_env_name_network_license_manager())
-    )
-    matlab_lic_mode = ["-licmode", "file"] if nlm_conn_str else ""
-    # flag to hide MATLAB Window
-    flag_to_hide_desktop = ["-nodesktop"]
-    if system.is_windows():
-        flag_to_hide_desktop.extend(["-noDisplayDesktop", "-wait", "-log"])
-
-    matlab_code_dir = Path(__file__).resolve().parent / "matlab"
-    matlab_startup_file = str(matlab_code_dir / "startup.m")
-    matlab_code_file = str(matlab_code_dir / "evaluateUserMatlabCode.m")
+    except UIVisibleFatalError as error:
+        logger.error(f"Exception raised during initialization: {error}")
+        # Set matlab root and executable path to None as MATLAB root could not be determined
+        matlab_executable_path = matlab_root_path = None
+        err = error
 
     matlab_version = get_matlab_version(matlab_root_path)
-
-    # If the matlab on system PATH is a wrapper script, then it would not be possible to determine MATLAB root (inturn not being able to determine MATLAB version)
-    # unless MWI_CUSTOM_MATLAB_ROOT is set. Raising only a warning as the matlab version is only required for communicating with MHLM.
-    if not matlab_version:
-        logger.warn(
-            f"Could not determine MATLAB version from MATLAB root path: {matlab_root_path}"
-        )
-        logger.warn(
-            f"Set {mwi_env.get_env_name_custom_matlab_root()} to a valid MATLAB root path"
-        )
-
-    mpa_flags = (
-        mwi_env.Experimental.get_mpa_flags()
-        if mwi_env.Experimental.is_mpa_enabled()
-        else ""
-    )
-    profile_matlab_startup = (
-        "-timing" if mwi_env.Experimental.is_matlab_startup_profiling_enabled() else ""
-    )
-
-    has_custom_code_to_execute = (
-        len(os.getenv(mwi_env.get_env_name_custom_matlab_code(), "").strip()) > 0
-    )
-
-    # Sanitize file paths to avoid MATLAB not running the script due to early breakup of character array.
-    mp_code_to_execute = f"try; run('{_sanitize_file_path_for_matlab(matlab_startup_file)}'); catch MATLABProxyInitializationError; disp(MATLABProxyInitializationError.message); end;"
-    custom_code_to_execute = f"try; run('{_sanitize_file_path_for_matlab(matlab_code_file)}'); catch MATLABCustomStartupCodeError; disp(MATLABCustomStartupCodeError.message); end;"
-    code_to_execute = (
-        mp_code_to_execute + custom_code_to_execute
-        if has_custom_code_to_execute
-        else mp_code_to_execute
-    )
+    matlab_version_determined_on_startup = bool(matlab_version)
+    matlab_cmd = _get_matlab_cmd(matlab_executable_path, code_to_execute, nlm_conn_str)
 
     return {
-        "matlab_path": matlab_root_path,
+        "error": err,
         "matlab_version": matlab_version,
-        "matlab_version_determined_on_startup": True if matlab_version else False,
-        "matlab_cmd": [
-            matlab_executable_path,
-            "-nosplash",
-            *flag_to_hide_desktop,
-            "-softwareopengl",
-            # " v=mvm ",
-            *matlab_lic_mode,
-            *mpa_flags,
-            profile_matlab_startup,
-            "-r",
-            code_to_execute,
-        ],
+        "matlab_path": matlab_root_path,
+        "matlab_version_determined_on_startup": matlab_version_determined_on_startup,
+        "matlab_cmd": matlab_cmd,
         "ws_env": ws_env,
-        "mwa_api_endpoint": f"https://login{ws_env_suffix}.mathworks.com/authenticationws/service/v4",
-        "mhlm_api_endpoint": f"https://licensing{ws_env_suffix}.mathworks.com/mls/service/v1/entitlement/list",
-        "mwa_login": f"https://login{ws_env_suffix}.mathworks.com",
+        **mw_licensing_urls,
         "nlm_conn_str": nlm_conn_str,
         "has_custom_code_to_execute": has_custom_code_to_execute,
     }
@@ -646,3 +595,104 @@ def _sanitize_file_path_for_matlab(filepath: str) -> str:
     """
     filepath_with_single_quotes_escaped = filepath.replace("'", "''")
     return filepath_with_single_quotes_escaped
+
+
+def _get_matlab_code_to_execute():
+    """Returns the code that needs to run on MATLAB startup.
+    Will check for user provided custom MATLAB code and execute it along with the default startup script.
+
+    Returns:
+        tuple: With the first value representing whether there is custom MATLAB code to execute, and the second value representing the MATLAB code to execute.
+    """
+    matlab_code_dir = Path(__file__).resolve().parent / "matlab"
+    matlab_startup_file = str(matlab_code_dir / "startup.m")
+    matlab_code_file = str(matlab_code_dir / "evaluateUserMatlabCode.m")
+
+    has_custom_code_to_execute = (
+        len(os.getenv(mwi_env.get_env_name_custom_matlab_code(), "").strip()) > 0
+    )
+
+    # Sanitize file paths to avoid MATLAB not running the script due to early breakup of character array.
+    mp_code_to_execute = f"try; run('{_sanitize_file_path_for_matlab(matlab_startup_file)}'); catch MATLABProxyInitializationError; disp(MATLABProxyInitializationError.message); end;"
+    custom_code_to_execute = f"try; run('{_sanitize_file_path_for_matlab(matlab_code_file)}'); catch MATLABCustomStartupCodeError; disp(MATLABCustomStartupCodeError.message); end;"
+    code_to_execute = (
+        mp_code_to_execute + custom_code_to_execute
+        if has_custom_code_to_execute
+        else mp_code_to_execute
+    )
+
+    return has_custom_code_to_execute, code_to_execute
+
+
+def _get_nlm_conn_str():
+    """Get the Network License Manager (NLM) connection string.
+
+    Returns:
+        str: The NLM connection string provided by the MLM_LICENSE_FILE environment variable.
+    """
+    # NLM Connection String provided by MLM_LICENSE_FILE environment variable
+    nlm_conn_str = mwi.validators.validate_mlm_license_file(
+        os.environ.get(mwi_env.get_env_name_network_license_manager())
+    )
+
+    return nlm_conn_str
+
+
+def _get_mw_licensing_urls(ws_env_suffix):
+    """Get the MathWorks licensing URLs.
+
+    Args:
+        ws_env_suffix (str): The environment suffix for the licensing URLs.
+
+    Returns:
+        dict: A dictionary containing the MathWorks licensing URLs for authentication and entitlement.
+    """
+    return {
+        "mwa_api_endpoint": f"https://login{ws_env_suffix}.mathworks.com/authenticationws/service/v4",
+        "mhlm_api_endpoint": f"https://licensing{ws_env_suffix}.mathworks.com/mls/service/v1/entitlement/list",
+        "mwa_login": f"https://login{ws_env_suffix}.mathworks.com",
+    }
+
+
+def _get_matlab_cmd(matlab_executable_path, code_to_execute, nlm_conn_str):
+    """Construct the MATLAB command with appropriate flags and arguments.
+
+    Args:
+        matlab_executable_path (str): The path to the MATLAB executable.
+        code_to_execute (str): The MATLAB code to execute on startup.
+        nlm_conn_str (str): The Network License Manager connection string.
+
+    Returns:
+        list: A list of command-line arguments to launch MATLAB with the specified configuration.
+    """
+    if not matlab_executable_path:
+        return None
+
+    matlab_lic_mode = ["-licmode", "file"] if nlm_conn_str else ""
+    # flag to hide MATLAB Window
+    flag_to_hide_desktop = ["-nodesktop"]
+    if system.is_windows():
+        flag_to_hide_desktop.extend(["-noDisplayDesktop", "-wait", "-log"])
+
+    mpa_flags = (
+        mwi_env.Experimental.get_mpa_flags()
+        if mwi_env.Experimental.is_mpa_enabled()
+        else ""
+    )
+
+    profile_matlab_startup = (
+        "-timing" if mwi_env.Experimental.is_matlab_startup_profiling_enabled() else ""
+    )
+
+    return [
+        matlab_executable_path,
+        "-nosplash",
+        *flag_to_hide_desktop,
+        "-softwareopengl",
+        # " v=mvm ",
+        *matlab_lic_mode,
+        *mpa_flags,
+        profile_matlab_startup,
+        "-r",
+        code_to_execute,
+    ]
