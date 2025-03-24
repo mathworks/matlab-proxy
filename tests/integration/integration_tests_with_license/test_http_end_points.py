@@ -1,4 +1,4 @@
-# Copyright 2023-2024 The MathWorks, Inc.
+# Copyright 2023-2025 The MathWorks, Inc.
 
 """
 Contains integration tests which exercise HTTP endpoints of interest exposed by matlab-proxy-app
@@ -246,24 +246,23 @@ class RealMATLABServer:
 # Fixtures
 @pytest.fixture
 def matlab_proxy_app_fixture(
-    loop,
+    event_loop,
 ):
     """A pytest fixture which yields a real matlab server to be used by tests.
 
     Args:
-        loop (Event event_loop): The built-in event event_loop provided by pytest.
+        event_loop (Event loop): The built-in event loop provided by pytest.
 
     Yields:
         real_matlab_server : A real matlab web server used by tests.
     """
 
     try:
-        with RealMATLABServer(loop) as matlab_proxy_app:
+        with RealMATLABServer(event_loop) as matlab_proxy_app:
             yield matlab_proxy_app
     except ProcessLookupError as e:
         _logger.debug("ProcessLookupError found in matlab proxy app fixture")
         _logger.debug(e)
-        pass
 
 
 @pytest.fixture

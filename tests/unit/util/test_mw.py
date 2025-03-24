@@ -1,4 +1,4 @@
-# Copyright 2020-2023 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 
 import datetime
 import random
@@ -519,7 +519,7 @@ def test_range_matlab_connector_ports():
     not system.is_linux(),
     reason="Xvfb is only required on linux based operating systems",
 )
-async def test_create_xvfb_process(loop):
+async def test_create_xvfb_process(event_loop):
     """Test to check if more than 1 xvfb process can be created with -displayfd flag
 
     Creates 2 xvfb processes with '-displayfd' flag and  checks if the processes are

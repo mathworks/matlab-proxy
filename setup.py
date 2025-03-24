@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 import os
 from pathlib import Path
 from shutil import which
@@ -60,17 +60,17 @@ TESTS_REQUIRES = [
     "pytest-timeout",
     "psutil",
     "urllib3",
-    "requests",
     "pytest-playwright",
 ]
 
 INSTALL_REQUIRES = [
-    "aiohttp>=3.7.4, <=3.10.5",
+    "aiohttp>=3.7.4",
     "aiohttp_session[secure]",
     "importlib-metadata",
     "importlib-resources",
     "psutil",
     "watchdog",
+    "requests",
 ]
 
 HERE = Path(__file__).parent.resolve()

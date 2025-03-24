@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 
 import asyncio
 import pytest
@@ -19,19 +19,19 @@ def test_get_supported_termination_signals():
     assert len(system.get_supported_termination_signals()) >= 1
 
 
-def test_add_signal_handlers(loop: asyncio.AbstractEventLoop):
-    """Test to check if signal handlers are being added to asyncio loop
+def test_add_signal_handlers(event_loop: asyncio.AbstractEventLoop):
+    """Test to check if signal handlers are being added to asyncio event_loop
 
     Args:
-        loop (asyncio loop): In built-in pytest fixture.
+        event_loop (asyncio event loop): built-in pytest fixture.
     """
 
-    loop = add_signal_handlers(loop)
+    event_loop = add_signal_handlers(event_loop)
 
     # In posix systems, event loop is modified with new signal handlers
     if system.is_posix():
-        assert loop._signal_handlers is not None
-        assert loop._signal_handlers.items() is not None
+        assert event_loop._signal_handlers is not None
+        assert event_loop._signal_handlers.items() is not None
 
     else:
         import signal

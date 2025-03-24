@@ -1,4 +1,4 @@
-# Copyright 2020-2022 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 
 import os
 import shutil
@@ -126,7 +126,7 @@ def mock_settings_get_fixture(mocker):
 
 @pytest.fixture(name="test_server")
 def test_server_fixture(
-    loop,
+    event_loop,
     aiohttp_client,
     build_frontend,
     matlab_port_setup,
@@ -140,7 +140,7 @@ def test_server_fixture(
     This fixture 'initializes' the test server with different constraints from the test server in test_app.py
 
     Args:
-        loop : Event Loop
+        event_loop : Event loop
         aiohttp_client : A built-in pytest fixture
         build_frontend: Pytest fixture which generates the directory structure of static files with some placeholder content
         matlab_port_setup: Pytest fixture which monkeypatches 'MWI_DEV' env to False. This is required for the test_server to add static content
@@ -150,7 +150,7 @@ def test_server_fixture(
         [aiohttp_client]: A aiohttp_client to send HTTP requests.
     """
 
-    with FakeServer(loop, aiohttp_client) as test_server:
+    with FakeServer(event_loop, aiohttp_client) as test_server:
         yield test_server
 
 

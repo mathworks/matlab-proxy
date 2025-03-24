@@ -1,4 +1,4 @@
-# Copyright 2023-2024 The MathWorks, Inc.
+# Copyright 2023-2025 The MathWorks, Inc.
 
 import pytest
 from aiohttp import web
@@ -90,7 +90,7 @@ async def fake_endpoint(request):
 
 @pytest.fixture
 def fake_server_with_auth_enabled(
-    loop, aiohttp_client, monkeypatch, get_custom_auth_token_str
+    event_loop, aiohttp_client, monkeypatch, get_custom_auth_token_str
 ):
     auth_token = get_custom_auth_token_str
     auth_enablement = "True"
@@ -120,7 +120,7 @@ def fake_server_with_auth_enabled(
     aiohttp_session_setup(
         app, EncryptedCookieStorage(f, cookie_name="matlab-proxy-session")
     )
-    return loop.run_until_complete(aiohttp_client(app))
+    return event_loop.run_until_complete(aiohttp_client(app))
 
 
 async def test_set_value_with_token(
@@ -256,7 +256,7 @@ async def test_get_value_with_token_in_query_params(
 
 
 @pytest.fixture
-def fake_server_without_auth_enabled(loop, aiohttp_client, monkeypatch):
+def fake_server_without_auth_enabled(event_loop, aiohttp_client, monkeypatch):
     auth_enablement = "False"
     monkeypatch.setenv(
         mwi_env.get_env_name_enable_mwi_auth_token(), str(auth_enablement)
@@ -281,7 +281,7 @@ def fake_server_without_auth_enabled(loop, aiohttp_client, monkeypatch):
     aiohttp_session_setup(
         app, EncryptedCookieStorage(f, cookie_name="matlab-proxy-session")
     )
-    return loop.run_until_complete(aiohttp_client(app))
+    return event_loop.run_until_complete(aiohttp_client(app))
 
 
 async def test_get_value(fake_server_without_auth_enabled):

@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 
 import asyncio
 import datetime
@@ -9,13 +9,18 @@ import time
 from datetime import timedelta, timezone
 from http import HTTPStatus
 
-import aiohttp
 import pytest
-import tests.unit.test_constants as test_constants
+from aiohttp import WSMsgType
+from aiohttp.web import WebSocketResponse
+from multidict import CIMultiDict
 
+import tests.unit.test_constants as test_constants
 from matlab_proxy import app, util
+from matlab_proxy.app import matlab_view
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi.exceptions import EntitlementError, MatlabInstallError
+from tests.unit.fixtures.fixture_auth import patch_authenticate_access_decorator
+from tests.unit.mocks.mock_client import MockWebSocketClient
 
 
 @pytest.mark.parametrize(
@@ -61,7 +66,7 @@ def test_configure_no_proxy_in_env(monkeypatch, no_proxy_user_configuration):
     )
 
 
-def test_create_app(loop):
+def test_create_app(event_loop):
     """Test if aiohttp server is being created successfully.
 
     Checks if the aiohttp server is created successfully, routes, startup and cleanup
@@ -75,7 +80,7 @@ def test_create_app(loop):
     # Verify app server has a cleanup task
     # By default there is 1 for clean up task
     assert len(test_server.on_cleanup) > 1
-    loop.run_until_complete(test_server["state"].stop_server_tasks())
+    event_loop.run_until_complete(test_server["state"].stop_server_tasks())
 
 
 def get_email():
@@ -245,9 +250,33 @@ class FakeServer:
         self.loop.run_until_complete(self.server.cleanup())
 
 
+@pytest.fixture
+def mock_request(mocker):
+    """Creates a mock request with required attributes"""
+    req = mocker.MagicMock()
+    req.app = {
+        "state": mocker.MagicMock(matlab_port=8000),
+        "settings": {"matlab_protocol": "http", "mwapikey": "test-key"},
+    }
+    req.headers = CIMultiDict()
+    req.cookies = {}
+    return req
+
+
+@pytest.fixture(name="mock_websocket_messages")
+def mock_messages(mocker):
+    # Mock WebSocket messages
+    return [
+        mocker.MagicMock(type=WSMsgType.TEXT, data="test message"),
+        mocker.MagicMock(type=WSMsgType.BINARY, data=b"test binary"),
+        mocker.MagicMock(type=WSMsgType.PING),
+        mocker.MagicMock(type=WSMsgType.PONG),
+    ]
+
+
 @pytest.fixture(name="test_server")
 def test_server_fixture(
-    loop,
+    event_loop,
     aiohttp_client,
     monkeypatch,
 ):
@@ -263,7 +292,7 @@ def test_server_fixture(
     # Disabling the authentication token mechanism explicitly
     monkeypatch.setenv(mwi_env.get_env_name_enable_mwi_auth_token(), "False")
     try:
-        with FakeServer(loop, aiohttp_client) as test_server:
+        with FakeServer(event_loop, aiohttp_client) as test_server:
             yield test_server
     except ProcessLookupError:
         pass
@@ -350,7 +379,7 @@ async def test_start_matlab_route(test_server):
     await __check_for_matlab_status(test_server, "starting")
 
 
-async def __check_for_matlab_status(test_server, status):
+async def __check_for_matlab_status(test_server, status, sleep_interval=0.5):
     """Helper function to check if the status of MATLAB returned by the server is either of the values mentioned in statuses
 
     Args:
@@ -369,7 +398,7 @@ async def __check_for_matlab_status(test_server, status):
             break
         else:
             count += 1
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(sleep_interval)
             if count > test_constants.FIVE_MAX_TRIES:
                 raise ConnectionError
 
@@ -592,19 +621,6 @@ async def test_matlab_proxy_http_post_request(proxy_payload, test_server):
             raise ConnectionError
 
 
-# While acceessing matlab-proxy directly, the web socket request looks like
-#     {
-#         "connection": "Upgrade",
-#         "Upgrade": "websocket",
-#     }
-# whereas while accessing matlab-proxy with nginx as the reverse proxy, the nginx server
-# modifies the web socket request to
-#     {
-#         "connection": "upgrade",
-#         "upgrade": "websocket",
-#     }
-
-
 async def test_set_licensing_info_put_nlm(test_server):
     """Test to check endpoint : "/set_licensing_info"
 
@@ -641,35 +657,70 @@ async def test_set_licensing_info_put_invalid_license(test_server):
     assert resp.status == HTTPStatus.BAD_REQUEST
 
 
+# While acceessing matlab-proxy directly, the web socket request looks like
+#     {
+#         "connection": "Upgrade",
+#         "Upgrade": "websocket",
+#     }
+# whereas while accessing matlab-proxy with nginx as the reverse proxy, the nginx server
+# modifies the web socket request to
+#     {
+#         "connection": "upgrade",
+#         "upgrade": "websocket",
+#     }
 @pytest.mark.parametrize(
     "headers",
     [
-        {
-            "connection": "Upgrade",
-            "Upgrade": "websocket",
-        },
-        {
-            "connection": "upgrade",
-            "upgrade": "websocket",
-        },
+        CIMultiDict(
+            {
+                "connection": "Upgrade",
+                "Upgrade": "websocket",
+            }
+        ),
+        CIMultiDict(
+            {
+                "connection": "upgrade",
+                "upgrade": "websocket",
+            }
+        ),
     ],
     ids=["Uppercase header", "Lowercase header"],
 )
-async def test_matlab_proxy_web_socket(test_server, headers):
-    """Test to check if test_server proxies web socket request to fake matlab server
+async def test_matlab_view_websocket_success(
+    mocker,
+    mock_request,
+    mock_websocket_messages,
+    headers,
+    patch_authenticate_access_decorator,
+):
+    """Test successful websocket connection and message forwarding"""
 
-    Args:
-        test_server (aiohttp_client): Test Server to send HTTP Requests.
-    """
+    # Configure request for WebSocket
+    mock_request.headers = headers
+    mock_request.method = "GET"
+    mock_request.path_qs = "/test"
 
-    await wait_for_matlab_to_be_up(test_server, test_constants.ONE_SECOND_DELAY)
-    resp = await test_server.ws_connect("/http_ws_request.html/", headers=headers)
-    text = await resp.receive()
-    websocket_response_string = (
-        "Hello world"  # This string is set by the web_socket_handler in devel.py
+    # Mock WebSocket setup
+    mock_ws_server = mocker.MagicMock(spec=WebSocketResponse)
+    mocker.patch(
+        "matlab_proxy.app.aiohttp.web.WebSocketResponse", return_value=mock_ws_server
     )
-    assert text.type == aiohttp.WSMsgType.TEXT
-    assert text.data == websocket_response_string
+
+    # Mock WebSocket client
+    mock_ws_client = MockWebSocketClient(messages=mock_websocket_messages)
+    mocker.patch(
+        "matlab_proxy.app.aiohttp.ClientSession.ws_connect", return_value=mock_ws_client
+    )
+
+    # Execute
+    result = await matlab_view(mock_request)
+
+    # Assertions
+    assert result == mock_ws_server
+    assert mock_ws_server.send_str.call_count == 1
+    assert mock_ws_server.send_bytes.call_count == 1
+    assert mock_ws_server.ping.call_count == 1
+    assert mock_ws_server.pong.call_count == 1
 
 
 async def test_set_licensing_info_put_mhlm(test_server):
@@ -992,7 +1043,7 @@ async def test_set_licensing_mhlm_single_entitlement(
     assert resp_json["licensing"]["entitlementId"] == "Entitlement3"
 
     # validate that MATLAB has started correctly
-    await __check_for_matlab_status(test_server, "up")
+    await __check_for_matlab_status(test_server, "up", sleep_interval=2)
 
     # test-cleanup: unset licensing
     # without this, we can leave test drool related to cached license file
