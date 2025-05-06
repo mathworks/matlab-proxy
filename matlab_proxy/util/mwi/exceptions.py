@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 
 
 class AppError(Exception):
@@ -130,6 +130,19 @@ class XvfbError(AppError):
     """A Class which inherits the AppError class.
 
     This class represents any errors raised by Xvfb process.
+
+    Args:
+        AppError (Class): Parent Class containing attributes to store
+        messages, logs and stacktrace.
+    """
+
+    pass
+
+
+class WindowManagerError(AppError):
+    """A Class which inherits the AppError class.
+
+    This class represents any errors raised when instantiating a Window Manager within the Xvfb DISPLAY.
 
     Args:
         AppError (Class): Parent Class containing attributes to store

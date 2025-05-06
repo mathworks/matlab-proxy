@@ -218,6 +218,7 @@ def get_dev_settings(config):
         ),
         "warnings": [],
         "is_xvfb_available": False,
+        "is_windowmanager_available": False,
         "mwi_idle_timeout": None,
     }
 
@@ -271,12 +272,21 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
         settings.update(get_server_settings(config_name))
 
         settings["is_xvfb_available"] = True if shutil.which("Xvfb") else False
+        settings["is_windowmanager_available"] = (
+            True if shutil.which("fluxbox") else False
+        )
 
         # Warn user if xvfb is not available on system path.
-        if system.is_linux() and not settings["is_xvfb_available"]:
-            warning = " Unable to find Xvfb on the system PATH. Xvfb enables graphical abilities like plots and figures in the MATLAB desktop.\nConsider adding Xvfb to the system PATH and restart matlab-proxy. See https://github.com/mathworks/matlab-proxy#requirements for information."
-            logger.warning(warning)
-            settings["warnings"].append(warning)
+        if system.is_linux():
+            if not settings["is_xvfb_available"]:
+                warning = "  Unable to find Xvfb on the system PATH. Xvfb enables graphical abilities like plots and figures in the MATLAB desktop.\nConsider adding Xvfb to the system PATH and restart matlab-proxy.\nFor details, see https://github.com/mathworks/matlab-proxy#requirements."
+                logger.warning(warning)
+                settings["warnings"].append(warning)
+
+            if not settings["is_windowmanager_available"]:
+                warning = " Unable to find fluxbox on the system PATH. To use Simulink Online, add Fluxbox to the system PATH and restart matlab-proxy. For details, see https://github.com/mathworks/matlab-proxy#requirements."
+                logger.warning(warning)
+                settings["warnings"].append(warning)
 
         settings.update(get_matlab_settings())
 

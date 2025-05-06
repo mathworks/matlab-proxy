@@ -32,7 +32,7 @@ The following table describes all the environment variables that you can set to 
 | **MWI_CUSTOM_MATLAB_ROOT** | string (optional) | `"/path/to/matlab/root/"` | Optionally, provide a custom path to MATLAB root. For more information see [Adding MATLAB to System Path](#adding-matlab-to-system-path) |
 | **MWI_PROCESS_START_TIMEOUT** | integer (optional) | `1234` |  This field controls the time (in seconds) for which `matlab-proxy` waits for the processes it spins up, viz: MATLAB & Xvfb, to respond. By default, this value is `600 seconds`. A timeout could either indicate an issue with the spawned processes or be a symptom of a resource-constrained environment. Increase this value if your environment needs more time for the spawned processes to start.|
 | **MWI_MATLAB_STARTUP_SCRIPT** | string (optional) | `"addpath('/path/to/a/folder'), c=12"` | Executes string provided at MATLAB startup. For details, see [Run Custom MATLAB Startup Code](#run-custom-matlab-startup-code) |
-| **MWI_SHUTDOWN_ON_IDLE_TIMEOUT** | integer (optional) | 60 | Defines the duration in minutes, that `matlab-proxy` remains idle before shutting down. When you do not set the variable, `matlab-proxy` will not shutdown when idle. For details, [see Shutdown on Idle](#shutdown-on-idle).
+| **MWI_SHUTDOWN_ON_IDLE_TIMEOUT** | integer (optional) | 60 | Defines the duration in minutes, that `matlab-proxy` remains idle before shutting down. When you do not set the variable, `matlab-proxy` will not shut down when idle. For details, [see Shutdown on Idle](#shutdown-on-idle). |
 
 ## Shutdown on Idle
 
@@ -181,6 +181,6 @@ Note: Restarting MATLAB from within `matlab-proxy` will run the specified code a
 
 ----
 
-Copyright 2020-2024 The MathWorks, Inc.
+Copyright 2020-2025 The MathWorks, Inc.
 
 ----

@@ -196,5 +196,5 @@ class Experimental:
 
     @staticmethod
     def is_matlab_startup_profiling_enabled():
-        """Returns true if the simulink online is enabled."""
+        """Returns true if the startup profiling is enabled."""
         return _is_env_set_to_true(Experimental.get_env_name_profile_matlab_startup())

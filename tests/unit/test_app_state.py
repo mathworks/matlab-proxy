@@ -43,6 +43,7 @@ def sample_settings_fixture(tmp_path):
         "warnings": [],
         "matlab_config_file": tmp_file,
         "is_xvfb_available": True,
+        "is_windowmanager_available": True,
         "mwi_server_url": "dummy",
         "mwi_logs_root_dir": Path(settings.get_mwi_config_folder(dev=True)),
         "app_port": 12345,

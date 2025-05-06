@@ -34,6 +34,7 @@ from matlab_proxy.util.mwi.exceptions import (
     OnlineLicensingError,
     UIVisibleFatalError,
     XvfbError,
+    WindowManagerError,
     log_error,
 )
 
@@ -548,7 +549,7 @@ class AppState:
 
         if system.is_linux():
             # If Xvfb is on system PATH, check if it up and running.
-            if self.settings["is_xvfb_available"] and (
+            if self.settings.get("is_xvfb_available", None) and (
                 xvfb_process is None or xvfb_process.returncode is not None
             ):
                 logger.debug(
@@ -1000,11 +1001,6 @@ class AppState:
             f"MW_CONNECTOR_CONTEXT_ROOT is set to: {matlab_env['MW_CONNECTOR_CONTEXT_ROOT']}"
         )
 
-        # Setup Simulink Online which requires a pre-warm stage
-        if mwi_env.Experimental.is_simulink_enabled():
-            logger.info("Enabling usage of Simulink Online...")
-            matlab_env["PREWARM_SIMULINK"] = "true"
-
         # Env setup related to logging
         # Very verbose logging in debug mode
         if logger.isEnabledFor(logging.getLevelName("DEBUG")):
@@ -1052,6 +1048,31 @@ class AppState:
             key: value for key, value in env_vars.items() if not key.startswith(prefix)
         }
 
+    async def __start_window_manager(self, display=None):
+        if display is None:
+            logger.info("Not starting fluxbox as display is not provided")
+            return None
+
+        wm_env = os.environ.copy()
+        wm_env["DISPLAY"] = display
+        wm_cmd = ["fluxbox", "-screen", "0", "-log", "/dev/null"]
+
+        try:
+            logger.info(f"Starting window manager with DISPLAY={wm_env['DISPLAY']}")
+            return await asyncio.create_subprocess_exec(
+                *wm_cmd, close_fds=False, env=wm_env, stderr=asyncio.subprocess.PIPE
+            )
+
+        except Exception as err:
+            self.error = WindowManagerError(
+                "Unable to start the Fluxbox Window Manager due to the following error: "
+                + err
+            )
+            # Log the error on the console.
+            log_error(logger, self.error)
+
+        return None
+
     async def __start_xvfb_process(self):
         """Private method to start the xvfb process. Will set appropriate
         errors to self.error and return None when any exceptions are raised.
@@ -1073,7 +1094,7 @@ class AppState:
             )
             self.settings["matlab_display"] = ":" + str(display_port)
 
-            logger.debug(f"Started Xvfb with PID={xvfb.pid} on DISPLAY={display_port}")
+            logger.info(f"Started Xvfb with PID={xvfb.pid} on DISPLAY={display_port}")
 
             return xvfb
 
@@ -1303,7 +1324,13 @@ class AppState:
 
             self.processes["xvfb"] = xvfb
 
+        # Start Window Manager on linux if possible
+        if system.is_linux() and self.settings["is_windowmanager_available"]:
+            display = self.settings.get("matlab_display", None)
+            await self.__start_window_manager(display)
+
         try:
+
             # Prepare ready file for the MATLAB process.
             self.create_logs_dir_for_MATLAB()
 
