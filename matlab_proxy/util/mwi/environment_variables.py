@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 """This file lists and exposes the environment variables which are used by the integration."""
 
 import os
@@ -190,26 +190,6 @@ class Experimental:
         return _is_env_set_to_true(Experimental.get_env_name_enable_simulink())
 
     @staticmethod
-    def should_use_mos_html():
-        """Returns true if matlab-proxy should use MOS htmls to load MATLAB"""
-        return _is_env_set_to_true("MWI_USE_MOS")
-
-    @staticmethod
-    def should_use_mre_html():
-        """Returns true if matlab-proxy should provide MRE parameter to the htmls used to load MATLAB"""
-        return _is_env_set_to_true("MWI_USE_MRE")
-
-    @staticmethod
-    def get_env_name_enable_mpa():
-        """Returns the environment variable name used to enable MPA support"""
-        return "MWI_ENABLE_MPA"
-
-    @staticmethod
-    def is_mpa_enabled():
-        """Returns true if the simulink online is enabled."""
-        return _is_env_set_to_true(Experimental.get_env_name_enable_mpa())
-
-    @staticmethod
     def get_env_name_profile_matlab_startup():
         """Returns the environment variable name used to enable MPA support"""
         return "MWI_PROFILE_MATLAB_STARTUP"
@@ -218,8 +198,3 @@ class Experimental:
     def is_matlab_startup_profiling_enabled():
         """Returns true if the simulink online is enabled."""
         return _is_env_set_to_true(Experimental.get_env_name_profile_matlab_startup())
-
-    @staticmethod
-    def get_mpa_flags():
-        """Returns list of flags required to enable MPA"""
-        return ["-webui", "-externalUI"]

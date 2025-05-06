@@ -28,8 +28,6 @@ export const getEnvConfigResponse = {
     doc_url: state.envConfig.doc_url,
     extension_name: state.envConfig.extension_name,
     extension_name_short_description: state.envConfig.extension_name_short_description,
-    useMOS: state.matlab.useMOS,
-    useMRE: state.matlab.useMRE,
     authentication: state.authentication,
     matlab: {
         version: state.matlab.versionOnPath,

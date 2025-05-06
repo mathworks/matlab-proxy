@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 
 import asyncio
 import json
@@ -197,8 +197,6 @@ async def get_env_config(req):
     state = req.app["state"]
     config = state.settings["env_config"]
 
-    config["useMOS"] = mwi_env.Experimental.should_use_mos_html()
-    config["useMRE"] = mwi_env.Experimental.should_use_mre_html()
     config["isConcurrencyEnabled"] = IS_CONCURRENCY_CHECK_ENABLED
     # In a previously authenticated session, if the url is accessed without the token(using session cookie), send the token as well.
     config["authentication"] = {

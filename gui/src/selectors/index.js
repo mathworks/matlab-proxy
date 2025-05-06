@@ -19,8 +19,6 @@ export const selectServerStatusFetchFailCount = state => state.serverStatus.fetc
 export const selectLoadUrl = state => state.loadUrl;
 export const selectError = state => state.error;
 export const selectWarnings = state => state.warnings;
-export const selectUseMOS = state => state.matlab.useMOS === true;
-export const selectUseMRE = state => state.matlab.useMRE === true;
 export const selectAuthEnabled = state => state.authentication.enabled;
 export const selectAuthToken = state => state.authentication.token;
 export const selectIsAuthenticated = state => state.authentication.status === true;

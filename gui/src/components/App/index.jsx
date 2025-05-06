@@ -31,8 +31,6 @@ import {
     selectLicensingMhlmHasEntitlements,
     selectIsEntitled,
     selectLicensingInfo,
-    selectUseMOS,
-    selectUseMRE,
     selectIsConcurrent,
     selectWasEverActive,
     selectIsConcurrencyEnabled,
@@ -73,8 +71,6 @@ function App () {
     const isAuthenticated = useSelector(selectIsAuthenticated);
     const authEnabled = useSelector(selectAuthEnabled);
     const licensingInfo = useSelector(selectLicensingInfo);
-    const useMOS = useSelector(selectUseMOS);
-    const useMRE = useSelector(selectUseMRE);
     const isSessionConcurrent = useSelector(selectIsConcurrent);
     const isActiveClient = useSelector(selectIsActiveClient);
     const isConcurrencyEnabled = useSelector(selectIsConcurrencyEnabled);
@@ -163,12 +159,11 @@ function App () {
     }, []);
 
     const htmlToRenderMATLAB = () => {
-        let theHtmlToRenderMATLAB = useMOS
-            ? 'index-matlabonlineserver.html'
-            : 'index-jsd-cr.html';
-        if (useMRE) {
-            theHtmlToRenderMATLAB += `?mre=${encodeURIComponent(fullyQualifiedUrl)}`;
-        }
+        let theHtmlToRenderMATLAB = 'index-jsd-cr.html';
+
+        // Add mre query parameter
+        theHtmlToRenderMATLAB += `?mre=${encodeURIComponent(fullyQualifiedUrl)}`;
+
         return theHtmlToRenderMATLAB;
     };
 
@@ -377,7 +372,6 @@ function App () {
     // process in development mode
 
     // MW Internal Comment: See g2992889 for a discussion on why a FQDN is required in the MRE parameter.
-    // MW Internal Comment: Using websocket on breaks some UI components : `./index-matlabonlineserver.html?websocket=on&mre=${fullyQualifiedUrl}`;
     const matlabUrl = process.env.NODE_ENV === 'development'
         ? 'http://localhost:31515/index-jsd-cr.html'
         : `./${htmlToRenderMATLAB()}`;

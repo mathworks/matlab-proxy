@@ -543,21 +543,6 @@ def test_get_matlab_cmd_windows(mocker):
     assert ".exe" in cmd[0]  # Assert .exe suffix in matlab_executable_path
 
 
-def test_get_matlab_cmd_with_mpa_flags(mocker):
-    # Arrange
-    mocker.patch(
-        "matlab_proxy.settings.mwi_env.Experimental.is_mpa_enabled", return_value=True
-    )
-    matlab_executable_path = "/path/to/matlab"
-    code_to_execute = "disp('Test')"
-
-    # Act
-    cmd = settings._get_matlab_cmd(matlab_executable_path, code_to_execute, None)
-
-    # Assert
-    assert all(mpa_flag in cmd for mpa_flag in mwi_env.Experimental.get_mpa_flags())
-
-
 def test_get_matlab_cmd_with_startup_profiling(mocker):
     # Arrange
     mocker.patch("matlab_proxy.settings.system.is_windows", return_value=False)

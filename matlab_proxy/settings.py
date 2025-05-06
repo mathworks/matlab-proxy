@@ -674,12 +674,6 @@ def _get_matlab_cmd(matlab_executable_path, code_to_execute, nlm_conn_str):
     if system.is_windows():
         flag_to_hide_desktop.extend(["-noDisplayDesktop", "-wait", "-log"])
 
-    mpa_flags = (
-        mwi_env.Experimental.get_mpa_flags()
-        if mwi_env.Experimental.is_mpa_enabled()
-        else ""
-    )
-
     profile_matlab_startup = (
         "-timing" if mwi_env.Experimental.is_matlab_startup_profiling_enabled() else ""
     )
@@ -691,7 +685,7 @@ def _get_matlab_cmd(matlab_executable_path, code_to_execute, nlm_conn_str):
         "-softwareopengl",
         # " v=mvm ",
         *matlab_lic_mode,
-        *mpa_flags,
+        "-externalUI",
         profile_matlab_startup,
         "-r",
         code_to_execute,

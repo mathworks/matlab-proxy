@@ -994,12 +994,11 @@ class AppState:
         # The mwi_logs_dir is where MATLAB will write any subsequent logs
         matlab_env["MATLAB_LOG_DIR"] = str(self.mwi_logs_dir)
 
-        # Set MW_CONNECTOR_CONTEXT_ROOT for MPA
-        if mwi_env.Experimental.is_mpa_enabled():
-            matlab_env["MW_CONNECTOR_CONTEXT_ROOT"] = self.settings.get("base_url", "/")
-            logger.info(
-                f"MW_CONNECTOR_CONTEXT_ROOT is set to: {matlab_env['MW_CONNECTOR_CONTEXT_ROOT']}"
-            )
+        # Set MW_CONNECTOR_CONTEXT_ROOT
+        matlab_env["MW_CONNECTOR_CONTEXT_ROOT"] = self.settings.get("base_url", "/")
+        logger.info(
+            f"MW_CONNECTOR_CONTEXT_ROOT is set to: {matlab_env['MW_CONNECTOR_CONTEXT_ROOT']}"
+        )
 
         # Setup Simulink Online which requires a pre-warm stage
         if mwi_env.Experimental.is_simulink_enabled():

@@ -41,26 +41,6 @@ export function authEnabled (state = false, action) {
     }
 }
 
-// Stores information on whether to use MOS HTML while rendering MATLAB.
-export function useMOS (state = false, action) {
-    switch (action.type) {
-        case RECEIVE_ENV_CONFIG:
-            return action.config.useMOS;
-        default:
-            return state;
-    }
-}
-
-// Stores information on whether to provide MRE parameter to HTML while rendering MATLAB.
-export function useMRE (state = false, action) {
-    switch (action.type) {
-        case RECEIVE_ENV_CONFIG:
-            return action.config.useMRE;
-        default:
-            return state;
-    }
-}
-
 // Stores timeout duration for idle timer.
 export function idleTimeoutDuration (state = null, action) {
     switch (action.type) {
@@ -413,8 +393,6 @@ export const matlab = combineReducers({
     versionOnPath: matlabVersionOnPath,
     supportedVersions: supportedMatlabVersions,
     busyStatus: matlabBusyStatus,
-    useMOS,
-    useMRE
 });
 
 export const serverStatus = combineReducers({

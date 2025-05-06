@@ -1,8 +1,5 @@
-% Copyright 2020-2024 The MathWorks, Inc.
+% Copyright 2020-2025 The MathWorks, Inc.
 
-if (strlength(getenv('MWI_BASE_URL')) > 0)
-    connector.internal.setConfig('contextRoot', getenv('MWI_BASE_URL'));
-end
 evalc('connector.internal.Worker.start');
 
 % Add-on explorer is not supported in this environment.
