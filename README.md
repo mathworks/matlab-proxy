@@ -138,6 +138,7 @@ The following options are available in the status panel (some options are only a
 | Stop MATLAB | Stop your MATLAB session. Use this option if you want to free up RAM and CPU resources. Available if MATLAB is running or starting.|
 | Sign Out | Sign out of MATLAB session. Use this to stop MATLAB and sign in with an alternative account. Available if using online licensing.|
 | Unset License Server Address | Unset network license manager server address. Use this to stop MATLAB and enter new licensing information. Available if using network license manager.|
+| Shut Down | Stop your MATLAB session and the `matlab-proxy` server.|
 | Feedback | Provide feedback. Opens a new tab to create an issue on GitHub.|
 | Help | Open a help pop-up for a detailed description of the options.|
 
