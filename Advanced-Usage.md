@@ -160,7 +160,7 @@ When you start MATLAB using `matlab-proxy`, MATLAB will first run a `startup.m` 
 
 You might want to run code at startup to:
 1. Add a folder to the MATLAB search path before you run a script.
-2. Set a constant in the workspace
+2. Set a constant in the workspace.
 
 For example, to set variables `c1` and `c2`, with values `124` and `'xyz'`, respectively, and to add the folder `C:\Windows\Temp` to the MATLAB search path, run the command:
 ```bash
@@ -171,7 +171,7 @@ To specify a script to run at startup, use the `run` command and provide the pat
 env MWI_MATLAB_STARTUP_SCRIPT="run('path/to/startup_script.m')" matlab-proxy-app
 ```
 
-If the code you specify throws an error, then after MATLAB starts, you see a variable `MATLABCustomStartupCodeError` of type `MException` in the workspace. To see the error message, run `disp(MATLABCustomStartupCodeError.message)` in the command window.
+If the code you specify throws an error, then after MATLAB starts, you see a variable named `MATLABCustomStartupCodeError` of type `MException` in the workspace. To see the error message, run `disp(MATLABCustomStartupCodeError.message)` in the command window. To see the output of your code, open the file named `startup_code_output.txt` at the location `<USER-HOME-DIR>\.matlab\MWI\hosts\<HOSTNAME>\ports\<MATLAB-PROXY-PORT>\startup_code_output.txt`. The path to this file is also displayed in the terminal from where you started `matlab-proxy`.
 
 Note: Restarting MATLAB from within `matlab-proxy` will run the specified code again.
 
