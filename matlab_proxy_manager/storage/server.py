@@ -101,8 +101,11 @@ class ServerProcess:
 
             # Force kill matlab-proxy and its process tree if termination
             # via shutdown_integration endpoint fails
-            matlab_proxy_process = psutil.Process(int(self.pid))
-            self.terminate_process_tree(matlab_proxy_process)
+            try:
+                matlab_proxy_process = psutil.Process(int(self.pid))
+                self.terminate_process_tree(matlab_proxy_process)
+            except Exception as e:
+                log.debug("Exception while terminating child processes: %s", e)
             return None
 
     def terminate_process_tree(self, matlab_proxy_process):

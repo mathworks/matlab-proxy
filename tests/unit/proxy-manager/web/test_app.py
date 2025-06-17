@@ -1,4 +1,4 @@
-# Copyright 2024 The MathWorks, Inc.
+# Copyright 2024-2025 The MathWorks, Inc.
 import asyncio
 import os
 from collections import namedtuple
@@ -388,6 +388,93 @@ class TestProxy:
             },
         )
 
+    async def test_proxy_start_default_proxy_is_called_if_default_proxy_not_already_started(
+        self, mocker
+    ):
+        # Setup
+        mock_req = mocker.MagicMock()
+        mock_req.rel_url = "/matlab/default/some/path"
+        mock_req.headers = {"MWI-MPM-CONTEXT": "test_context"}
+        mock_req.method = "POST"
+        mock_req.read = mocker.AsyncMock(return_value=b"request_body")
+        mock_req.app = {"has_default_matlab_proxy_started": False, "servers": {}}
+        mock_start_default_proxy = mocker.patch(
+            "matlab_proxy_manager.web.app._start_default_proxy",
+        )
+        mocker.patch(
+            "matlab_proxy_manager.web.app._get_backend_server",
+            return_value={"absolute_url": "http://server", "headers": {}},
+        )
+        mock_forward_http = mocker.patch(
+            "matlab_proxy_manager.web.app._forward_http_request",
+            return_value=web.Response(),
+        )
+
+        # Execute
+        await app.proxy(mock_req)
+
+        # Assertions
+        mock_start_default_proxy.assert_called_once()
+        mock_forward_http.assert_called_once()
+
+    async def test_proxy_start_default_proxy_is_not_called_if_proxying_non_default_matlab_request(
+        self, mocker
+    ):
+        # Setup
+        mock_req = mocker.MagicMock()
+        mock_req.rel_url = "/matlab/12345/some/path"
+        mock_req.headers = {"MWI-MPM-CONTEXT": "test_context"}
+        mock_req.method = "POST"
+        mock_req.read = mocker.AsyncMock(return_value=b"request_body")
+        mock_req.app = {"has_default_matlab_proxy_started": False, "servers": {}}
+        mock_start_default_proxy = mocker.patch(
+            "matlab_proxy_manager.web.app._start_default_proxy",
+        )
+        mocker.patch(
+            "matlab_proxy_manager.web.app._get_backend_server",
+            return_value={"absolute_url": "http://server", "headers": {}},
+        )
+        mock_forward_http = mocker.patch(
+            "matlab_proxy_manager.web.app._forward_http_request",
+            return_value=web.Response(),
+        )
+
+        # Execute
+        await app.proxy(mock_req)
+
+        # Assertions
+        mock_start_default_proxy.assert_not_called()
+        mock_forward_http.assert_called_once()
+
+    async def test_proxy_start_default_proxy_is_not_called_if_default_proxy_already_started(
+        self, mocker
+    ):
+        # Setup
+        mock_req = mocker.MagicMock()
+        mock_req.rel_url = "/matlab/default/some/path"
+        mock_req.headers = {"MWI-MPM-CONTEXT": "test_context"}
+        mock_req.method = "POST"
+        mock_req.read = mocker.AsyncMock(return_value=b"request_body")
+        mock_req.app = {"has_default_matlab_proxy_started": True, "servers": {}}
+        mock_start_default_proxy = mocker.patch(
+            "matlab_proxy_manager.web.app._start_default_proxy",
+        )
+        mocker.patch(
+            "matlab_proxy_manager.web.app._get_backend_server",
+            return_value={"absolute_url": "http://server", "headers": {}},
+        )
+        mock_forward_http = mocker.patch(
+            "matlab_proxy_manager.web.app._forward_http_request",
+            return_value=web.Response(),
+        )
+
+        # Execute
+        await app.proxy(mock_req)
+
+        # Assertions
+        mock_start_default_proxy.assert_not_called()
+        mock_forward_http.assert_called_once()
+
 
 @pytest.fixture
 def patch_env_vars(monkeypatch):
@@ -491,25 +578,19 @@ class TestHelpers:
         assert args[0] == "dummy_signal"
         assert callable(args[1])
 
-    async def test_start_default_proxy(self, mocker):
+    async def test_start_default_proxy_happy_path(self, mocker):
         """Test the startup of the default proxy."""
         # Mock the necessary components
         app_state = {
             "parent_pid": "123",
             "auth_token": "token",
             "data_dir": "/path/to/data",
+            "servers": {},
         }
         mock_server_process = {"id": "server1", "details": "other details"}
         mock_start_proxy = mocker.patch(
             "matlab_proxy_manager.lib.api.start_matlab_proxy_for_jsp",
             return_value=mock_server_process,
-        )
-
-        mocker.patch(
-            "matlab_proxy_manager.web.app.helpers.pre_load_from_state_file",
-            return_value={
-                "existing_server": {"id": "existing_server", "details": "some details"}
-            },
         )
 
         # Exercise the system under test
@@ -520,36 +601,29 @@ class TestHelpers:
             parent_id="123", is_shared_matlab=True, mpm_auth_token="token"
         )
         assert app_state["servers"] == {
-            "existing_server": {"id": "existing_server", "details": "some details"},
             "server1": mock_server_process,
         }
 
-    async def test_start_default_proxy_returns_none(self, mocker):
+    async def test_start_default_proxy_throws_Exception(self, mocker):
         """Test the startup of the default proxy."""
         # Mock the necessary components
         app_state = {
             "parent_pid": "123",
             "auth_token": "token",
             "data_dir": "/path/to/data",
+            "servers": {},
         }
         mocker.patch(
             "matlab_proxy_manager.lib.api.start_matlab_proxy_for_jsp",
-            return_value=None,
+            return_value={"errors": ["Failed to start matlab-proxy server"]},
         )
 
-        mock_helper = mocker.patch(
-            "matlab_proxy_manager.web.app.helpers.pre_load_from_state_file",
-            return_value={
-                "existing_server": {"id": "existing_server", "details": "some details"}
-            },
-        )
-
-        # Exercise the system under test
-        await app._start_default_proxy(app_state)
+        with pytest.raises(Exception):
+            # Exercise the system under test
+            await app._start_default_proxy(app_state)
 
         # Assertions
-        mock_helper.assert_not_called()
-        assert app_state.get("servers") is None
+        assert app_state.get("servers") == {}
 
     def test_fetch_and_validate_required_env_vars(self, patch_env_vars):
         """Test to verify that the function correctly fetches and validates required environment variables."""

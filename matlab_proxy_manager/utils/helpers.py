@@ -1,4 +1,4 @@
-# Copyright 2024 The MathWorks, Inc.
+# Copyright 2024-2025 The MathWorks, Inc.
 import http
 import os
 import socket
@@ -204,7 +204,7 @@ def poll_for_server_deletion() -> None:
     Logs the status of server deletion attempts.
     """
     timeout_in_seconds: int = 2
-    log.info("Interrupt/termination signal caught, cleaning up resources")
+    log.debug("Interrupt/termination signal caught, cleaning up resources")
     start_time = time.time()
 
     while time.time() - start_time < timeout_in_seconds:

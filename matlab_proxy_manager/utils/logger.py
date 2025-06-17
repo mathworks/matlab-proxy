@@ -1,4 +1,4 @@
-# Copyright 2024 The MathWorks, Inc.
+# Copyright 2024-2025 The MathWorks, Inc.
 # Helper functions to access & control the logging behavior of the app
 
 import logging
@@ -55,6 +55,9 @@ def __set_logging_configuration():
     # Allow other libraries used by this integration to
     # also print their logs at the specified level
     logging.basicConfig(level=log_level)
+
+    # Suppress debug logs from the watchdog module
+    logging.getLogger("watchdog").setLevel(logging.WARNING)
 
     return logger
 

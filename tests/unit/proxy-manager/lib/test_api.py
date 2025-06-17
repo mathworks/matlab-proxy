@@ -2,6 +2,7 @@
 import pytest
 
 from matlab_proxy_manager.lib import api as mpm_api
+from matlab_proxy_manager.utils import exceptions
 from matlab_proxy_manager.storage.server import ServerProcess
 
 
@@ -129,7 +130,7 @@ async def test_start_matlab_proxy_with_existing_server(mocker, mock_server_proce
     assert result == mock_server_process.as_dict()
 
 
-async def test_start_matlab_proxy_returns_none_if_server_not_created(
+async def test_start_matlab_proxy_returns_error_if_server_not_created(
     mocker, mock_server_process
 ):
     """
@@ -156,15 +157,17 @@ async def test_start_matlab_proxy_returns_none_if_server_not_created(
         return_value=None,
     )
     mock_start_subprocess = mocker.patch(
-        "matlab_proxy_manager.lib.api._start_subprocess_and_check_for_readiness",
-        return_value=None,
+        "matlab_proxy_manager.lib.api._start_subprocess"
+    )
+    mock_start_subprocess.side_effect = exceptions.ProcessStartError(
+        extra_info="Server creation failed"
     )
 
     caller_id = "test_caller"
     parent_id = "test_parent"
     is_shared_matlab = True
 
-    result = await mpm_api._start_matlab_proxy(
+    server_process = await mpm_api._start_matlab_proxy(
         caller_id=caller_id, ctx=parent_id, is_shared_matlab=is_shared_matlab
     )
 
@@ -174,7 +177,9 @@ async def test_start_matlab_proxy_returns_none_if_server_not_created(
     mock_start_subprocess.assert_awaited_once()
     mock_create_state_file.assert_not_called()
 
-    assert result is None
+    assert isinstance(server_process, dict)
+    assert len(server_process.get("errors")) == 1
+    assert "Server creation failed" in server_process.get("errors")[0]
 
 
 async def test_matlab_proxy_is_cleaned_up_if_server_was_not_ready(mocker):
@@ -214,14 +219,14 @@ async def test_matlab_proxy_is_cleaned_up_if_server_was_not_ready(mocker):
     )
     mock_start_subprocess = mocker.patch(
         "matlab_proxy_manager.lib.api._start_subprocess",
-        return_value=(1, "dummy", "dummy"),
+        return_value=(1, "dummy"),
     )
 
     caller_id = "test_caller"
     parent_id = "test_parent"
     is_shared_matlab = True
 
-    result = await mpm_api._start_matlab_proxy(
+    server_process = await mpm_api._start_matlab_proxy(
         caller_id=caller_id, ctx=parent_id, is_shared_matlab=is_shared_matlab
     )
 
@@ -234,7 +239,9 @@ async def test_matlab_proxy_is_cleaned_up_if_server_was_not_ready(mocker):
     mock_is_server_ready.assert_called_once()
     mock_shutdown.assert_called_once()
 
-    assert result is None
+    assert isinstance(server_process, dict)
+    assert len(server_process.get("errors")) == 1
+    assert "MATLAB Proxy Server unavailable" in server_process.get("errors")[0]
 
 
 # Test for shutdown with missing arguments
