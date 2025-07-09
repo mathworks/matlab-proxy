@@ -214,9 +214,9 @@ def __get_configs():
         Dict: Contains all the values present in 'matlab_web_desktop_configs' entry_point from all the packages
         installed in the current environment.
     """
-    import importlib_metadata
+    import importlib.metadata
 
-    matlab_proxy_eps = importlib_metadata.entry_points(
+    matlab_proxy_eps = importlib.metadata.entry_points(
         group=matlab_proxy.get_entrypoint_name()
     )
     configs = {}
