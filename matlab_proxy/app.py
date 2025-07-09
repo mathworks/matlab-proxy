@@ -493,7 +493,7 @@ def make_static_route_table(app):
     Returns:
         Dict: Containing information about the static files and header information.
     """
-    import importlib_resources
+    import importlib.resources
 
     from matlab_proxy import gui
     from matlab_proxy.gui import static
@@ -510,9 +510,9 @@ def make_static_route_table(app):
         (gui.static.js.__name__, "/static/js"),
         (gui.static.media.__name__, "/static/media"),
     ]:
-        for entry in importlib_resources.files(mod).iterdir():
+        for entry in importlib.resources.files(mod).iterdir():
             name = entry.name
-            if not importlib_resources.files(mod).joinpath(name).is_dir():
+            if not importlib.resources.files(mod).joinpath(name).is_dir():
                 if name != "__init__.py":
                     # Special case for manifest.json
                     if "manifest.json" in name:

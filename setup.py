@@ -66,8 +66,6 @@ TESTS_REQUIRES = [
 INSTALL_REQUIRES = [
     "aiohttp>=3.7.4",
     "aiohttp_session[secure]",
-    "importlib-metadata",
-    "importlib-resources",
     "psutil",
     "watchdog",
     "requests",
