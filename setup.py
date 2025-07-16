@@ -50,6 +50,8 @@ class InstallNpm(install):
         super().run()
 
 
+# Testing dependencies
+# Note: pytest-asyncio is pinned to 0.24.0 for event loop compatibility
 TESTS_REQUIRES = [
     "pytest",
     "pytest-env",
@@ -61,6 +63,7 @@ TESTS_REQUIRES = [
     "psutil",
     "urllib3",
     "pytest-playwright",
+    "pytest-asyncio==0.24.0",
 ]
 
 INSTALL_REQUIRES = [
