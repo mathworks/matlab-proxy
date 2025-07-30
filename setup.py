@@ -110,7 +110,7 @@ setuptools.setup(
     python_requires="~=3.8",
     install_requires=INSTALL_REQUIRES,
     tests_require=TESTS_REQUIRES,
-    extras_require={"dev": ["aiohttp-devtools", "black"] + TESTS_REQUIRES},
+    extras_require={"dev": ["aiohttp-devtools", "black", "ruff"] + TESTS_REQUIRES},
     # The entrypoint will be used by multiple packages that have this package as an installation
     # dependency. These packages can use the same API, get_entrypoint_name(), to make their configs discoverable
     entry_points={

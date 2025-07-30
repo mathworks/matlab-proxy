@@ -1,0 +1,12 @@
+// Copyright 2025 The MathWorks, Inc.
+{
+  // Requires the 'Ruff' extension installed in Visual Studio Code
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
+      "source.organizeImports": "explicit"
+    },
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  }
+}

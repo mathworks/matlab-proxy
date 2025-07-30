@@ -198,3 +198,13 @@ class Experimental:
     def is_matlab_startup_profiling_enabled():
         """Returns true if the startup profiling is enabled."""
         return _is_env_set_to_true(Experimental.get_env_name_profile_matlab_startup())
+
+    @staticmethod
+    def get_env_name_use_cookie_cache():
+        """Returns the environment variable name used to enable cookie jar support for matlab-proxy"""
+        return "MWI_USE_COOKIE_CACHE"
+
+    @staticmethod
+    def should_use_cookie_cache():
+        """Returns true if the cookie jar support is enabled."""
+        return _is_env_set_to_true(Experimental.get_env_name_use_cookie_cache())

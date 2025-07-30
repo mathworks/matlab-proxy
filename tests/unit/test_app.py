@@ -7,7 +7,7 @@ import platform
 import random
 import time
 from datetime import timedelta, timezone
-from http import HTTPStatus
+from http import HTTPStatus, cookies
 
 import pytest
 from aiohttp import WSMsgType
@@ -19,7 +19,9 @@ from matlab_proxy import app, util
 from matlab_proxy.app import matlab_view
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi.exceptions import EntitlementError, MatlabInstallError
-from tests.unit.fixtures.fixture_auth import patch_authenticate_access_decorator
+from tests.unit.fixtures.fixture_auth import (
+    patch_authenticate_access_decorator,  # noqa: F401
+)
 from tests.unit.mocks.mock_client import MockWebSocketClient
 
 
@@ -236,8 +238,8 @@ class FakeServer:
     Setting up the server in the context of Pytest.
     """
 
-    def __init__(self, loop, aiohttp_client):
-        self.loop = loop
+    def __init__(self, event_loop, aiohttp_client):
+        self.loop = event_loop
         self.aiohttp_client = aiohttp_client
 
     def __enter__(self):
@@ -256,7 +258,11 @@ def mock_request(mocker):
     req = mocker.MagicMock()
     req.app = {
         "state": mocker.MagicMock(matlab_port=8000),
-        "settings": {"matlab_protocol": "http", "mwapikey": "test-key"},
+        "settings": {
+            "matlab_protocol": "http",
+            "mwapikey": "test-key",
+            "cookie_jar": None,
+        },
     }
     req.headers = CIMultiDict()
     req.cookies = {}
@@ -275,11 +281,7 @@ def mock_messages(mocker):
 
 
 @pytest.fixture(name="test_server")
-def test_server_fixture(
-    event_loop,
-    aiohttp_client,
-    monkeypatch,
-):
+def test_server_fixture(event_loop, aiohttp_client, monkeypatch, request):
     """A pytest fixture which yields a test server to be used by tests.
 
     Args:
@@ -289,18 +291,29 @@ def test_server_fixture(
     Yields:
         aiohttp_client : A aiohttp_client server used by tests.
     """
-    # Disabling the authentication token mechanism explicitly
-    monkeypatch.setenv(mwi_env.get_env_name_enable_mwi_auth_token(), "False")
+    # Default set of environment variables for testing convenience
+    default_env_vars_for_testing = [
+        (mwi_env.get_env_name_enable_mwi_auth_token(), "False")
+    ]
+    custom_env_vars = getattr(request, "param", None)
+
+    if custom_env_vars:
+        default_env_vars_for_testing.extend(custom_env_vars)
+
+    for env_var_name, env_var_value in default_env_vars_for_testing:
+        monkeypatch.setenv(env_var_name, env_var_value)
+
     try:
         with FakeServer(event_loop, aiohttp_client) as test_server:
             yield test_server
+
     except ProcessLookupError:
         pass
+
     finally:
-        # Cleaning up the env variable related to auth token
-        monkeypatch.delenv(
-            mwi_env.get_env_name_enable_mwi_auth_token(), raising="False"
-        )
+        # Cleaning up the environment variables set for testing
+        for env_var_name, _ in default_env_vars_for_testing:
+            monkeypatch.delenv(env_var_name, raising="False")
 
 
 async def test_get_status_route(test_server):
@@ -689,7 +702,7 @@ async def test_matlab_view_websocket_success(
     mock_request,
     mock_websocket_messages,
     headers,
-    patch_authenticate_access_decorator,
+    patch_authenticate_access_decorator,  # noqa: F401
 ):
     """Test successful websocket connection and message forwarding"""
 
@@ -1198,3 +1211,89 @@ async def test_check_for_concurrency(test_server):
         status_resp_json = json.loads(await status_resp.text())
         assert "clientId" not in status_resp_json
         assert "isActiveClient" not in status_resp_json
+
+
+# Pytest construct to set the environment variable `MWI_ENABLE_COOKIE_JAR` to `"True"`
+# before initializing the test_server.
+@pytest.mark.parametrize(
+    "test_server",
+    [
+        [(mwi_env.Experimental.get_env_name_use_cookie_cache(), "True")],
+    ],
+    indirect=True,
+)
+async def test_cookie_jar_http_request(proxy_payload, test_server):
+    # Arrange
+    actual_custom_cookie = cookies.Morsel()
+    actual_custom_cookie.set("custom_cookie", "cookie_value", "cookie_value")
+    actual_custom_cookie["domain"] = "example.com"
+    actual_custom_cookie["path"] = "/"
+    actual_custom_cookie["HttpOnly"] = True
+    actual_custom_cookie["expires"] = (
+        datetime.datetime.now() + timedelta(days=1)
+    ).strftime("%a, %d-%b-%Y %H:%M:%S GMT")
+
+    await wait_for_matlab_to_be_up(test_server, test_constants.ONE_SECOND_DELAY)
+
+    # Manually update cookie in cookie jar
+    test_server.app["settings"]["cookie_jar"]._cookie_jar[
+        "custom_cookie"
+    ] = actual_custom_cookie
+
+    # Act
+    async with await test_server.get(
+        "/http_get_request.html", data=json.dumps(proxy_payload)
+    ) as _:
+        expected_custom_cookie = test_server.app["settings"]["cookie_jar"]._cookie_jar[
+            "custom_cookie"
+        ]
+
+        # Assert
+        assert actual_custom_cookie == expected_custom_cookie
+
+
+# Pytest construct to set the environment variable `MWI_ENABLE_COOKIE_JAR` to `"True"`
+# before initializing the test_server.
+@pytest.mark.parametrize(
+    "test_server",
+    [
+        [(mwi_env.Experimental.get_env_name_use_cookie_cache(), "True")],
+    ],
+    indirect=True,
+)
+async def test_cookie_jar_web_socket(proxy_payload, test_server):
+    # Arrange
+
+    # Createa a custom cookie
+    actual_custom_cookie = cookies.Morsel()
+    actual_custom_cookie.set("custom_cookie", "cookie_value", "cookie_value")
+    actual_custom_cookie["domain"] = "example.com"
+    actual_custom_cookie["path"] = "/"
+    actual_custom_cookie["expires"] = (
+        datetime.datetime.now() + timedelta(days=1)
+    ).strftime("%a, %d-%b-%Y %H:%M:%S GMT")
+
+    # Update cookie in cookie jar
+    test_server.app["settings"]["cookie_jar"]._cookie_jar[
+        "custom_cookie"
+    ] = actual_custom_cookie
+
+    await wait_for_matlab_to_be_up(test_server, test_constants.ONE_SECOND_DELAY)
+
+    # Act
+    async with test_server.get(
+        "/http_ws_request.html/",
+        headers={
+            # Headers required to initiate a websocket connection
+            # First 2 headers are required for the connection upgrade
+            "Connection": "upgrade",
+            "upgrade": "websocket",
+            "Sec-WebSocket-Version": "13",  # Required for initiating the websocket handshake with aiohttp server
+            "Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",  # Optional unique key for the websocket handshake
+        },
+    ) as _:
+        expected_custom_cookie = test_server.app["settings"]["cookie_jar"]._cookie_jar[
+            "custom_cookie"
+        ]
+        # Assert
+        assert actual_custom_cookie == expected_custom_cookie

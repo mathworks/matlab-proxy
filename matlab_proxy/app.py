@@ -283,6 +283,10 @@ async def start_matlab(req):
         JSONResponse: JSONResponse object containing updated information on the state of MATLAB among other information.
     """
     state = req.app["state"]
+    cookie_jar = req.app["settings"]["cookie_jar"]
+
+    if cookie_jar:
+        cookie_jar.clear()
 
     # Start MATLAB
     await state.start_matlab(restart_matlab=True)
@@ -349,7 +353,7 @@ async def set_licensing_info(req):
             raise Exception(
                 'License type must be "NLM" or "MHLM" or "ExistingLicense"!'
             )
-    except Exception as e:
+    except Exception:
         raise web.HTTPBadRequest(text="Error with licensing!")
 
     # This is true for a user who has only one license associated with their account
@@ -495,9 +499,13 @@ def make_static_route_table(app):
     """
     import importlib_resources
 
-    from matlab_proxy import gui
-    from matlab_proxy.gui import static
-    from matlab_proxy.gui.static import css, js, media
+    from matlab_proxy import gui  # noqa: F401
+    from matlab_proxy.gui import static  # noqa: F401
+    from matlab_proxy.gui.static import (
+        css,  # noqa: F401
+        js,  # noqa: F401
+        media,  # noqa: F401
+    )
 
     base_url = app["settings"]["base_url"]
 
@@ -557,6 +565,9 @@ async def matlab_view(req):
     matlab_protocol = req.app["settings"]["matlab_protocol"]
     mwapikey = req.app["settings"]["mwapikey"]
     matlab_base_url = f"{matlab_protocol}://127.0.0.1:{matlab_port}"
+    cookie_jar = req.app["settings"]["cookie_jar"]
+
+    cookies_from_jar = cookie_jar.get_dict() if cookie_jar else None
 
     # If we are trying to send request to matlab while the matlab_port is still not assigned
     # by embedded connector, return service not available and log a message
@@ -576,11 +587,14 @@ async def matlab_view(req):
         and req.method == "GET"
     ):
         ws_server = web.WebSocketResponse()
+
         await ws_server.prepare(req)
 
         async with aiohttp.ClientSession(
+            cookies=(
+                cookies_from_jar if cookie_jar else req.cookies
+            ),  # If cookie jar is not provided, use the cookies from the incoming request
             trust_env=True,
-            cookies=req.cookies,
             connector=aiohttp.TCPConnector(ssl=False),
         ) as client_session:
             try:
@@ -627,6 +641,7 @@ async def matlab_view(req):
                         ],
                         return_when=asyncio.FIRST_COMPLETED,
                     )
+
                     return ws_server
 
             except Exception as err:
@@ -666,11 +681,37 @@ async def matlab_view(req):
                     allow_redirects=False,
                     data=req_body,
                     params=None,
+                    cookies=cookies_from_jar,  # Pass cookies from  cookie_jar for HTTP requests to MATLAB. This value will
+                    # be none if cookie jar is not enabled
                 ) as res:
                     headers = res.headers.copy()
                     body = await res.read()
-                    headers.update(req.app["settings"]["mwi_custom_http_headers"])
-                    return web.Response(headers=headers, status=res.status, body=body)
+
+                    response = web.Response(
+                        status=res.status, headers=headers, body=body
+                    )
+
+                    # Purpose of the cookie-jar in matlab-proxy is to:
+                    # 1) Update the cookies within it when the Embedded Connector sends back Set-Cookie headers in the response.
+                    # 2) Read these cookies from the cookie jar and insert them into subsequent requests to the Embedded Connector.
+
+                    # Due to matlab-proxy's PING requests to EC, the number cookies present in the cookie-jar and their
+                    # value will be more than the ones present on the browser side.
+                    # Example: The JSESSIONID cookie will be present in the cookie-jar but not on the browser side.
+                    # This inconsistency of cookies between the browser and matlab-proxy's cookie-jar is expected and okay
+                    # as these cookies are HttpOnly cookies.
+
+                    # Incase the Embedded Connector sends cookies which are not HttpOnly, then additional logic needs to be written
+                    # to update the response with cookies from the cookie jar before it is forwarded to the browser.
+                    if cookie_jar:
+                        # Update the cookies in the cookie jar with the Set-Cookie headers in the response.
+                        cookie_jar.update_from_response_headers(headers)
+
+                    response.headers.update(
+                        req.app["settings"]["mwi_custom_http_headers"]
+                    )
+
+                    return response
 
             # Handles any pending HTTP requests from the browser when the MATLAB process is terminated before responding to them.
             except (
@@ -852,7 +893,7 @@ def configure_and_start(app):
 
     logger.debug("Starting MATLAB proxy app")
     logger.debug(
-        f' with base_url: {app["settings"]["base_url"]} and app_port:{app["settings"]["app_port"]}.'
+        f" with base_url: {app['settings']['base_url']} and app_port:{app['settings']['app_port']}."
     )
 
     app["state"].create_server_info_file()
@@ -987,7 +1028,6 @@ def print_version_and_exit():
 
 def main():
     """Starting point of the integration. Creates the web app and runs indefinitely."""
-
     if util.parse_cli_args()["version"]:
         print_version_and_exit()
 

@@ -19,6 +19,7 @@ import matlab_proxy
 from matlab_proxy import constants
 from matlab_proxy.constants import MWI_AUTH_TOKEN_NAME_FOR_HTTP
 from matlab_proxy.util import mwi, system
+from matlab_proxy.util.cookie_jar import HttpOnlyCookieJar
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import token_auth
 from matlab_proxy.util.mwi.exceptions import (
@@ -159,7 +160,7 @@ def get_mwi_config_folder(dev=False):
             config_folder_path = config_folder_path / "hosts" / hostname
 
         logger.debug(
-            f"{'Hostname could not be determined. ' if not hostname else '' }Using the folder: {config_folder_path} for storing all matlab-proxy related session information"
+            f"{'Hostname could not be determined. ' if not hostname else ''}Using the folder: {config_folder_path} for storing all matlab-proxy related session information"
         )
 
         return config_folder_path
@@ -220,6 +221,7 @@ def get_dev_settings(config):
         "is_xvfb_available": False,
         "is_windowmanager_available": False,
         "mwi_idle_timeout": None,
+        "cookie_jar": _get_cookie_jar(),
     }
 
 
@@ -321,6 +323,8 @@ def get_server_settings(config_name):
         else f"{short_desc} - MATLAB Integration"
     )
 
+    cookie_jar = _get_cookie_jar()
+
     return {
         "create_xvfb_cmd": create_xvfb_cmd,
         "base_url": mwi.validators.validate_base_url(
@@ -359,6 +363,7 @@ def get_server_settings(config_name):
         "mwi_idle_timeout": mwi.validators.validate_idle_timeout(
             os.getenv(mwi_env.get_env_name_shutdown_on_idle_timeout())
         ),
+        "cookie_jar": cookie_jar,
     }
 
 
@@ -700,3 +705,19 @@ def _get_matlab_cmd(matlab_executable_path, code_to_execute, nlm_conn_str):
         "-r",
         code_to_execute,
     ]
+
+
+def _get_cookie_jar():
+    """Returns an instance of HttpOnly cookie jar if MWI_USE_COOKIE_CACHE environment variable is set to True
+
+    Returns:
+        HttpOnlyCookieJar: An instance of HttpOnly cookie jar if MWI_USE_COOKIE_CACHE environment variable is set to True, otherwise None.
+    """
+    cookie_jar = None
+    if mwi_env.Experimental.should_use_cookie_cache():
+        logger.info(
+            f"Environment variable {mwi_env.Experimental.get_env_name_use_cookie_cache()} is set. matlab-proxy server will cache cookies from MATLAB"
+        )
+        cookie_jar = HttpOnlyCookieJar()
+
+    return cookie_jar
