@@ -14,6 +14,7 @@ from aiohttp import ClientSession, client_exceptions, web
 import matlab_proxy.util.mwi.environment_variables as mwi_env
 import matlab_proxy.util.system as mwi_sys
 import matlab_proxy_manager.lib.api as mpm_lib
+import matlab_proxy.constants as mp_constants
 from matlab_proxy_manager.utils import constants, helpers, logger
 from matlab_proxy_manager.utils import environment_variables as mpm_env
 from matlab_proxy_manager.utils.auth import authenticate_access_decorator
@@ -342,7 +343,9 @@ async def _forward_websocket_request(
     Returns:
         web.WebSocketResponse: The response from the backend server
     """
-    ws_server = web.WebSocketResponse()
+    ws_server = web.WebSocketResponse(
+        max_msg_size=mp_constants.MAX_WEBSOCKET_MESSAGE_SIZE_IN_MB, compress=True
+    )
     await ws_server.prepare(req)
 
     async with aiohttp.ClientSession(
@@ -351,7 +354,11 @@ async def _forward_websocket_request(
         connector=aiohttp.TCPConnector(ssl=False),
     ) as client_session:
         try:
-            async with client_session.ws_connect(proxy_url) as ws_client:
+            async with client_session.ws_connect(
+                proxy_url,
+                max_msg_size=mp_constants.MAX_WEBSOCKET_MESSAGE_SIZE_IN_MB,  # max websocket message size from MATLAB to browser
+                compress=12,  # enable websocket messages compression
+            ) as ws_client:
 
                 async def ws_forward(ws_src, ws_dest):
                     async for msg in ws_src:
@@ -389,6 +396,13 @@ async def _forward_websocket_request(
                             await ws_dest.close(
                                 code=ws_dest.close_code, message=msg.extra
                             )
+                        elif msg_type == aiohttp.WSMsgType.ERROR:
+                            log.error(f"WebSocket error received: {msg}")
+                            if "exceeds limit" in str(msg.data):
+                                log.error(
+                                    f"Message too large: {msg.data}. Please refresh browser tab to reconnect."
+                                )
+                            break
                         else:
                             raise ValueError(f"Unexpected message type: {msg}")
 

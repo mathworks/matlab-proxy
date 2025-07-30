@@ -586,8 +586,9 @@ async def matlab_view(req):
         and reqH.get(UPGRADE, "").lower() == "websocket"
         and req.method == "GET"
     ):
-        ws_server = web.WebSocketResponse()
-
+        ws_server = web.WebSocketResponse(
+            max_msg_size=constants.MAX_WEBSOCKET_MESSAGE_SIZE_IN_MB, compress=True
+        )
         await ws_server.prepare(req)
 
         async with aiohttp.ClientSession(
@@ -600,6 +601,8 @@ async def matlab_view(req):
             try:
                 async with client_session.ws_connect(
                     matlab_base_url + req.path_qs,
+                    max_msg_size=constants.MAX_WEBSOCKET_MESSAGE_SIZE_IN_MB,  # max websocket message size from MATLAB to browser
+                    compress=12,  # enable websocket messages compression
                 ) as ws_client:
 
                     async def wsforward(ws_from, ws_to):
@@ -631,13 +634,24 @@ async def matlab_view(req):
                                 await ws_to.close(
                                     code=ws_to.close_code, message=msg.extra
                                 )
+                            elif mt == aiohttp.WSMsgType.ERROR:
+                                logger.error(f"WebSocket error received: {msg}")
+                                if "exceeds limit" in str(msg.data):
+                                    logger.error(
+                                        f"Message too large: {msg.data}. Please refresh browser tab to reconnect."
+                                    )
+                                break
                             else:
                                 raise ValueError(f"Unexpected message type: {msg}")
 
                     await asyncio.wait(
                         [
-                            asyncio.create_task(wsforward(ws_server, ws_client)),
-                            asyncio.create_task(wsforward(ws_client, ws_server)),
+                            asyncio.create_task(
+                                wsforward(ws_server, ws_client)
+                            ),  # browser to MATLAB
+                            asyncio.create_task(
+                                wsforward(ws_client, ws_server)
+                            ),  # MATLAB to browser
                         ],
                         return_when=asyncio.FIRST_COMPLETED,
                     )
