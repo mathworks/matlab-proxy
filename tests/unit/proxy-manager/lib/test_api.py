@@ -36,7 +36,7 @@ async def test_start_matlab_proxy_value_error():
         )
 
 
-async def test_start_matlab_proxy_without_existing_server(mocker, mock_server_process):
+async def test_start_matlab_proxy_without_existing_server(mocker):
     """
     Test case for starting a MATLAB proxy without an existing server.
 
@@ -61,16 +61,17 @@ async def test_start_matlab_proxy_without_existing_server(mocker, mock_server_pr
         return_value=None,
     )
     mock_start_subprocess = mocker.patch(
-        "matlab_proxy_manager.lib.api._start_subprocess_and_check_for_readiness",
-        return_value=mock_server_process,
+        "matlab_proxy_manager.lib.api._start_subprocess",
+        return_value={1, "url"},
+    )
+    mock_check_readiness = mocker.patch(
+        "matlab_proxy_manager.lib.api._check_for_process_readiness", return_value=None
     )
 
-    caller_id = "test_caller"
     parent_id = "test_parent"
-    is_shared_matlab = True
 
-    result = await mpm_api._start_matlab_proxy(
-        caller_id=caller_id, ctx=parent_id, is_shared_matlab=is_shared_matlab
+    result = await mpm_api.start_matlab_proxy_for_jsp(
+        parent_id=parent_id, is_shared_matlab=True, mpm_auth_token=""
     )
 
     mock_delete_dangling_servers.assert_called_once_with(parent_id)
@@ -78,9 +79,11 @@ async def test_start_matlab_proxy_without_existing_server(mocker, mock_server_pr
     mock_find_existing_server.assert_called_once()
     mock_start_subprocess.assert_awaited_once()
     mock_create_state_file.assert_called_once()
+    mock_check_readiness.assert_called_once()
 
     assert result is not None
-    assert result == mock_server_process.as_dict()
+    assert result.get("pid") == "1"
+    assert result.get("server_url") == "url"
 
 
 async def test_start_matlab_proxy_with_existing_server(mocker, mock_server_process):
@@ -108,16 +111,14 @@ async def test_start_matlab_proxy_with_existing_server(mocker, mock_server_proce
         return_value=mock_server_process,
     )
     mock_start_subprocess = mocker.patch(
-        "matlab_proxy_manager.lib.api._start_subprocess_and_check_for_readiness",
-        return_value=None,
+        "matlab_proxy_manager.lib.api._start_subprocess",
+        return_value={1, "url"},
     )
 
-    caller_id = "test_caller"
     parent_id = "test_parent"
-    is_shared_matlab = True
 
-    result = await mpm_api._start_matlab_proxy(
-        caller_id=caller_id, ctx=parent_id, is_shared_matlab=is_shared_matlab
+    result = await mpm_api.start_matlab_proxy_for_jsp(
+        parent_id=parent_id, is_shared_matlab=True, mpm_auth_token=""
     )
 
     mock_delete_dangling_servers.assert_called_once_with(parent_id)

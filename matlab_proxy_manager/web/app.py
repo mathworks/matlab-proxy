@@ -109,7 +109,7 @@ def init_app() -> web.Application:
     return app
 
 
-async def start_app(env_vars: namedtuple):
+async def start_app(env_vars):
     """
     Initialize and start the web application.
 
@@ -125,6 +125,7 @@ async def start_app(env_vars: namedtuple):
     app["port"] = env_vars.mpm_port
     app["auth_token"] = env_vars.mpm_auth_token
     app["parent_pid"] = env_vars.mpm_parent_pid
+    app["base_url_prefix"] = env_vars.base_url_prefix
 
     web_logger = None if not mwi_env.is_web_logging_enabled() else log
 
@@ -196,8 +197,9 @@ async def _start_default_proxy(app):
         parent_id=app.get("parent_pid"),
         is_shared_matlab=True,
         mpm_auth_token=app.get("auth_token"),
+        base_url_prefix=app.get("base_url_prefix"),
     )
-    errors: list = server_process.get("errors")
+    errors = server_process.get("errors")
 
     # Raising an exception if there was an error starting the default MATLAB proxy
     if errors:
@@ -484,8 +486,10 @@ def _render_error_page(error_msg: str) -> web.Response:
     )
 
 
-def _fetch_and_validate_required_env_vars() -> namedtuple:
-    EnvVars = namedtuple("EnvVars", ["mpm_port", "mpm_auth_token", "mpm_parent_pid"])
+def _fetch_and_validate_required_env_vars():
+    EnvVars = namedtuple(
+        "EnvVars", ["mpm_port", "mpm_auth_token", "mpm_parent_pid", "base_url_prefix"]
+    )
 
     port = os.getenv(mpm_env.get_env_name_mwi_mpm_port())
     mpm_auth_token = os.getenv(mpm_env.get_env_name_mwi_mpm_auth_token())
@@ -496,9 +500,13 @@ def _fetch_and_validate_required_env_vars() -> namedtuple:
         sys.exit(1)
 
     try:
+        base_url_prefix = os.getenv(mpm_env.get_env_name_base_url_prefix(), "")
         mwi_mpm_port: int = int(port)
         return EnvVars(
-            mpm_port=mwi_mpm_port, mpm_auth_token=mpm_auth_token, mpm_parent_pid=ctx
+            mpm_port=mwi_mpm_port,
+            mpm_auth_token=mpm_auth_token,
+            mpm_parent_pid=ctx,
+            base_url_prefix=base_url_prefix,
         )
     except ValueError as ve:
         log.error("Error: Invalid type for port: %s", ve)
@@ -510,7 +518,7 @@ def main() -> None:
     The main entry point of the application. Starts the app and run until the shutdown
     signal to terminate the app is received.
     """
-    env_vars: namedtuple = _fetch_and_validate_required_env_vars()
+    env_vars = _fetch_and_validate_required_env_vars()
     asyncio.run(start_app(env_vars))
 
 

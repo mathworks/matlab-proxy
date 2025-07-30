@@ -25,9 +25,10 @@ class TestStartApp:
     @pytest.fixture
     def mock_env_vars(self):
         """Fixture that creates and returns a mock environment variables object."""
-        return namedtuple("EnvVars", ["mpm_port", "mpm_auth_token", "mpm_parent_pid"])(
-            8888, "test_token", 12345
-        )
+        return namedtuple(
+            "EnvVars",
+            ["mpm_port", "mpm_auth_token", "mpm_parent_pid", "base_url_prefix"],
+        )(8888, "test_token", 12345, "/matlab/test")
 
     @pytest.fixture
     def mock_runner(self, mocker):
@@ -585,6 +586,7 @@ class TestHelpers:
             "parent_pid": "123",
             "auth_token": "token",
             "data_dir": "/path/to/data",
+            "base_url_prefix": "/matlab/test",
             "servers": {},
         }
         mock_server_process = {"id": "server1", "details": "other details"}
@@ -598,7 +600,10 @@ class TestHelpers:
 
         # Assertions
         mock_start_proxy.assert_called_once_with(
-            parent_id="123", is_shared_matlab=True, mpm_auth_token="token"
+            parent_id="123",
+            is_shared_matlab=True,
+            mpm_auth_token="token",
+            base_url_prefix="/matlab/test",
         )
         assert app_state["servers"] == {
             "server1": mock_server_process,

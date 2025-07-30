@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 """This file lists and exposes the environment variables which are used by proxy manager."""
 
 import os
@@ -39,6 +39,11 @@ def get_env_name_mwi_mpm_port():
 def get_env_name_mwi_mpm_parent_pid():
     """Used to specify the parent pid for the proxy manager process"""
     return "MWI_MPM_PARENT_PID"
+
+
+def get_env_name_base_url_prefix():
+    """Used to specify the base url prefix for setting base url on matlab (e.g. Jupyter base url)"""
+    return "MWI_MPM_BASE_URL_PREFIX"
 
 
 def is_web_logging_enabled():
