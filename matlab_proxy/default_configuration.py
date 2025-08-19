@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 from enum import Enum
 from typing import List
 
@@ -45,7 +45,7 @@ def get_required_config() -> List[str]:
         list: A list of strings representing the required
         configuration keys.
     """
-    required_keys: List[str] = [
+    required_keys: List[ConfigKeys] = [
         ConfigKeys.DOC_URL,
         ConfigKeys.EXT_NAME,
         ConfigKeys.EXT_NAME_DESC,

@@ -54,12 +54,12 @@ jobs:
       - name: Install Python build dependencies
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install --upgrade setuptools
+          python3 -m pip install --upgrade build
           python3 -m pip install wheel
         shell: bash
   
       - name: Build Source and Binary wheel distributions
-        run: python3 setup.py bdist_wheel sdist
+        run: python3 -m build
         shell: bash
   
       - name: Publish to PyPI.

@@ -1,0 +1,104 @@
+# Copyright 2025 The MathWorks, Inc.
+
+[build-system]
+requires = ["hatchling >= 1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "matlab-proxy"
+version = "0.26.0"
+description = "Python® package enables you to launch MATLAB® and access it from a web browser."
+readme = "README.md"
+license = "LicenseRef-MATHWORKS-CLOUD-REFERENCE-ARCHITECTURE-LICENSE"
+license-files = ["LICENSE.md"]
+requires-python = ">=3.8"
+authors = [
+    { name = "The MathWorks Inc.", email = "cloud@mathworks.com" },
+]
+keywords = [
+    "Proxy",
+    "MATLAB Proxy",
+    "MATLAB",
+    "MATLAB Javascript Desktop",
+    "MATLAB Web Desktop",
+    "Remote MATLAB Web Access",
+]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+    "aiohttp>=3.7.4",
+    "aiohttp_session[secure]",
+    "psutil",
+    "watchdog",
+    "requests",
+]
+
+[project.urls]
+Homepage = "https://github.com/mathworks/matlab-proxy/"
+Documentation = "https://github.com/mathworks/matlab-proxy/blob/main/README.md"
+Issues = "https://github.com/mathworks/matlab-proxy/issues"
+
+# Testing dependencies
+# Note: pytest-asyncio is pinned to 0.24.0 for event loop compatibility
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-env",
+    "pytest-cov",
+    "pytest-timeout",
+    "pytest-mock",
+    "pytest-aiohttp",
+    "psutil",
+    "urllib3",
+    "pytest-playwright",
+    "pytest-asyncio==0.24.0",
+]
+dev = [
+    "aiohttp-devtools",
+    "black",
+    "ruff",
+    "matlab-proxy[test]",
+]
+
+[project.entry-points.matlab_proxy_configs]
+default_configuration_matlab_proxy = "matlab_proxy.default_configuration:config"
+
+[project.scripts]
+matlab-proxy-app = "matlab_proxy.app:main"
+matlab-proxy-app-list-servers = "matlab_proxy.util.list_servers:print_server_info"
+matlab-proxy-manager-app = "matlab_proxy_manager.web.app:main"
+
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["matlab_proxy", "matlab_proxy_manager"]
+# To package gui files that are ignored by gitignore, we are using the artifacts option
+artifacts = ["matlab_proxy/gui/**/*"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "README.md",
+    "matlab_proxy/**",
+    "matlab_proxy_manager/**",
+    "gui/**",
+    "tests/**",
+]
+exclude = [
+    "gui/node_modules/**",
+    "gui/build/**",
+    "matlab_proxy/gui/**",
+    "install_guides/**",
+    "examples/**",
+    "img/**",
+    "troubleshooting/**",
+]
+ignore-vcs = true

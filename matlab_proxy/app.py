@@ -6,6 +6,7 @@ import mimetypes
 import pkgutil
 import secrets
 import sys
+from importlib import resources
 
 import aiohttp
 from aiohttp import client_exceptions, web
@@ -497,15 +498,9 @@ def make_static_route_table(app):
     Returns:
         Dict: Containing information about the static files and header information.
     """
-    import importlib_resources
-
-    from matlab_proxy import gui  # noqa: F401
-    from matlab_proxy.gui import static  # noqa: F401
-    from matlab_proxy.gui.static import (
-        css,  # noqa: F401
-        js,  # noqa: F401
-        media,  # noqa: F401
-    )
+    from matlab_proxy import gui
+    from matlab_proxy.gui import static
+    from matlab_proxy.gui.static import css, js, media
 
     base_url = app["settings"]["base_url"]
 
@@ -513,14 +508,14 @@ def make_static_route_table(app):
 
     for mod, parent in [
         (gui.__name__, ""),
-        (gui.static.__name__, "/static"),
-        (gui.static.css.__name__, "/static/css"),
-        (gui.static.js.__name__, "/static/js"),
-        (gui.static.media.__name__, "/static/media"),
+        (static.__name__, "/static"),
+        (css.__name__, "/static/css"),
+        (js.__name__, "/static/js"),
+        (media.__name__, "/static/media"),
     ]:
-        for entry in importlib_resources.files(mod).iterdir():
+        for entry in resources.files(mod).iterdir():
             name = entry.name
-            if not importlib_resources.files(mod).joinpath(name).is_dir():
+            if not resources.files(mod).joinpath(name).is_dir():
                 if name != "__init__.py":
                     # Special case for manifest.json
                     if "manifest.json" in name:
