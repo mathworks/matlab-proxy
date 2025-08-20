@@ -2,8 +2,8 @@
 import pytest
 
 from matlab_proxy_manager.lib import api as mpm_api
-from matlab_proxy_manager.utils import exceptions
 from matlab_proxy_manager.storage.server import ServerProcess
+from matlab_proxy_manager.utils import exceptions
 
 
 @pytest.fixture
@@ -62,7 +62,7 @@ async def test_start_matlab_proxy_without_existing_server(mocker):
     )
     mock_start_subprocess = mocker.patch(
         "matlab_proxy_manager.lib.api._start_subprocess",
-        return_value={1, "url"},
+        return_value=(1, "url"),
     )
     mock_check_readiness = mocker.patch(
         "matlab_proxy_manager.lib.api._check_for_process_readiness", return_value=None
@@ -112,7 +112,7 @@ async def test_start_matlab_proxy_with_existing_server(mocker, mock_server_proce
     )
     mock_start_subprocess = mocker.patch(
         "matlab_proxy_manager.lib.api._start_subprocess",
-        return_value={1, "url"},
+        return_value=(1, "url"),
     )
 
     parent_id = "test_parent"

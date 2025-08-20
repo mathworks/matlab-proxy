@@ -15,7 +15,6 @@ import errno
 import math
 import os
 import socket
-from importlib import metadata
 from pathlib import Path
 from typing import List
 
@@ -215,6 +214,8 @@ def __get_configs():
         Dict: Contains all the values present in 'matlab_web_desktop_configs' entry_point from all the packages
         installed in the current environment.
     """
+    import importlib_metadata as metadata
+
     matlab_proxy_eps = metadata.entry_points(group=matlab_proxy.get_entrypoint_name())
     configs = {}
     for entry_point in matlab_proxy_eps:

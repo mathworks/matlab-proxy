@@ -6,7 +6,6 @@ import mimetypes
 import pkgutil
 import secrets
 import sys
-from importlib import resources
 
 import aiohttp
 from aiohttp import client_exceptions, web
@@ -498,6 +497,8 @@ def make_static_route_table(app):
     Returns:
         Dict: Containing information about the static files and header information.
     """
+    import importlib_resources as resources
+
     from matlab_proxy import gui
     from matlab_proxy.gui import static
     from matlab_proxy.gui.static import css, js, media

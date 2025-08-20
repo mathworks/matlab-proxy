@@ -39,6 +39,8 @@ dependencies = [
     "psutil",
     "watchdog",
     "requests",
+    "importlib-metadata",
+    "importlib-resources",
 ]
 
 [project.urls]
