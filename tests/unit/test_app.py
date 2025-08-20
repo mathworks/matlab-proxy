@@ -734,15 +734,35 @@ async def test_matlab_view_websocket_success(
     assert mock_ws_server.pong.call_count == 1
 
 
-async def test_set_licensing_info_put_mhlm(test_server):
+async def test_set_licensing_info_put_mhlm(
+    mocker,
+    test_server,
+    set_licensing_info_mock_expand_token,
+    set_licensing_info_mock_access_token,
+    set_licensing_info_mock_fetch_multiple_entitlements,
+):
     """Test to check endpoint : "/set_licensing_info"
 
     Test which sends HTTP PUT request with MHLM licensing information.
     Args:
         test_server (aiohttp_client): A aiohttp_client server to send HTTP GET request.
     """
-    # FIXME: This test is talking to production loginws endpoint and is resulting in an exception.
-    # TODO: Use mocks to test the mhlm workflows is working as expected
+
+    mocker.patch(
+        "matlab_proxy.app_state.mw.fetch_expand_token",
+        return_value=set_licensing_info_mock_expand_token,
+    )
+
+    mocker.patch(
+        "matlab_proxy.app_state.mw.fetch_access_token",
+        return_value=set_licensing_info_mock_access_token,
+    )
+
+    mocker.patch(
+        "matlab_proxy.app_state.mw.fetch_entitlements",
+        return_value=set_licensing_info_mock_fetch_multiple_entitlements,
+    )
+
     data = {
         "type": "mhlm",
         "status": "starting",
