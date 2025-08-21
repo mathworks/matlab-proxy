@@ -172,6 +172,11 @@ def get_env_name_shutdown_on_idle_timeout():
     return "MWI_SHUTDOWN_ON_IDLE_TIMEOUT"
 
 
+def get_env_name_session_name():
+    """User specified session name for the MATLAB Proxy instance, used to set the browser title."""
+    return "MWI_SESSION_NAME"
+
+
 class Experimental:
     """This class houses functions which are undocumented APIs and Environment variables.
     Note: Never add any state to this class. Its only intended for use as an abstraction layer

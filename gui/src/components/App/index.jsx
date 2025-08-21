@@ -40,6 +40,7 @@ import {
     selectMatlabStarting,
     selectIsIdleTimeoutEnabled,
     selectMatlabStopping,
+    selectBrowserTitle,
     selectIntegrationName
 } from '../../selectors';
 
@@ -54,7 +55,7 @@ import blurredBackground from './MATLAB-env-blur.png';
 import EntitlementSelector from '../EntitlementSelector';
 import { BUFFER_TIMEOUT_DURATION, MWI_AUTH_TOKEN_NAME_FOR_HTTP } from '../../constants';
 
-function App () {   
+function App() {
     const dispatch = useDispatch();
 
     const overlayVisible = useSelector(selectOverlayVisible);
@@ -76,6 +77,7 @@ function App () {
     const isConcurrencyEnabled = useSelector(selectIsConcurrencyEnabled);
     const wasEverActive = useSelector(selectWasEverActive);
     const integrationName = useSelector(selectIntegrationName);
+    const browserTitle = useSelector(selectBrowserTitle);
 
     // Timeout duration is specified in seconds, but useTimeoutFn accepts timeout values in ms.
     const idleTimeoutDurationInMS = useSelector(selectIdleTimeoutDurationInMS);
@@ -93,7 +95,7 @@ function App () {
 
 
     // callback that will fire once the IDLE timer expires
-    function terminationFn () {
+    function terminationFn() {
         // Reset the timer if MATLAB is either starting or stopping or is busy
         if (isMatlabStarting || isMatlabStopping || isMatlabBusy) {
             idleTimerReset();
@@ -303,7 +305,7 @@ function App () {
         if (hasFetchedEnvConfig) {
             const queryParams = parseQueryParams(window.location);
             const token = queryParams.get(MWI_AUTH_TOKEN_NAME_FOR_HTTP);
-
+            document.title = `${browserTitle}`;
             if (token) {
                 dispatch(updateAuthStatus(token));
             }
@@ -331,7 +333,7 @@ function App () {
             overlayContent = <ShutdownWarning
                 bufferTimeout={BUFFER_TIMEOUT_DURATION}
                 resumeCallback={() => {
-                // Restart IDLE timer
+                    // Restart IDLE timer
                     idleTimerReset();
                     setIdleTimerHasExpired(false);
 
@@ -386,7 +388,7 @@ function App () {
     if (matlabUp) {
         matlabJsd = (!authEnabled || isAuthenticated)
             ? (<MatlabJsd handleUserInteraction={handleUserInteraction} url={matlabUrl} iFrameRef={MatlabJsdIframeRef} shouldListenForEvents={shouldListenForEvents} />)
-            : <img style={{ objectFit: 'fill' }}src={blurredBackground} alt='Blurred MATLAB environment'/>;
+            : <img style={{ objectFit: 'fill' }} src={blurredBackground} alt='Blurred MATLAB environment' />;
     }
 
     const overlayTrigger = overlayVisible

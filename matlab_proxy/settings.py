@@ -21,7 +21,7 @@ from matlab_proxy.constants import MWI_AUTH_TOKEN_NAME_FOR_HTTP
 from matlab_proxy.util import mwi, system
 from matlab_proxy.util.cookie_jar import HttpOnlyCookieJar
 from matlab_proxy.util.mwi import environment_variables as mwi_env
-from matlab_proxy.util.mwi import token_auth
+from matlab_proxy.util.mwi import token_auth, session_name
 from matlab_proxy.util.mwi.exceptions import (
     FatalError,
     MatlabInstallError,
@@ -222,6 +222,7 @@ def get_dev_settings(config):
         "is_windowmanager_available": False,
         "mwi_idle_timeout": None,
         "cookie_jar": _get_cookie_jar(),
+        "browser_title": session_name.get_browser_title("R2020b"),
     }
 
 
@@ -324,7 +325,6 @@ def get_server_settings(config_name):
     )
 
     cookie_jar = _get_cookie_jar()
-
     return {
         "create_xvfb_cmd": create_xvfb_cmd,
         "base_url": mwi.validators.validate_base_url(
@@ -406,6 +406,7 @@ def get_matlab_settings():
         **mw_licensing_urls,
         "nlm_conn_str": nlm_conn_str,
         "has_custom_code_to_execute": has_custom_code_to_execute,
+        "browser_title": session_name.get_browser_title(matlab_version),
     }
 
 

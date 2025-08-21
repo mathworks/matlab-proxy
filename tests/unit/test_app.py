@@ -360,6 +360,7 @@ async def test_get_env_config(test_server):
         "should_show_shutdown_button": True,
         "isConcurrencyEnabled": "foobar",
         "idleTimeoutDuration": 100,
+        "browserTitle": "MATLAB R2020b",
     }
     resp = await test_server.get("/get_env_config")
     assert resp.status == HTTPStatus.OK

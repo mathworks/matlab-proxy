@@ -896,8 +896,8 @@ class AppState:
 
         mwi_server_info_file = mwi_logs_dir / "mwi_server.info"
         mwi_auth_token_str = token_auth.get_mwi_auth_token_access_str(self.settings)
-        with open(mwi_server_info_file, "w") as fh:
-            fh.write(self.settings["mwi_server_url"] + mwi_auth_token_str + "\n")
+        with open(mwi_server_info_file, "w", encoding="utf-8") as fh:
+            fh.write(self.settings["mwi_server_url"] + mwi_auth_token_str + "\n" + self.settings["browser_title"] + "\n")
         self.mwi_server_session_files["mwi_server_info_file"] = mwi_server_info_file
         logger.debug(f"Server info stored into: {mwi_server_info_file}")
 

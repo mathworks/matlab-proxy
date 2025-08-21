@@ -635,6 +635,35 @@ def test_get_matlab_settings_valid_custom_matlab_root(mocker, monkeypatch, tmp_p
     assert matlab_settings["matlab_path"] == matlab_root_path
     assert matlab_settings["matlab_version"] == matlab_version
     assert matlab_settings["error"] is None
+    assert matlab_settings["browser_title"] == f"MATLAB {matlab_version}"
+
+
+def test_get_matlab_settings_valid_custom_matlab_root_and_session_name(
+    mocker, monkeypatch, tmp_path
+):
+    # Arrange
+    matlab_root_path = Path(tmp_path)
+    matlab_exec_path = matlab_root_path / "bin" / "matlab"
+    matlab_version = "R2024b"
+    monkeypatch.setenv(mwi_env.get_env_name_custom_matlab_root(), str(matlab_root_path))
+    monkeypatch.setenv(mwi_env.get_env_name_session_name(), "Test Session")
+    mocker.patch(
+        "matlab_proxy.settings.mwi.validators.validate_matlab_root_path",
+        return_value=matlab_root_path,
+    )
+    mocker.patch(
+        "matlab_proxy.settings.get_matlab_version", return_value=matlab_version
+    )
+
+    # Act
+    matlab_settings = settings.get_matlab_settings()
+
+    # Assert
+    assert str(matlab_exec_path) in str(matlab_settings["matlab_cmd"][0])
+    assert matlab_settings["matlab_path"] == matlab_root_path
+    assert matlab_settings["matlab_version"] == matlab_version
+    assert matlab_settings["error"] is None
+    assert matlab_settings["browser_title"] == f"Test Session - MATLAB {matlab_version}"
 
 
 def test_get_matlab_settings_invalid_custom_matlab_root(mocker, monkeypatch, tmp_path):

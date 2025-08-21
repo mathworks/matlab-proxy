@@ -209,6 +209,8 @@ async def get_env_config(req):
         "supportedVersions": constants.SUPPORTED_MATLAB_VERSIONS,
     }
 
+    config["browserTitle"] = state.settings["browser_title"]
+
     # Send timeout duration for the idle timer as part of the response
     config["idleTimeoutDuration"] = state.settings["mwi_idle_timeout"]
 

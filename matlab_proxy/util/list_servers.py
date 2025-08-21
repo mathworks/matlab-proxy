@@ -31,8 +31,8 @@ def print_server_info():
         for server in search_results:
             server_number += 1
             with open(server) as f:
-                server_info = f.read()
-                print_output += str(server_number) + ".  " + str(server_info)
+                server_info = f.readline().strip()
+                print_output += str(server_number) + ".  " + str(server_info) + "\n"
 
     print_output += str(
         mwi_util.prettify(

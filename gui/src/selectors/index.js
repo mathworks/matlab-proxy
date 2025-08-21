@@ -260,9 +260,23 @@ export const selectIsIdleTimeoutEnabled = createSelector(
 export const selectIdleTimeoutDurationInMS = createSelector(
     selectIsIdleTimeoutEnabled,
     selectIdleTimeoutDuration,
-    (isTimeoutEnabled, idleTimeoutDuration) => { return isTimeoutEnabled
-        ? idleTimeoutDuration * 1000
-        : undefined; }
+    (isTimeoutEnabled, idleTimeoutDuration) => {
+        return isTimeoutEnabled
+            ? idleTimeoutDuration * 1000
+            : undefined;
+    }
+);
+
+export const selectBrowserTitle = createSelector(
+    selectHasFetchedEnvConfig,
+    selectEnvConfig,
+    (hasFetchedEnvConfig, envConfig) => {
+        if (hasFetchedEnvConfig) {
+            return envConfig.browserTitle;
+        } else {
+            return 'MATLAB';
+        }
+    }
 );
 
 export const selectIntegrationName = createSelector(
