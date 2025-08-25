@@ -7,6 +7,7 @@ from matlab_proxy.util.mwi import logger as mwi_logger
 
 logger = mwi_logger.get()
 
+
 def _get_session_name():
     """Get the session name for the MATLAB Proxy instance.
 
