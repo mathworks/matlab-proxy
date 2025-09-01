@@ -484,7 +484,7 @@ class AppState:
                         "'busy' status endpoint returned an invalid response, falling back to using 'ping' endpoint to determine MATLAB state"
                     )
                     warning = f"{mwi_env.get_env_name_shutdown_on_idle_timeout()} environment variable is supported only for MATLAB versions R2021a or later"
-                    logger.warn(warning)
+                    logger.warning(warning)
                     self.warnings.append(warning)
 
                 else:

@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 
 # This file contains functions required to enable token based authentication in the server.
 
@@ -39,7 +39,7 @@ def generate_mwi_auth_token_and_hash():
 
     if enable_token_auth == "false":
         if auth_token:
-            logger.warn(
+            logger.warning(
                 f"Ignoring {env_name_mwi_auth_token}, as {env_name_enable_mwi_token_auth} explicitly set to false"
             )
         return _format_token_as_dictionary(None)

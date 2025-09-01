@@ -289,7 +289,6 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
             if not settings["is_windowmanager_available"]:
                 warning = " Unable to find fluxbox on the system PATH. To use Simulink Online, add Fluxbox to the system PATH and restart matlab-proxy. For details, see https://github.com/mathworks/matlab-proxy#requirements."
                 logger.warning(warning)
-                settings["warnings"].append(warning)
 
         settings.update(get_matlab_settings())
 
@@ -500,7 +499,7 @@ def _validate_ssl_files_and_get_ssl_context(mwi_config_folder):
     # Don't use SSL if the user has explicitly disabled SSL communication or not set the respective env var
     if not is_ssl_enabled:
         if ssl_cert_file:
-            logger.warn(
+            logger.warning(
                 f"Ignoring provided SSL files, as {env_name_enable_ssl} is either unset or set to false"
             )
         return None
@@ -597,7 +596,7 @@ def generate_new_self_signed_certs(mwi_certs_dir):
             f.write(cert.public_bytes(serialization.Encoding.PEM))
 
     except Exception as ex:
-        logger.warn(
+        logger.warning(
             f"Failed to generate self-signed certificates, proceeding with non-secure mode! Error: {ex}"
         )
         cert_file = priv_key_file = None

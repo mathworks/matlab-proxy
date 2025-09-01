@@ -380,7 +380,7 @@ def validate_idle_timeout(timeout):
         return timeout
 
     except ValueError:
-        logger.warn(
+        logger.warning(
             f"Invalid value supplied for {mwi_env.get_env_name_shutdown_on_idle_timeout()}: {timeout}. Continuing without any IDLE timeout."
         )
         return None

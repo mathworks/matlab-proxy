@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 import argparse
 import inspect
 import os
@@ -312,7 +312,7 @@ class TrackingLock:
         self._acquired_by = None
         self._lock = asyncio.Lock()
         if not purpose:
-            logger.warn("Provide a purpose for this instance of TrackingLock")
+            logger.warning("Provide a purpose for this instance of TrackingLock")
         self._purpose = purpose
 
     @property
