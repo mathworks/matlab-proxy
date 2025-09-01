@@ -432,25 +432,38 @@ async def shutdown_integration_delete(req):
         req (HTTPRequest): HTTPRequest Object
     """
     state = req.app["state"]
-
     logger.info(f"Shutting down {state.settings['integration_name']}...")
 
-    # Send response manually because this has to happen before the application exits
     res = create_status_response(req.app, "../")
-    await res.prepare(req)
-    await res.write_eof()
 
-    # Gracefully shutdown the server
-    await req.app.shutdown()
-    await req.app.cleanup()
-
-    loop = util.get_event_loop()
-    # Run the current batch of coroutines in the event loop and then exit.
-    # This completes the loop.run_forever() blocking call and subsequent code
-    # in create_and_start_app() resumes execution.
-    loop.stop()
+    # Schedule the shutdown to happen after the response is sent
+    asyncio.create_task(_shutdown_after_response(req.app))
 
     return res
+
+
+async def _shutdown_after_response(app):
+    # Shutdown the application after a short delay to allow the response to be fully sent
+    # back to the client before the server is stopped
+    await asyncio.sleep(0.1)
+
+    # aiohttp shutdown to be invoked before cleanup -
+    # https://docs.aiohttp.org/en/stable/web_reference.html#aiohttp.web.Application.shutdown
+    await app.shutdown()
+    await app.cleanup()
+
+    loop = util.get_event_loop()
+
+    # Cancel remaining tasks (except this one: _shutdown_after_response)
+    running_tasks = asyncio.all_tasks(loop)
+    current_task = asyncio.current_task()
+    if current_task:
+        running_tasks.discard(current_task)
+
+    await util.cancel_tasks(running_tasks)
+
+    # Stop the event loop from this task
+    loop.call_soon_threadsafe(loop.stop)
 
 
 # @token_auth.authenticate_access_decorator
@@ -873,8 +886,6 @@ def configure_and_start(app):
     """
     loop = util.get_event_loop()
 
-    web_logger = None if not mwi_env.is_web_logging_enabled() else logger
-
     # Setup the session storage,
     # Uniqified per session to prevent multiple proxy servers on the same FQDN from interfering with each other.
     uniqify_session_cookie = secrets.token_hex()
@@ -888,7 +899,9 @@ def configure_and_start(app):
     )
 
     # Setup runner
-    runner = web.AppRunner(app, logger=web_logger, access_log=web_logger)
+    runner = web.AppRunner(
+        app, access_log=logger if mwi_env.is_web_logging_enabled() else None
+    )
     loop.run_until_complete(runner.setup())
 
     # Prepare site to start, then set port of the app.
@@ -961,7 +974,7 @@ def create_app(config_name=matlab_proxy.get_default_config_name()):
     app.router.add_route("*", f"{base_url}", root_redirect)
 
     app.router.add_route("*", f"{base_url}/{{proxyPath:.*}}", matlab_view)
-    app.on_cleanup.append(cleanup_background_tasks)
+    app.on_shutdown.append(cleanup_background_tasks)
 
     return app
 
@@ -1011,15 +1024,15 @@ def create_and_start_app(config_name):
 
     # After handling the interrupt, proceed with shutting down the server gracefully.
     try:
+        # aiohttp shutdown to be invoked before cleanup -
+        # https://docs.aiohttp.org/en/stable/web_reference.html#aiohttp.web.Application.shutdown
+        loop.run_until_complete(app.shutdown())
+        loop.run_until_complete(app.cleanup())
+
         running_tasks = asyncio.all_tasks(loop)
-        loop.run_until_complete(
-            asyncio.gather(
-                app.shutdown(),
-                app.cleanup(),
-                util.cancel_tasks(running_tasks),
-                return_exceptions=False,
-            )
-        )
+
+        # Gracefully cancel all running background tasks
+        loop.run_until_complete(util.cancel_tasks(running_tasks))
 
     except Exception:
         pass

@@ -79,9 +79,10 @@ def test_create_app(event_loop):
     # Verify router is configured with some routes
     assert test_server.router._resources is not None
 
-    # Verify app server has a cleanup task
+    # Verify app server has a shutdown task
     # By default there is 1 for clean up task
-    assert len(test_server.on_cleanup) > 1
+    assert len(test_server.on_shutdown) == 1
+    assert len(test_server.on_cleanup) == 1
     event_loop.run_until_complete(test_server["state"].stop_server_tasks())
 
 

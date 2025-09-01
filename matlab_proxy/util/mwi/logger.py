@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 """Functions to access & control the logging behavior of the app"""
 
 import logging
@@ -7,7 +7,6 @@ import sys
 from pathlib import Path
 
 from . import environment_variables as mwi_env
-
 
 logging.getLogger("aiohttp_session").setLevel(logging.ERROR)
 
