@@ -39,7 +39,6 @@ function MatlabJsd ({ url, iFrameRef, shouldListenForEvents, handleUserInteracti
                 ref={iFrameRef}
                 title="MATLAB JSD"
                 src={url}
-                frameBorder="0"
                 allowFullScreen />
         </div>
     );

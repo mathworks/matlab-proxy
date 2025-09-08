@@ -4,8 +4,6 @@ import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSelector, useDispatch } from 'react-redux';
 import { useInterval, useTimeoutFn } from 'react-use';
 import './App.css';
-import './3p/css/bootstrap.min.css';
-import './3p/css/site7.min.css';
 import Confirmation from '../Confirmation';
 import OverlayTrigger from '../OverlayTrigger';
 import Overlay from '../Overlay';

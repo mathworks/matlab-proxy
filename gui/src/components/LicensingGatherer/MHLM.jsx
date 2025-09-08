@@ -13,6 +13,8 @@ import {
     fetchSetLicensing
 } from '../../actionCreators';
 
+import './MHLM.css';
+
 // Send a generated nonce to the login iframe
 function setLoginNonce (username) {
     const clientNonce = (Math.random() + '').substr(2);
@@ -150,9 +152,6 @@ function MHLM ({ mhlmLicensingInfo = null }) {
                 id="loginframe"
                 title="MathWorks Embedded Login"
                 type="text/html"
-                height="380"
-                width="100%"
-                frameBorder="0"
                 src={embeddedLoginUrl}
                 onLoad={handleIFrameLoaded}
             >
