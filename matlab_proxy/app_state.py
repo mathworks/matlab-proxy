@@ -965,10 +965,11 @@ class AppState:
             matlab_env["MLM_LICENSE_FILE"] = self.licensing["conn_str"]
 
         # Env setup related to MATLAB
-        matlab_env["MW_CRASH_MODE"] = "native"
-        matlab_env["MATLAB_WORKER_CONFIG_ENABLE_LOCAL_PARCLUSTER"] = "true"
-        matlab_env["PCT_ENABLED"] = "true"
-        matlab_env["HTTP_MATLAB_CLIENT_GATEWAY_PUBLIC_PORT"] = "1"
+        ## Update the values only if it does not already exist in the environment
+        matlab_env["MW_CRASH_MODE"] = matlab_env.get("MW_CRASH_MODE", "native")
+        matlab_env["MATLAB_WORKER_CONFIG_ENABLE_LOCAL_PARCLUSTER"] = matlab_env.get(
+            "MATLAB_WORKER_CONFIG_ENABLE_LOCAL_PARCLUSTER", "true"
+        )
         matlab_env["MW_DOCROOT"] = os.path.join("ui", "webgui", "src")
         matlab_env["MWAPIKEY"] = self.settings["mwapikey"]
 
