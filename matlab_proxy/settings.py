@@ -53,7 +53,7 @@ def get_process_startup_timeout():
             )
             return constants.DEFAULT_PROCESS_START_TIMEOUT
 
-    logger.info(
+    logger.debug(
         f"Using {constants.DEFAULT_PROCESS_START_TIMEOUT} seconds as the default timeout value"
     )
 
@@ -94,7 +94,7 @@ def get_matlab_executable_and_root_path():
 
     if matlab_executable_path:
         matlab_root_path = Path(matlab_executable_path).resolve().parent.parent
-        logger.info(f"Found MATLAB executable at: {matlab_executable_path}")
+        logger.debug(f"MATLAB root folder: {matlab_root_path}")
         matlab_root_path = mwi.validators.validate_matlab_root_path(
             matlab_root_path, is_custom_matlab_root=False
         )
@@ -698,7 +698,6 @@ def _get_matlab_cmd(matlab_executable_path, code_to_execute, nlm_conn_str):
         "-nosplash",
         *flag_to_hide_desktop,
         "-softwareopengl",
-        # " v=mvm ",
         *matlab_lic_mode,
         "-externalUI",
         profile_matlab_startup,

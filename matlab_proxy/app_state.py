@@ -875,15 +875,8 @@ class AppState:
                     user_code_output_file
                 )
                 logger.info(
-                    util.prettify(
-                        boundary_filler="*",
-                        text_arr=[
-                            f"When MATLAB starts, you can see the output for your startup code at:",
-                            f"{self.matlab_session_files.get('startup_code_output_file', ' ')}",
-                        ],
-                    )
+                    f"The results of executing MWI_MATLAB_STARTUP_SCRIPT are stored at: {user_code_output_file} "
                 )
-
             return
 
     def create_server_info_file(self):
@@ -909,16 +902,16 @@ class AppState:
 
         # By default mwi_server_url usually points to 0.0.0.0 as the hostname, but this does not work well
         # on some browsers. Specifically on Safari (MacOS)
-        logger.info(
-            util.prettify(
-                boundary_filler="=",
-                text_arr=[
-                    f"Access MATLAB at:",
-                    self.settings["mwi_server_url"].replace("0.0.0.0", "localhost")
-                    + mwi_auth_token_str,
-                ],
-            )
+        server_url = (
+            self.settings["mwi_server_url"].replace("0.0.0.0", "localhost")
+            + mwi_auth_token_str
         )
+
+        mwi.logger.log_startup_info(
+            title=f"matlab-proxy-app running on {self.settings['app_port']}",
+            matlab_url=server_url,
+        )
+        logger.info(f"MATLAB Root: {self.settings['matlab_path']}")
 
     def clean_up_mwi_server_session(self):
         # Clean up mwi_server_session_files
@@ -1004,7 +997,7 @@ class AppState:
 
         # Set MW_CONNECTOR_CONTEXT_ROOT
         matlab_env["MW_CONNECTOR_CONTEXT_ROOT"] = self.settings.get("base_url", "/")
-        logger.info(
+        logger.debug(
             f"MW_CONNECTOR_CONTEXT_ROOT is set to: {matlab_env['MW_CONNECTOR_CONTEXT_ROOT']}"
         )
 
@@ -1316,6 +1309,8 @@ class AppState:
         # to MATLAB state by other functions/tasks until the lock is released, ensuring consistency. It's released early only in case of exceptions.
         await self.matlab_state_updater_lock.acquire()
         self.set_matlab_state("starting")
+        logger.info(f"Starting MATLAB...")
+
         # Clear MATLAB errors and logging
         self.error = None
         self.logs["matlab"].clear()
@@ -1535,7 +1530,7 @@ class AppState:
                             except:
                                 pass
 
-        logger.info("Stopped (any running) MATLAB process.")
+        logger.debug("Stopped (any running) MATLAB process.")
 
         # Terminating Xvfb
         if system.is_posix():

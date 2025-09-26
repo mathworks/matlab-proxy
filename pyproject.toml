@@ -34,13 +34,14 @@ classifiers = [
 ]
 
 dependencies = [
-    "aiohttp>=3.7.4",
     "aiohttp_session[secure]",
-    "psutil",
-    "watchdog",
-    "requests",
+    "aiohttp>=3.7.4",
     "importlib-metadata",
     "importlib-resources",
+    "psutil",
+    "requests",
+    "rich",
+    "watchdog",
 ]
 
 [project.urls]

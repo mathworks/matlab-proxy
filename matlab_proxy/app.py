@@ -996,7 +996,7 @@ def configure_no_proxy_in_env():
         os.environ["no_proxy"] = ",".join(
             set(existing_no_proxy_env + no_proxy_whitelist)
         )
-    logger.info(f"Setting no_proxy to: {os.environ.get('no_proxy')}")
+    logger.debug(f"Setting no_proxy to: {os.environ.get('no_proxy')}")
 
 
 def create_and_start_app(config_name):
@@ -1053,12 +1053,12 @@ def print_version_and_exit():
 
 def main():
     """Starting point of the integration. Creates the web app and runs indefinitely."""
-    if util.parse_cli_args()["version"]:
+    if util.parse_main_cli_args()["version"]:
         print_version_and_exit()
 
     # The integration needs to be called with --config flag.
     # Parse the passed cli arguments.
-    desired_configuration_name = util.parse_cli_args()["config"]
+    desired_configuration_name = util.parse_main_cli_args()["config"]
 
     create_and_start_app(config_name=desired_configuration_name)
 

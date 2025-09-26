@@ -26,7 +26,7 @@ logger = mwi.logger.get()
 interrupt_signal_caught = False
 
 
-def parse_cli_args():
+def parse_main_cli_args():
     """Parses CLI arguments passed to the main() function.
 
     Returns:
@@ -52,6 +52,28 @@ def parse_cli_args():
 
     parsed_args["config"] = args.config
     parsed_args["version"] = args.version
+
+    return parsed_args
+
+
+def parse_list_cli_args():
+    """Parses CLI arguments passed to the matlab-proxy-app-list-servers entrypoint.
+
+    Returns:
+        dict: Containing the parsed arguments
+    """
+    # Parse the --config flag provided to the console script executable.
+    parsed_args = {}
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-q",
+        "--quiet",
+        help="Return the server list without any additional text.",
+        action="store_true",
+    )
+    args = parser.parse_args()
+
+    parsed_args["quiet"] = args.quiet
 
     return parsed_args
 
@@ -146,47 +168,6 @@ def add_signal_handlers(loop):
             signal.signal(interrupt_signal, catch_interrupt_signal)
 
     return loop
-
-
-def prettify(boundary_filler=" ", text_arr=[]):
-    """Prettify array of strings with borders for stdout
-
-    Args:
-        boundary_filler (str, optional): Upper and lower border filler for text. Defaults to " ".
-        text_arr (list, optional):The text array to prettify. Each element will be added to a newline. Defaults to [].
-
-    Returns:
-        [str]: Prettified String
-    """
-
-    import sys
-
-    if not sys.stdout.isatty():
-        return (
-            "\n============================\n"
-            + "\n".join(text_arr)
-            + "\n============================\n"
-        )
-
-    size = os.get_terminal_size()
-    cols, _ = size.columns, size.lines
-
-    if any(len(text) > cols for text in text_arr):
-        result = ""
-        for text in text_arr:
-            result += text + "\n"
-        return result
-
-    upper = "\n" + "".ljust(cols, boundary_filler) + "\n" if len(text_arr) > 0 else ""
-    lower = "".ljust(cols, boundary_filler) if len(text_arr) > 0 else ""
-
-    content = ""
-    for text in text_arr:
-        content += text.center(cols) + "\n"
-
-    result = upper + content + lower
-
-    return result
 
 
 def get_child_processes(parent_process, max_attempts=10, sleep_interval=1):

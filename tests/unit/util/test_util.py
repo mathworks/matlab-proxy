@@ -7,7 +7,7 @@ import psutil
 import inspect
 
 from matlab_proxy import util
-from matlab_proxy.util import get_child_processes, system, add_signal_handlers, prettify
+from matlab_proxy.util import get_child_processes, system, add_signal_handlers
 from matlab_proxy.util import system
 from matlab_proxy.util.mwi.exceptions import (
     UIVisibleFatalError,
@@ -39,16 +39,6 @@ def test_add_signal_handlers(event_loop: asyncio.AbstractEventLoop):
         # In a windows system, the signal handlers are added to the 'signal' package.
         for interrupt_signal in system.get_supported_termination_signals():
             assert signal.getsignal(interrupt_signal) is not None
-
-
-def test_prettify():
-    """Tests if text is prettified"""
-    txt_arr = ["Hello world"]
-
-    prettified_txt = prettify(boundary_filler="=", text_arr=txt_arr)
-
-    assert txt_arr[0] in prettified_txt
-    assert "=" in prettified_txt
 
 
 def test_get_child_processes_no_children_initially(mocker):

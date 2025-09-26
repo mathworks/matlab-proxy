@@ -70,7 +70,7 @@ def validate_mlm_license_file(nlm_connections_str):
     # regex = Start of Line, Any number of 0-9 digits , @, any number of nonwhite space characters with "- _ ." allowed
     # "^[0-9]+[@](\w|\_|\-|\.)+$"
     # Server triad is of the form : port@host1 or port@host1,port@host2,port@host3
-    nlm_connection_str_regex = "(^[0-9]+[@](\w|\_|\-|\.)+$)"
+    nlm_connection_str_regex = r"(^[0-9]+[@](\w|\_|\-|\.)+$)"
     error_message = (
         f"MLM_LICENSE_FILE validation failed for {nlm_connections_str}. "
         f"If set, the MLM_LICENSE_FILE environment variable must contain server names (each of the form port@hostname) separated by ':' on unix or ';' on windows(server triads however must be comma seperated)"

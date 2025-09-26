@@ -213,3 +213,13 @@ class Experimental:
     def should_use_cookie_cache():
         """Returns true if the cookie jar support is enabled."""
         return _is_env_set_to_true(Experimental.get_env_name_use_cookie_cache())
+
+    @staticmethod
+    def get_env_name_use_rich_logging():
+        """Set to True to enable rich logging to console."""
+        return "MWI_USE_RICH_LOGGING"
+
+    @staticmethod
+    def use_rich_logger():
+        """Returns true if the cookie jar support is enabled."""
+        return _is_env_set_to_true(Experimental.get_env_name_use_rich_logging())
