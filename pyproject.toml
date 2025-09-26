@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "matlab-proxy"
-version = "0.27.1"
+version = "0.27.2"
 description = "Python® package enables you to launch MATLAB® and access it from a web browser."
 readme = "README.md"
 license = "LicenseRef-MATHWORKS-CLOUD-REFERENCE-ARCHITECTURE-LICENSE"
