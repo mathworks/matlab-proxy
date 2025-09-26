@@ -58,7 +58,7 @@ def __set_logging_configuration():
         mwi_env.get_env_name_logging_level(), __get_default_log_level()
     ).upper()
 
-    if __is_not_valid_log_level(log_level):
+    if __is_invalid_log_level(log_level):
         default_log_level = __get_default_log_level()
         logging.warning(
             f"Unknown log level '{log_level}' set. Defaulting to log level '{default_log_level}'..."
@@ -134,14 +134,14 @@ def __get_default_log_level():
     return "INFO"
 
 
-def __is_not_valid_log_level(log_level):
+def __is_invalid_log_level(log_level):
     """Helper to check if the log level is valid.
 
     Returns:
         Boolean: Whether log level  exists
     """
 
-    return log_level not in logging.getLevelNamesMapping().keys()
+    return not hasattr(logging, log_level)
 
 
 def log_startup_info(title=None, matlab_url=None):

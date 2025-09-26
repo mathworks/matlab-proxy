@@ -10,7 +10,6 @@ from matlab_proxy.util.mwi import logger as mwi_logger
 @pytest.fixture
 def reset_logger_handlers():
     """Fixture to reset logger handlers after each test."""
-    yield
     logger = mwi_logger.get()
     logger.handlers.clear()
 
