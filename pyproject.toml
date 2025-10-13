@@ -62,7 +62,7 @@ test = [
     "psutil",
     "urllib3",
     "pytest-playwright",
-    "pytest-asyncio==0.24.0",
+    "pytest-asyncio",
 ]
 dev = [
     "aiohttp-devtools",

@@ -89,8 +89,8 @@ async def fake_endpoint(request):
 
 
 @pytest.fixture
-def fake_server_with_auth_enabled(
-    event_loop, aiohttp_client, monkeypatch, get_custom_auth_token_str
+async def fake_server_with_auth_enabled(
+    aiohttp_client, monkeypatch, get_custom_auth_token_str
 ):
     auth_token = get_custom_auth_token_str
     auth_enablement = "True"
@@ -120,7 +120,7 @@ def fake_server_with_auth_enabled(
     aiohttp_session_setup(
         app, EncryptedCookieStorage(f, cookie_name="matlab-proxy-session")
     )
-    return event_loop.run_until_complete(aiohttp_client(app))
+    return await aiohttp_client(app)
 
 
 async def test_set_value_with_token(
@@ -256,7 +256,7 @@ async def test_get_value_with_token_in_query_params(
 
 
 @pytest.fixture
-def fake_server_without_auth_enabled(event_loop, aiohttp_client, monkeypatch):
+async def fake_server_without_auth_enabled(aiohttp_client, monkeypatch):
     auth_enablement = "False"
     monkeypatch.setenv(
         mwi_env.get_env_name_enable_mwi_auth_token(), str(auth_enablement)
@@ -281,7 +281,7 @@ def fake_server_without_auth_enabled(event_loop, aiohttp_client, monkeypatch):
     aiohttp_session_setup(
         app, EncryptedCookieStorage(f, cookie_name="matlab-proxy-session")
     )
-    return event_loop.run_until_complete(aiohttp_client(app))
+    return await aiohttp_client(app)
 
 
 async def test_get_value(fake_server_without_auth_enabled):

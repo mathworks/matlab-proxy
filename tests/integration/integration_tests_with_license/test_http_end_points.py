@@ -170,10 +170,19 @@ class RealMATLABServer:
     Setting up the server in the context of Pytest.
     """
 
-    def __init__(self, event_loop):
-        self.event_loop = event_loop
+    def __init__(self):
+        self.proc = None
+        self.dpipe = None
+        self.mwi_app_port = None
+        self.matlab_config_file_path = None
+        self.temp_dir_path = None
+        self.temp_dir_name = None
+        self.mwi_base_url = None
+        self.headers = None
+        self.connection_scheme = None
+        self.url = None
 
-    def __enter__(self):
+    async def __aenter__(self):
         # Store the matlab proxy logs in os.pipe for testing
         # os.pipe2 is only supported in Linux systems
         _logger.info("Setting up MATLAB Server for integration test")
@@ -196,8 +205,8 @@ class RealMATLABServer:
             "MWI_BASE_URL": self.mwi_base_url,
         }
 
-        self.proc = self.event_loop.run_until_complete(
-            utils.start_matlab_proxy_app(out=self.dpipe[1], input_env=input_env)
+        self.proc = await utils.start_matlab_proxy_app(
+            out=self.dpipe[1], input_env=input_env
         )
 
         utils.wait_server_info_ready(self.mwi_app_port)
@@ -237,28 +246,23 @@ class RealMATLABServer:
             await process.wait()
             _logger.debug("Killed the MATLAB process after timeout.")
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
+    async def __aexit__(self, exc_type, exc_value, exc_traceback):
         _logger.info("Tearing down the MATLAB Server.")
-        self.event_loop.run_until_complete(self._terminate_process(timeout=10))
+        await self._terminate_process(timeout=10)
         _logger.debug("Terminated the MATLAB process.")
 
 
 # Fixtures
 @pytest.fixture
-def matlab_proxy_app_fixture(
-    event_loop,
-):
+async def matlab_proxy_app_fixture():
     """A pytest fixture which yields a real matlab server to be used by tests.
-
-    Args:
-        event_loop (Event loop): The built-in event loop provided by pytest.
 
     Yields:
         real_matlab_server : A real matlab web server used by tests.
     """
 
     try:
-        with RealMATLABServer(event_loop) as matlab_proxy_app:
+        async with RealMATLABServer() as matlab_proxy_app:
             yield matlab_proxy_app
     except ProcessLookupError as e:
         _logger.debug("ProcessLookupError found in matlab proxy app fixture")
