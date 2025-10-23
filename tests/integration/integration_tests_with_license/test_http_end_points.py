@@ -198,11 +198,13 @@ class RealMATLABServer:
 
         self.temp_dir_name = "temp_dir"
         self.mwi_base_url = "/matlab-test"
+        self.mwi_matlab_startup_script = "c=12"
 
         # Environment variables to launch matlab proxy
         input_env = {
             "MWI_APP_PORT": self.mwi_app_port,
             "MWI_BASE_URL": self.mwi_base_url,
+            "MWI_MATLAB_STARTUP_SCRIPT": self.mwi_matlab_startup_script,
         }
 
         self.proc = await utils.start_matlab_proxy_app(
@@ -399,3 +401,92 @@ def test_download_file_from_matlab(
     # Once MATLAB is up, we can then attempt to download
     result = _download_test_file(matlab_proxy_app_fixture, test_file)
     assert result == test_file_contents
+
+
+def test_matlab_startup_script_execution(matlab_proxy_app_fixture):
+    """Test that the MATLAB startup script is executed and creates the expected output file.
+
+    This test verifies:
+    1. MATLAB is up and running
+    2. The startup script (c=12) was executed
+    3. The output file exists at the expected location
+    4. The file contains the expected content
+    5. After stopping MATLAB, the output file is deleted
+
+    Args:
+        matlab_proxy_app_fixture: A pytest fixture which yields a real matlab server to be used by tests.
+    """
+    # Arrange
+    # Ensure MATLAB is up
+    status = _check_matlab_status(matlab_proxy_app_fixture, "up")
+    assert status == "up"
+
+    # Read the logs to find the path of the startup code output file
+    read_descriptor, write_descriptor = matlab_proxy_app_fixture.dpipe
+    number_of_bytes = 2000
+
+    if read_descriptor:
+        line = os.read(read_descriptor, number_of_bytes).decode("utf-8")
+        process_logs = line.strip()
+        # Find the path of the startup code output file
+        match = re.search(
+            r"The results of executing MWI_MATLAB_STARTUP_SCRIPT are stored at: \s*(.*?startup_code_output\.txt)",
+            process_logs,
+        )
+        if match:
+            output_file_path = match.group(1)
+            _logger.info(f"Found startup code output file path: {output_file_path}")
+        else:
+            log_excerpt = (
+                process_logs[:1500] + "..."
+                if len(process_logs) > 1500
+                else process_logs
+            )
+            error_message = (
+                f"Could not find startup code output file path in logs. "
+                f"Expected to find a message containing 'When MATLAB starts, you can see the output for your startup code at:' "
+                f"followed by a path to 'startup_code_output.txt'. "
+                f"Log excerpt: {log_excerpt}"
+            )
+            assert False, error_message
+
+        # Assert
+        # Verify the file exists
+        assert os.path.exists(
+            output_file_path
+        ), f"Startup code output file not found at {output_file_path}"
+
+        # Read the file content and verify it contains the expected output
+        with open(output_file_path, "r") as f:
+            content = f.read()
+            normalized_content = "".join(content.split())
+            assert (
+                "c=12" in normalized_content
+            ), f"Expected value 'c=12' in file content, but got: {normalized_content}"
+
+        # Act
+        # Stop MATLAB
+        http_endpoint_to_test = "/stop_matlab"
+        stop_url = matlab_proxy_app_fixture.url + http_endpoint_to_test
+
+        with requests.Session() as s:
+            retries = Retry(total=10, backoff_factor=0.1)
+            s.mount(
+                f"{matlab_proxy_app_fixture.connection_scheme}://",
+                HTTPAdapter(max_retries=retries),
+            )
+            s.delete(stop_url, headers=matlab_proxy_app_fixture.headers, verify=False)
+
+        status = _check_matlab_status(matlab_proxy_app_fixture, "down")
+
+        # Assert
+        assert status == "down"
+        # Verify the file has been deleted
+        assert not os.path.exists(
+            output_file_path
+        ), f"Startup code output file was not deleted after stopping MATLAB: {output_file_path}"
+
+    # Cleanup
+    # Close the read and write descriptors
+    os.close(read_descriptor)
+    os.close(write_descriptor)

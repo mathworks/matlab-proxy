@@ -1,4 +1,4 @@
-% Copyright 2024 The MathWorks, Inc.
+% Copyright 2024-2025 The MathWorks, Inc.
 
 classdef TestEvaluateUserMatlabCodeScript < matlab.unittest.TestCase
 % TestEvaluateUserMatlabCodeScript contains unit tests for the complete function
@@ -80,6 +80,17 @@ classdef TestEvaluateUserMatlabCodeScript < matlab.unittest.TestCase
             logContent = fileread(testCase.LogFile);
             testCase.verifyTrue(contains(logContent, 'An error occurred in the following code:'));
             testCase.verifyTrue(contains(logContent, 'MATLAB:UndefinedFunction'));
+        end
+
+        function testVariableCreationInBaseWorkspace(testCase)
+            % Test that a variable created in the startup script exists in the workspace
+            setenv('MWI_MATLAB_STARTUP_SCRIPT', 'myStartupVar = 10;');
+            evaluateUserMatlabCode();
+            % Check variable existence and value
+            varExists = eval("exist('myStartupVar', 'var')");
+            assert(varExists == 1, 'myStartupVar should exist in workspace');
+            varValue = eval("myStartupVar");
+            assert(varValue == 10, 'myStartupVar should have value 10');
         end
     end
 end
