@@ -565,10 +565,6 @@ async def matlab_view(req):
     Returns:
         WebSocketResponse or HTTPResponse: based on the Request type.
     """
-    # Special keys for web socket requests
-    CONNECTION = "connection"
-    UPGRADE = "upgrade"
-
     reqH = req.headers.copy()
 
     state = req.app["state"]
@@ -589,14 +585,7 @@ async def matlab_view(req):
         raise web.HTTPServiceUnavailable()
 
     # WebSocket
-    # According to according to RFC6455 (https://www.rfc-editor.org/rfc/rfc6455.html)
-    # the values of 'connection' and 'upgrade'  keys of request header
-    # should be ASCII case-insensitive matches.
-    if (
-        reqH.get(CONNECTION, "").lower() == UPGRADE
-        and reqH.get(UPGRADE, "").lower() == "websocket"
-        and req.method == "GET"
-    ):
+    if _is_websocket_upgrade_request(req.method, reqH):
         ws_server = web.WebSocketResponse(
             max_msg_size=constants.MAX_WEBSOCKET_MESSAGE_SIZE_IN_MB, compress=True
         )
@@ -754,6 +743,30 @@ async def matlab_view(req):
                     f"Failed to forward HTTP request to MATLAB with error: {err}"
                 )
                 raise web.HTTPNotFound()
+
+
+def _is_websocket_upgrade_request(request_method, request_headers):
+    """Check if the request is a WebSocket upgrade request.
+
+    Args:
+        method (str): The HTTP method
+        headers (dict): The request headers
+
+    Returns:
+        bool: True if the request is a WebSocket upgrade request, False otherwise
+    """
+    # According to RFC6455 (https://www.rfc-editor.org/rfc/rfc6455.html)
+    # the values of 'connection' and 'upgrade'  keys of request header
+    # should be ASCII case-insensitive matches.
+    #
+    # Different browsers may send different values for connection header, so we check if literal 'upgrade'
+    # is present in the header value. E.g. Firefox sets connection header to "keep-alive, Upgrade"
+    # while Chrome sets it to "Upgrade".
+    return (
+        "upgrade" in request_headers.get("connection", "").lower()
+        and request_headers.get("upgrade", "").lower() == "websocket"
+        and request_method == "GET"
+    )
 
 
 async def transform_request_url(req, matlab_base_url):
