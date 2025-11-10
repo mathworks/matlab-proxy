@@ -223,3 +223,8 @@ class Experimental:
     def use_rich_logger():
         """Returns true if the cookie jar support is enabled."""
         return _is_env_set_to_true(Experimental.get_env_name_use_rich_logging())
+
+    @staticmethod
+    def get_licmode_override():
+        """Returns the licmode oveerride if set"""
+        return os.environ.get("MWI_LICMODE_OVERRIDE", None)

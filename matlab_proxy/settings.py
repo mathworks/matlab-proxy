@@ -684,6 +684,11 @@ def _get_matlab_cmd(matlab_executable_path, code_to_execute, nlm_conn_str):
         return None
 
     matlab_lic_mode = ["-licmode", "file"] if nlm_conn_str else ""
+
+    if mwi_env.Experimental.get_licmode_override():
+        matlab_lic_mode = ["-licmode", mwi_env.Experimental.get_licmode_override()]
+        logger.info(f"Using MATLAB license mode arguments: {matlab_lic_mode}")
+
     # flag to hide MATLAB Window
     flag_to_hide_desktop = ["-nodesktop"]
     if system.is_windows():
