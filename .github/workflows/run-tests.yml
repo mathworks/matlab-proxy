@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 
 # Workflow that contains jobs to test MATLAB Proxy
 name: Testing MATLAB Proxy Integration
@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - "main"
+      - "integration/**"
 
 jobs:
   # Runs unit tests
