@@ -161,8 +161,8 @@ function App() {
     const htmlToRenderMATLAB = () => {
         let theHtmlToRenderMATLAB = 'index-jsd-cr.html';
 
-        // Add mre query parameter
-        theHtmlToRenderMATLAB += `?mre=${encodeURIComponent(fullyQualifiedUrl)}`;
+        // Add mre query parameter and to improve graphics performance turn websocket on
+        theHtmlToRenderMATLAB += `?mre=${encodeURIComponent(fullyQualifiedUrl)}&websocket=on`;
 
         return theHtmlToRenderMATLAB;
     };
