@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2025 The MathWorks, Inc.
 
 # Workflow that contains jobs to run MATLAB-Proxy unit tests
 
@@ -10,7 +10,6 @@ on:
 
 jobs:
   matlab_unit_tests:
-    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -28,7 +27,6 @@ jobs:
         uses: matlab-actions/run-tests@v2
 
   node_tests:
-    timeout-minutes: 15
     strategy:
       # fail-fast=false runs all the jobs in strategy matrix
       # irrespective of failures in a particular job, and marks
@@ -65,7 +63,6 @@ jobs:
         run: npm test
 
   python_tests:
-    timeout-minutes: 15
     strategy:
       # fail-fast=false runs all the jobs in strategy matrix
       # irrespective of failures in a particular job, and marks
