@@ -14,7 +14,7 @@ on:
 
 jobs:
   python_tests:
-    timeout-minutes: 20
+    timeout-minutes: 15
     strategy:
       # fail-fast=false runs all the jobs in strategy matrix
       # irrespective of failures in a particular job, and marks
