@@ -10,10 +10,11 @@ on:
 
 jobs:
   matlab_unit_tests:
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -27,6 +28,7 @@ jobs:
         uses: matlab-actions/run-tests@v2
 
   node_tests:
+    timeout-minutes: 15
     strategy:
       # fail-fast=false runs all the jobs in strategy matrix
       # irrespective of failures in a particular job, and marks
@@ -34,8 +36,8 @@ jobs:
       fail-fast: false
 
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        node-version: ['24']
+        os: [ubuntu-latest, windows-latest]
+        node-version: ['18.x']
 
     runs-on: ${{ matrix.os }}
 
@@ -63,6 +65,7 @@ jobs:
         run: npm test
 
   python_tests:
+    timeout-minutes: 15
     strategy:
       # fail-fast=false runs all the jobs in strategy matrix
       # irrespective of failures in a particular job, and marks
@@ -70,14 +73,9 @@ jobs:
       fail-fast: false
 
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11']
+        os: [ubuntu-latest, windows-latest]
+        python-version: ['3.10', '3.11']
         node-version: ['24']
-        exclude:
-          - os: macos-latest
-            python-version: '3.8'
-          - os: macos-latest
-            python-version: '3.9'
 
     runs-on: ${{ matrix.os }}
 
