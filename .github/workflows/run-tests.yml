@@ -12,11 +12,11 @@ on:
 jobs:
   # Runs unit tests
   call-run-unit-tests:
-    uses: ./.github/workflows/run-unit-tests.yml
     timeout-minutes: 15
+    uses: ./.github/workflows/run-unit-tests.yml
 
   # Runs integration tests
   call-integration-tests:
+    timeout-minutes: 20
     uses: ./.github/workflows/run-integration-tests.yml
     secrets: inherit
-    timeout-minutes: 20
