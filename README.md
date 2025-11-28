@@ -76,7 +76,7 @@ python -m pip install matlab-proxy
 ```
 
 ### Building From Sources
-Building from sources requires Node.js® version 18 or higher. [Click here to install Node.js](https://nodejs.org/en/)
+Building from sources requires Node.js® version 24 or higher — [install it from the official site](https://nodejs.org/en/).
 
 ```bash
 git clone https://github.com/mathworks/matlab-proxy.git

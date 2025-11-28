@@ -1,6 +1,7 @@
 *.egg-info/
 .eggs/
 __pycache__/
+__uvcache__/
 build/
 dist/
 .venv*/
