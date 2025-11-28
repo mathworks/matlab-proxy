@@ -1,4 +1,4 @@
-# Copyright 2023-2024 The MathWorks, Inc.
+# Copyright 2023-2025 The MathWorks, Inc.
 
 # Workflow to run MATLAB-Proxy integration tests
 name: Integration testing for MATLAB Proxy
@@ -14,6 +14,7 @@ on:
 
 jobs:
   python_tests:
+    timeout-minutes: 20
     strategy:
       # fail-fast=false runs all the jobs in strategy matrix
       # irrespective of failures in a particular job, and marks
