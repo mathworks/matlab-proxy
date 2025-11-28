@@ -46,6 +46,11 @@ jobs:
         with:
           ref: ${{github.sha}}
 
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
       - name: Set up Python 3.8
         uses: actions/setup-python@v5
         with:
