@@ -24,7 +24,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         matlab-release: [R2020b, latest]
-        python-version: ['3.8', '3.11']
+        python-version: ['3.10', '3.13']
         node-version: ['24']
 
     runs-on: ${{ matrix.os }}

@@ -6,12 +6,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "matlab-proxy"
-version = "0.28.3"
+version = "0.28.4"
 description = "Python® package enables you to launch MATLAB® and access it from a web browser."
 readme = "README.md"
 license = "LicenseRef-MATHWORKS-CLOUD-REFERENCE-ARCHITECTURE-LICENSE"
 license-files = ["LICENSE.md"]
-requires-python = ">=3.8"
+requires-python = ">=3.10, <3.14"
 authors = [
     { name = "The MathWorks Inc.", email = "cloud@mathworks.com" },
 ]
@@ -27,10 +27,10 @@ classifiers = [
     "Intended Audience :: Developers",
     "Natural Language :: English",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 
 dependencies = [

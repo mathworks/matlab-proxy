@@ -155,7 +155,7 @@ def _download_test_file(matlab_proxy_app_fixture, test_file):
         uri,
         connection_scheme,
         headers,
-        http_endpoint="/download/" + test_file,
+        http_endpoint="/download" + test_file,
         outputFormat=Format.TEXT,
     )
     return res

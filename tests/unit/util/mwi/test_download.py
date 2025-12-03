@@ -1,4 +1,4 @@
-# Copyright 2024 The MathWorks, Inc.
+# Copyright 2024-2025 The MathWorks, Inc.
 import pytest
 
 from matlab_proxy.util.mwi.download import (
@@ -18,12 +18,6 @@ def mock_request_fixture(mocker):
     }
     mock_req.rel_url = mocker.MagicMock()
     return mock_req
-
-
-def _get_expected_output_based_on_os_type(paths: list) -> str:
-    import matlab_proxy.util.system as system
-
-    return "\\".join(paths) if system.is_windows() else "/".join(paths)
 
 
 # Test for is_download_request function
@@ -70,26 +64,25 @@ def test_is_download_request(mock_request_fixture, test_base_url, path, expected
             False,
             "",
             "/download/some/path/to/file.txt",
-            _get_expected_output_based_on_os_type(["/some", "path", "to", "file.txt"]),
+            "/some/path/to/file.txt",
         ),
         (
             False,
             "/base",
             "/base/download/some/path/to/file.txt",
-            _get_expected_output_based_on_os_type(["/some", "path", "to", "file.txt"]),
+            "/some/path/to/file.txt",
         ),
     ],
     ids=[
-        "Windows with null base url",
-        "Windows with non-null base url",
-        "Linux with null base url",
-        "Linux with non-null base url",
+        "Windows path with null base url",
+        "Windows path with non-null base url",
+        "Linux path with null base url",
+        "Linux path with non-null base url",
     ],
 )
 def test_get_download_payload_path(
     mock_request_fixture, mocker, is_windows, test_base_url, path, expected
 ):
-    mocker.patch("matlab_proxy.util.system.is_windows", return_value=is_windows)
     mock_request_fixture.app["settings"]["base_url"] = test_base_url
     mock_request_fixture.rel_url.path = path
     assert _get_download_payload_path(mock_request_fixture) == expected

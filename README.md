@@ -59,7 +59,7 @@ MATLAB Proxy is under active development. For support or to report issues, see [
   $ sudo apt install fluxbox 
   ```
 
-* Python versions: **3.8** | **3.9**  | **3.10** | **3.11**
+* Python versions: 3.10 | 3.11 | 3.12 | 3.13
 * [Browser Requirements](https://www.mathworks.com/support/requirements/browser-requirements.html)
 * Supported Operating Systems:
     * Linux®

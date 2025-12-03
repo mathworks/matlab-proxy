@@ -1,4 +1,4 @@
-# Copyright 2024 The MathWorks, Inc.
+# Copyright 2024-2025 The MathWorks, Inc.
 
 # This file contains functions required to enable downloads from the file browser
 from matlab_proxy.util.mwi import logger as mwi_logger
@@ -131,15 +131,6 @@ def _get_download_payload_path(req):
             "/download" if _is_null_base_url(base_url) else f"{base_url}/download"
         )
 
-        if system.is_windows():
-            # On Windows, the URL is of the form : /downloadC:\some\path\to\file.txt
-            return str(
-                Path((req.rel_url.path).replace("/download", "/download/")).relative_to(
-                    f"{compare_str}"
-                )
-            )
-        else:
-            # On Posix, the URL is of the form : /download/some/path/to/file.txt
-            return "/" + str(Path((req.rel_url.path)).relative_to(f"{compare_str}"))
+        return str(req.rel_url.path).replace(compare_str, "", 1)
 
     return None
