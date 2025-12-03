@@ -1,15 +1,16 @@
 # Copyright 2020-2025 The MathWorks, Inc.
 """Functions to access & control the logging behavior of the app"""
 
-from . import environment_variables as mwi_env
-
-from pathlib import Path
-from rich.console import Console
-from rich.table import Table
 import logging
 import os
 import sys
 import time
+from pathlib import Path
+
+from rich.console import Console
+from rich.table import Table
+
+from . import environment_variables as mwi_env
 
 logging.getLogger("aiohttp_session").setLevel(logging.ERROR)
 
@@ -144,7 +145,7 @@ def __is_invalid_log_level(log_level):
     return not hasattr(logging, log_level)
 
 
-def log_startup_info(title=None, matlab_url=None):
+def log_startup_info(title=None, matlab_urls=[]):
     """Logs the startup information to the console and log file if specified."""
     logger = __get_mw_logger()
     print_as_table = False
@@ -155,7 +156,7 @@ def log_startup_info(title=None, matlab_url=None):
         console = Console()
         # Number of additional characters used by the table
         padding = 4
-        print_as_table = len(matlab_url) + padding <= console.width
+        print_as_table = all(len(url) + padding <= console.width for url in matlab_urls)
 
     if print_as_table:
         table = Table(
@@ -168,11 +169,13 @@ def log_startup_info(title=None, matlab_url=None):
         )
         table.add_column(overflow="fold", style="bold green", justify="center")
         table.add_row(header_info)
-        table.add_row(matlab_url)
+        for url in matlab_urls:
+            table.add_row(url)
         console.print(table)
 
     if os.getenv(mwi_env.get_env_name_log_file(), None) or not print_as_table:
-        logger.critical(f"{header_info} {matlab_url}")
+        urls = "\n\t".join(matlab_urls)
+        logger.critical(f"{header_info}\n\t{urls}")
 
 
 class _ColoredFormatter(logging.Formatter):

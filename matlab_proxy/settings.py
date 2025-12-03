@@ -21,7 +21,7 @@ from matlab_proxy.constants import MWI_AUTH_TOKEN_NAME_FOR_HTTP
 from matlab_proxy.util import mwi, system
 from matlab_proxy.util.cookie_jar import HttpOnlyCookieJar
 from matlab_proxy.util.mwi import environment_variables as mwi_env
-from matlab_proxy.util.mwi import token_auth, session_name
+from matlab_proxy.util.mwi import session_name, token_auth
 from matlab_proxy.util.mwi.exceptions import (
     FatalError,
     MatlabInstallError,
@@ -191,7 +191,7 @@ def get_dev_settings(config):
         "create_xvfb_cmd": create_xvfb_cmd,
         "base_url": os.environ.get(mwi_env.get_env_name_base_url(), ""),
         "app_port": os.environ.get(mwi_env.get_env_name_app_port(), 8000),
-        "host_interface": os.environ.get(mwi_env.get_env_name_app_host(), "127.0.0.1"),
+        "host_interface": "127.0.0.1",
         "mwapikey": str(uuid.uuid4()),
         "matlab_protocol": "http",
         "matlab_display": ":1",
@@ -329,8 +329,8 @@ def get_server_settings(config_name):
         "base_url": mwi.validators.validate_base_url(
             os.getenv(mwi_env.get_env_name_base_url(), "")
         ),
-        # Set default to host interface to 0.0.0.0
-        "host_interface": os.environ.get(mwi_env.get_env_name_app_host(), "0.0.0.0"),
+        # Set host interface to 0.0.0.0 to bind on all interfaces
+        "host_interface": "0.0.0.0",
         # not_exception_safe, can_terminate_process by throwing FatalError
         "app_port": mwi.validators.validate_app_port_is_free(
             os.getenv(mwi_env.get_env_name_app_port())

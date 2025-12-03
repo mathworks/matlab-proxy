@@ -33,12 +33,27 @@ from matlab_proxy.util.mwi.exceptions import (
     MatlabInstallError,
     OnlineLicensingError,
     UIVisibleFatalError,
-    XvfbError,
     WindowManagerError,
+    XvfbError,
     log_error,
 )
 
 logger = mwi.logger.get()
+
+
+def _get_server_urls(server_url: str, mwi_auth_token_str: str) -> list[str]:
+    """Returns list of server URLs including user supplied hostname, if any."""
+    # By default mwi_server_url usually points to 0.0.0.0 as the hostname, but this does not work well
+    # on some browsers. Specifically on Safari (MacOS), hence the replace op with localhost.
+    server_urls_with_auth_token = [
+        f'{server_url.replace("0.0.0.0", "localhost")}{mwi_auth_token_str}'
+    ]
+    if user_supplied_hostname := os.getenv(mwi_env.get_env_name_app_host(), "").strip():
+        server_urls_with_auth_token.append(
+            f'{server_urls_with_auth_token[0].replace("localhost", user_supplied_hostname)}'
+        )
+
+    return server_urls_with_auth_token
 
 
 class AppState:
@@ -219,7 +234,7 @@ class AppState:
     def __delete_cached_config_file(self):
         """Deletes the cached config file"""
         try:
-            logger.debug(f"Deleting any cached config files!")
+            logger.debug("Deleting any cached config files!")
             os.remove(self.__get_cached_config_file())
         except FileNotFoundError:
             # The file being absent is acceptable.
@@ -227,7 +242,7 @@ class AppState:
 
     def __reset_and_delete_cached_config(self):
         """Reset licensing variable of the class and removes the cached config file."""
-        logger.debug(f"Resetting cached config information...")
+        logger.debug("Resetting cached config information...")
         self.licensing = None
         self.__delete_cached_config_file()
 
@@ -263,7 +278,7 @@ class AppState:
                 f"{mwi_env.get_env_name_mwi_use_existing_license()} variable set in environment"
             )
             logger.info(
-                f"!!! Starting MATLAB without providing any additional licensing information. This requires MATLAB to have been activated on the machine from which its being started !!!"
+                "!!! Starting MATLAB without providing any additional licensing information. This requires MATLAB to have been activated on the machine from which its being started !!!"
             )
 
             # Delete old config info from cache to ensure its wiped out first before persisting new info.
@@ -342,7 +357,7 @@ class AppState:
                     else:
                         # Somethings wrong, licensing is neither NLM or MHLM
                         self.__reset_and_delete_cached_config()
-                except Exception as e:
+                except Exception:
                     self.__reset_and_delete_cached_config()
 
     async def __update_matlab_state_based_on_connector_state(self):
@@ -900,16 +915,11 @@ class AppState:
         self.mwi_server_session_files["mwi_server_info_file"] = mwi_server_info_file
         logger.debug(f"Server info stored into: {mwi_server_info_file}")
 
-        # By default mwi_server_url usually points to 0.0.0.0 as the hostname, but this does not work well
-        # on some browsers. Specifically on Safari (MacOS)
-        server_url = (
-            self.settings["mwi_server_url"].replace("0.0.0.0", "localhost")
-            + mwi_auth_token_str
-        )
-
         mwi.logger.log_startup_info(
             title=f"matlab-proxy-app running on {self.settings['app_port']}",
-            matlab_url=server_url,
+            matlab_urls=_get_server_urls(
+                self.settings["mwi_server_url"], mwi_auth_token_str
+            ),
         )
         logger.info(f"MATLAB Root: {self.settings['matlab_path']}")
 
@@ -1103,7 +1113,7 @@ class AppState:
 
         # FileNotFoundError: is thrown if Xvfb is not found on System Path.
         # XvfbError: is thrown if something went wrong when starting Xvfb process.
-        except (FileNotFoundError, XvfbError) as err:
+        except (FileNotFoundError, XvfbError):
             self.error = XvfbError(
                 """Unable to start the Xvfb process. Ensure Xvfb is installed and is available on the System Path. See https://github.com/mathworks/matlab-proxy#requirements for information on Xvfb"""
             )
@@ -1309,7 +1319,7 @@ class AppState:
         # to MATLAB state by other functions/tasks until the lock is released, ensuring consistency. It's released early only in case of exceptions.
         await self.matlab_state_updater_lock.acquire()
         self.set_matlab_state("starting")
-        logger.info(f"Starting MATLAB...")
+        logger.info("Starting MATLAB...")
 
         # Clear MATLAB errors and logging
         self.error = None

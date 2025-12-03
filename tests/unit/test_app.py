@@ -924,16 +924,6 @@ def test_get_access_url_non_dev_windows(
     assert "127.0.0.1" in util.get_access_url(test_server.app)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="Testing the non-Windows access URL"
-)
-def test_get_access_url_non_dev_posix(
-    non_default_host_interface, non_test_env, test_server
-):
-    """Test to check access url to be 0.0.0.0 in non-dev mode on Linux/Darwin"""
-    assert "0.0.0.0" in util.get_access_url(test_server.app)
-
-
 @pytest.fixture(name="set_licensing_info_mock_fetch_single_entitlement")
 def set_licensing_info_mock_fetch_single_entitlement_fixture():
     """Fixture that returns a single entitlement
