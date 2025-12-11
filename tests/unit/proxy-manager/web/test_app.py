@@ -7,6 +7,7 @@ import pytest
 from aiohttp import client_exceptions, web
 
 import matlab_proxy_manager.utils.environment_variables as mpm_env
+from matlab_proxy_manager.utils import constants
 from matlab_proxy_manager.web import app
 
 
@@ -196,7 +197,9 @@ class TestProxy:
         """
         mock_req = mocker.Mock()
         mock_req.headers = mocker.MagicMock()
-        mock_req.headers.copy.return_value = {}
+        mock_req.headers.copy.return_value = {
+            constants.HEADER_MWI_MPM_CONTEXT: "test-ctx"
+        }
         mock_req.read = mocker.AsyncMock(return_value=b"request_body")
         mock_req.rel_url = "/matlab/"
 
@@ -213,12 +216,13 @@ class TestProxy:
         """
         mock_req = mocker.AsyncMock()
         mock_req.rel_url = "/invalid/path"
-        mock_req.headers = {}
+        mock_req.headers = {constants.HEADER_MWI_MPM_CONTEXT: "test-ctx"}
 
         response = await app.proxy(mock_req)
 
         assert isinstance(response, web.Response)
         assert response.status == 503
+        assert response.text is not None
         assert "Incorrect request path in the URL" in response.text
 
     async def test_proxy_missing_context_header(self, mocker):
@@ -237,6 +241,7 @@ class TestProxy:
 
         assert isinstance(response, web.Response)
         assert response.status == 503
+        assert response.text is not None
         assert "Required header" in response.text
 
     async def test_proxy_websocket_request(self, mocker):
@@ -252,7 +257,7 @@ class TestProxy:
         mock_req.headers = {
             "connection": "upgrade",
             "upgrade": "websocket",
-            "MWI-MPM-CONTEXT": "test_context",
+            constants.HEADER_MWI_MPM_CONTEXT: "test_context",
         }
         mock_req.method = "GET"
 
@@ -279,7 +284,7 @@ class TestProxy:
         """
         mock_req = mocker.MagicMock()
         mock_req.rel_url = "/matlab/default/some/path"
-        mock_req.headers = {"MWI-MPM-CONTEXT": "test_context"}
+        mock_req.headers = {constants.HEADER_MWI_MPM_CONTEXT: "test_context"}
         mock_req.method = "POST"
         mock_req.read = mocker.AsyncMock(return_value=b"request_body")
 
@@ -305,7 +310,7 @@ class TestProxy:
         """
         mock_req = mocker.MagicMock()
         mock_req.rel_url = "/matlab/default/some/path"
-        mock_req.headers = {"MWI-MPM-CONTEXT": "test_context"}
+        mock_req.headers = {constants.HEADER_MWI_MPM_CONTEXT: "test_context"}
         mock_req.method = "GET"
         mock_req.read = mocker.AsyncMock(return_value=b"")
 
@@ -331,7 +336,7 @@ class TestProxy:
         """
         mock_req = mocker.MagicMock()
         mock_req.rel_url = "/matlab/default/some/path"
-        mock_req.headers = {"MWI-MPM-CONTEXT": "test_context"}
+        mock_req.headers = {constants.HEADER_MWI_MPM_CONTEXT: "test_context"}
         mock_req.method = "GET"
         mock_req.read = mocker.AsyncMock(return_value=b"")
 
@@ -359,7 +364,7 @@ class TestProxy:
         mock_req.rel_url = "/matlab/default/some/path"
         mock_req.headers = {
             "JSESSION-ID": "123456789",
-            "MWI-MPM-CONTEXT": "test_context",
+            constants.HEADER_MWI_MPM_CONTEXT: "test_context",
         }
         mock_req.method = "GET"
 
@@ -395,7 +400,7 @@ class TestProxy:
         # Setup
         mock_req = mocker.MagicMock()
         mock_req.rel_url = "/matlab/default/some/path"
-        mock_req.headers = {"MWI-MPM-CONTEXT": "test_context"}
+        mock_req.headers = {constants.HEADER_MWI_MPM_CONTEXT: "test_context"}
         mock_req.method = "POST"
         mock_req.read = mocker.AsyncMock(return_value=b"request_body")
         mock_req.app = {"has_default_matlab_proxy_started": False, "servers": {}}
@@ -404,19 +409,15 @@ class TestProxy:
         )
         mocker.patch(
             "matlab_proxy_manager.web.app._get_backend_server",
-            return_value={"absolute_url": "http://server", "headers": {}},
-        )
-        mock_forward_http = mocker.patch(
-            "matlab_proxy_manager.web.app._forward_http_request",
-            return_value=web.Response(),
+            return_value=None,
         )
 
         # Execute
-        await app.proxy(mock_req)
+        with pytest.raises(web.HTTPFound):
+            await app.proxy(mock_req)
 
-        # Assertions
-        mock_start_default_proxy.assert_called_once()
-        mock_forward_http.assert_called_once()
+            # Assertions
+            mock_start_default_proxy.assert_called_once()
 
     async def test_proxy_start_default_proxy_is_not_called_if_proxying_non_default_matlab_request(
         self, mocker
@@ -424,7 +425,7 @@ class TestProxy:
         # Setup
         mock_req = mocker.MagicMock()
         mock_req.rel_url = "/matlab/12345/some/path"
-        mock_req.headers = {"MWI-MPM-CONTEXT": "test_context"}
+        mock_req.headers = {constants.HEADER_MWI_MPM_CONTEXT: "test_context"}
         mock_req.method = "POST"
         mock_req.read = mocker.AsyncMock(return_value=b"request_body")
         mock_req.app = {"has_default_matlab_proxy_started": False, "servers": {}}
@@ -453,7 +454,7 @@ class TestProxy:
         # Setup
         mock_req = mocker.MagicMock()
         mock_req.rel_url = "/matlab/default/some/path"
-        mock_req.headers = {"MWI-MPM-CONTEXT": "test_context"}
+        mock_req.headers = {constants.HEADER_MWI_MPM_CONTEXT: "test_context"}
         mock_req.method = "POST"
         mock_req.read = mocker.AsyncMock(return_value=b"request_body")
         mock_req.app = {"has_default_matlab_proxy_started": True, "servers": {}}
@@ -525,16 +526,14 @@ class TestHelpers:
 
     def test_catch_signals(self, mocker, mock_app):
         """Test the signal handling in the application."""
-        mock_poller = mocker.patch(
-            "matlab_proxy_manager.web.app.helpers.poll_for_server_deletion",
-            return_value=None,
-        )
+        mock_shutdown_event = mocker.MagicMock()
+        mock_shutdown_event.is_set.return_value = False
+        mock_app.get.return_value = mock_shutdown_event
 
         # Exercise the system under test
         app._catch_signals(mock_app)
 
         # Assertions
-        mock_poller.assert_called_once()
         mock_app.get.assert_called_once_with("shutdown_event")
         mock_app.get.return_value.set.assert_called_once()
 
@@ -660,28 +659,24 @@ class TestHelpers:
         assert excinfo.value.code == 1
 
     @pytest.mark.parametrize(
-        "client_key, default_key, expected_server",
+        "ctx, ident, expected_server",
         [
-            ("server1", "default", {"id": "server1", "details": "details1"}),
-            ("not-existing", "default", {"id": "default", "details": "details3"}),
+            ("12345", "default", {"id": "default", "details": "details3"}),
+            ("12345", "non-existing-kernel-id", None),
         ],
     )
-    def test_get_backend_server(self, mocker, client_key, default_key, expected_server):
+    def test_get_backend_server(self, mocker, ctx, ident, expected_server):
         """
         Test the _get_backend_server function.
         This test verifies that the _get_backend_server function correctly retrieves
-        the server information based on the provided client key and default key.
+        the server information based on the provided ctx and ident.
         """
         mock_req = mocker.MagicMock(spec=web.Request)
         mock_req.app = {
             "servers": {
-                "server1": {"id": "server1", "details": "details1"},
-                "server2": {"id": "server2", "details": "details2"},
-                "default": {"id": "default", "details": "details3"},
+                "12345_default": {"id": "default", "details": "details3"},
             }
         }
 
-        backend_server: dict = app._get_backend_server(
-            mock_req, client_key, default_key
-        )
+        backend_server: dict = app._get_backend_server(mock_req, ctx, ident)
         assert backend_server == expected_server

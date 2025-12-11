@@ -11,13 +11,14 @@ from typing import Optional
 import aiohttp
 from aiohttp import ClientSession, client_exceptions, web
 
+import matlab_proxy.constants as mp_constants
 import matlab_proxy.util.mwi.environment_variables as mwi_env
 import matlab_proxy.util.system as mwi_sys
 import matlab_proxy_manager.lib.api as mpm_lib
-import matlab_proxy.constants as mp_constants
 from matlab_proxy_manager.utils import constants, helpers, logger
 from matlab_proxy_manager.utils import environment_variables as mpm_env
 from matlab_proxy_manager.utils.auth import authenticate_access_decorator
+from matlab_proxy_manager.utils.decorators import validate_incoming_request_decorator
 from matlab_proxy_manager.web import watcher
 from matlab_proxy_manager.web.monitor import OrphanedProcessMonitor
 
@@ -100,7 +101,7 @@ def init_app() -> web.Application:
 
     app.on_startup.append(start_idle_monitor)
     app.on_startup.append(create_client_session)
-    app.on_cleanup.append(helpers.delete_dangling_servers)
+    app.on_cleanup.append(helpers.poll_for_server_deletion)
     app.on_cleanup.append(cleanup_client_session)
     app.on_cleanup.append(cleanup_monitor)
     app.on_cleanup.append(cleanup_watcher)
@@ -180,11 +181,14 @@ def _register_signal_handler(loop, app):
 
 def _catch_signals(app):
     """Handle termination signals for graceful shutdown."""
-    # Poll for parent process to clean up to avoid race conditions in cleanup of matlab proxies
-    # Ideally, we should minimize the work done when we catch exit signals, which would mean the
-    # polling for parent process should happen elsewhere
-    helpers.poll_for_server_deletion()
-    app.get("shutdown_event").set()
+    shutdown_event = app.get("shutdown_event")
+
+    # Only set if it exists and is not already set
+    if shutdown_event and not shutdown_event.is_set():
+        log.info("Signal caught, setting shutdown event")
+        shutdown_event.set()
+    else:
+        log.debug("Shutdown event already set or not available")
 
 
 async def _start_default_proxy(app):
@@ -211,6 +215,7 @@ async def _start_default_proxy(app):
 
 
 @authenticate_access_decorator
+@validate_incoming_request_decorator
 async def proxy(req):
     """
     Proxy incoming HTTP requests to the appropriate MATLAB proxy backend server.
@@ -247,45 +252,47 @@ async def proxy(req):
     if str(req_path).endswith(f"{constants.MWI_BASE_URL_PREFIX}"):
         return _redirect_to_default(req_path)
 
-    match = re.compile(r".*?/matlab/([^/]+)/(.*)").match(str(req.rel_url))
+    # Module-level pattern so it doesn't get recompiled on every request
+    match = constants.MATLAB_IN_REQ_PATH_PATTERN.match(str(req.rel_url))
 
     if not match:
         # Path doesn't contain /matlab/default|<id> in the request path
         # redirect to error page
         log.debug("Regex match not found, match: %s", match)
-        return _render_error_page(
+        return helpers.render_error_page(
             "Incorrect request path in the URL, please try with correct URL."
         )
 
     ident = match.group(1).rstrip("/")
-    log.debug("Client identifier for proxy: %s", ident)
+    backend_server = _get_backend_server(req, req.ctx, ident)
 
-    ctx = req_headers.get(constants.HEADER_MWI_MPM_CONTEXT)
-    if not ctx:
-        log.debug("MPM Context header not found in the request")
-        return _render_error_page(
-            f"Required header: ${constants.HEADER_MWI_MPM_CONTEXT} not found in the request"
-        )
+    # Route to default matlab if the specified path doesn't exist
+    if not backend_server:
+        # Start default matlab, if not already started
+        await _start_default_matlab_proxy_if_needed(req)
 
-    # Raising exception from here is not cleanly handled by Jupyter server proxy.
-    # It only shows 599 with a generic stream closed error message.
-    # Hence returning 503 with custom error message as response.
-    try:
-        await _start_default_proxy_if_not_already_started(req)
-    except Exception as e:
-        log.error("Error starting default proxy: %s", e)
-        return _render_error_page(f"Error during startup: {e}")
+        # Redirect to default matlab
+        try:
+            new_path = re.sub(f"/matlab/{ident}/", "/matlab/default/", str(req_path))
+            log.debug(
+                "Backend server not found. Redirecting from %s to %s",
+                str(req_path),
+                str(new_path),
+            )
+            raise web.HTTPFound(new_path)
+        except TypeError:
+            log.exception("Failed to redirect to default matlab")
+            return helpers.render_error_page(
+                "Incorrect URL, please try with correct URL."
+            )
 
-    client_key = f"{ctx}_{ident}"
-    default_key = f"{ctx}_default"
     group_two_rel_url = match.group(2)
-
-    backend_server = _get_backend_server(req, client_key, default_key)
     proxy_url = f"{backend_server.get('absolute_url')}/{group_two_rel_url}"
     log.debug("Proxy URL: %s", proxy_url)
 
+    # TODO: Unify transport layer functionality between matlab-proxy and matlab-proxy-manager
     if (
-        req_headers.get(connection, "").lower() == upgrade
+        "upgrade" in req_headers.get(connection, "").lower()
         and req_headers.get(upgrade, "").lower() == "websocket"
         and req.method == "GET"
     ):
@@ -451,31 +458,25 @@ async def _forward_http_request(
         return web.Response(headers=headers, status=res.status, body=body)
 
 
-async def _start_default_proxy_if_not_already_started(req):
-    app = req.app
-    req_path = req.rel_url
-
-    # Start default matlab-proxy only when it is not already started and
-    # if the request path contains the default MATLAB path (/matlab/default)
-    if not app.get(
-        "has_default_matlab_proxy_started", False
-    ) and constants.MWI_DEFAULT_MATLAB_PATH in str(req_path):
-        log.debug("Starting default matlab-proxy for request path: %s", str(req_path))
-        await _start_default_proxy(app)
-        app["has_default_matlab_proxy_started"] = True
-
-
-def _get_backend_server(req: web.Request, client_key: str, default_key: str) -> dict:
+def _get_backend_server(req: web.Request, ctx: str, ident: str):
     """
     Retrieves the backend server configuration for a given client key.
     """
+    client_key = f"{ctx}_{ident}"
+    return req.app["servers"].get(client_key)
+
+
+async def _start_default_matlab_proxy_if_needed(req: web.Request):
+    # There could be a chance that the default matlab-proxy hasn't been running at this point
+    # considering which we would want to start it first
     app = req.app
-    backend_server = app["servers"].get(client_key)
-    # Route to default matlab if the specified path doesn't exist
-    if not backend_server:
-        log.debug("Client not found in the current servers, using default matlab proxy")
-        backend_server = app["servers"].get(default_key)
-    return backend_server
+    if app.get("has_default_matlab_proxy_started") is False:
+        try:
+            await _start_default_proxy(app)
+            app["has_default_matlab_proxy_started"] = True
+        except Exception as e:
+            log.error("Error starting default proxy: %s", e)
+            return helpers.render_error_page(f"Error during startup: {e}")
 
 
 def _redirect_to_default(req_path) -> None:
@@ -491,13 +492,6 @@ def _redirect_to_default(req_path) -> None:
     new_redirect_url = f"{str(req_path).rstrip('/')}/default/"
     log.info("Redirecting to %s", new_redirect_url)
     raise web.HTTPFound(new_redirect_url)
-
-
-def _render_error_page(error_msg: str) -> web.Response:
-    """Returns 503 with error text"""
-    return web.HTTPServiceUnavailable(
-        text=f'<p style="color: red;">{error_msg}</p>', content_type="text/html"
-    )
 
 
 def _fetch_and_validate_required_env_vars():

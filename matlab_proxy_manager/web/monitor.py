@@ -1,8 +1,7 @@
-# Copyright 2024 The MathWorks, Inc.
+# Copyright 2024-2025 The MathWorks, Inc.
 import asyncio
 
-from matlab_proxy_manager.utils import logger
-from matlab_proxy_manager.utils import helpers
+from matlab_proxy_manager.utils import helpers, logger
 
 log = logger.get()
 
@@ -39,6 +38,8 @@ class OrphanedProcessMonitor:
 
         try:
             # Set the shutdown async event to signal app shutdown to the app runner
-            self.app.get("shutdown_event").set()
+            shutdown_event = self.app.get("shutdown_event")
+            if shutdown_event and not shutdown_event.is_set():
+                shutdown_event.set()
         except Exception as ex:
             log.debug("Unable to set proxy manager shutdown event, err: %s", ex)

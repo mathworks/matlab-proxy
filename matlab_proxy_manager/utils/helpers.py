@@ -1,4 +1,5 @@
 # Copyright 2024-2025 The MathWorks, Inc.
+import asyncio
 import http
 import os
 import socket
@@ -194,7 +195,7 @@ def _delete_server_and_file(storage, servers) -> bool:
     return is_server_deleted
 
 
-def poll_for_server_deletion() -> None:
+async def poll_for_server_deletion(app: web.Application) -> None:
     """
     Poll for server deletion for a specified timeout period.
 
@@ -207,14 +208,17 @@ def poll_for_server_deletion() -> None:
     log.debug("Interrupt/termination signal caught, cleaning up resources")
     start_time = time.time()
 
-    while time.time() - start_time < timeout_in_seconds:
-        is_server_deleted = _are_orphaned_servers_deleted()
-        if is_server_deleted:
-            log.debug("Servers deleted, breaking out of loop")
-            break
-        log.debug("Servers not deleted, waiting")
-        # Sleep for a short interval before polling again
-        time.sleep(0.5)
+    try:
+        while time.time() - start_time < timeout_in_seconds:
+            is_server_deleted = _are_orphaned_servers_deleted()
+            if is_server_deleted:
+                log.debug("Servers deleted, breaking out of loop")
+                break
+            log.debug("Servers not deleted, waiting")
+            # Sleep for a short interval before polling again
+            await asyncio.sleep(0.5)
+    except Exception as ex:
+        log.debug("Error while polling for server deletion: %s", ex)
 
 
 @contextmanager
@@ -301,3 +305,10 @@ def create_state_file(data_dir, server_process, filename: str):
         raise IOError(
             f"Failed to create state file {filename} in {data_dir}, error: {e}"
         ) from e
+
+
+def render_error_page(error_msg: str) -> web.Response:
+    """Returns 503 with error text"""
+    return web.HTTPServiceUnavailable(
+        text=f'<p style="color: red;">{error_msg}</p>', content_type="text/html"
+    )

@@ -1,6 +1,8 @@
 # Copyright 2024-2025 The MathWorks, Inc.
+import re
 
 MWI_BASE_URL_PREFIX = "/matlab/"
 MWI_DEFAULT_MATLAB_PATH = MWI_BASE_URL_PREFIX + "default"
 HEADER_MWI_MPM_CONTEXT = "MWI-MPM-CONTEXT"
 HEADER_MWI_MPM_AUTH_TOKEN = "MWI-MPM-AUTH-TOKEN"
+MATLAB_IN_REQ_PATH_PATTERN = re.compile(r".*?/matlab/([^/]+)/(.*)")

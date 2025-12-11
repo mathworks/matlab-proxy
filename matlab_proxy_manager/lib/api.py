@@ -21,19 +21,37 @@ log = logger.get(init=True)
 
 
 async def start_matlab_proxy_for_kernel(
-    caller_id: str, parent_id: str, is_shared_matlab: bool, base_url_prefix: str = ""
+    caller_id: str,
+    parent_id: str,
+    is_shared_matlab: bool,
+    base_url_prefix: str = "",
+    **kwargs,
 ):
     """
     Starts a MATLAB proxy server specifically for MATLAB Kernel.
 
     This function is a wrapper around the `start_matlab_proxy` function, with mpm_auth_token
     set to None, for starting the MATLAB proxy server via proxy manager.
+
+    Args:
+        caller_id (str): The identifier for the caller (kernel id).
+        parent_id (str): The context in which the server is being started (parent pid).
+        is_shared_matlab (bool): Flag indicating if the MATLAB proxy is shared.
+        base_url_prefix (str, optional): Custom URL path which gets added to mwi_base_url. Defaults to "".
+        **kwargs: Additional keyword arguments:
+            env (Dict[str, str], optional): Dictionary of environment variables to set for the
+                MATLAB proxy process. These variables can control various aspects of the MATLAB proxy
+                behavior. Defaults to None.
+
+    Returns:
+        dict: A dictionary representation of the server process, including any errors encountered.
     """
     return await _start_matlab_proxy(
         caller_id=caller_id,
         ctx=parent_id,
         is_shared_matlab=is_shared_matlab,
         base_url_prefix=base_url_prefix,
+        **kwargs,
     )
 
 
@@ -42,12 +60,26 @@ async def start_matlab_proxy_for_jsp(
     is_shared_matlab: bool,
     mpm_auth_token: str,
     base_url_prefix: str = "",
+    **kwargs,
 ):
     """
     Starts a MATLAB proxy server specifically for Jupyter Server Proxy (JSP) - Open MATLAB launcher.
 
     This function is a wrapper around the `start_matlab_proxy` function, providing
     a more specific context (mpm_auth_token) for starting the MATLAB proxy server via proxy manager.
+
+    Args:
+        caller_id (str): The identifier for the caller (kernel id).
+        parent_id (str): The context in which the server is being started (parent pid).
+        is_shared_matlab (bool): Flag indicating if the MATLAB proxy is shared.
+        base_url_prefix (str, optional): Custom URL path which gets added to mwi_base_url. Defaults to "".
+        **kwargs: Additional keyword arguments:
+            env (Dict[str, str], optional): Dictionary of environment variables to set for the
+                MATLAB proxy process. These variables can control various aspects of the MATLAB proxy
+                behavior. Defaults to None.
+
+    Returns:
+        dict: A dictionary representation of the server process, including any errors encountered.
     """
     return await _start_matlab_proxy(
         caller_id="jsp",
@@ -55,6 +87,7 @@ async def start_matlab_proxy_for_jsp(
         is_shared_matlab=is_shared_matlab,
         mpm_auth_token=mpm_auth_token,
         base_url_prefix=base_url_prefix,
+        **kwargs,
     )
 
 
@@ -122,6 +155,11 @@ async def _start_matlab_proxy(**options) -> dict:
         matlab_proxy_cmd, matlab_proxy_env = _prepare_cmd_and_env_for_matlab_proxy(
             client_id, base_url_prefix
         )
+
+        # Use client-provided environment variables, if available
+        client_env_variables = options.get("env")
+        if client_env_variables and isinstance(client_env_variables, dict):
+            matlab_proxy_env.update(client_env_variables)
 
         log.debug(
             "Starting new matlab proxy server using ctx=%s, client_id=%s, is_shared_matlab=%s",

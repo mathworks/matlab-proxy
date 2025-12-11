@@ -154,6 +154,9 @@ class AppState:
                 self.__decrement_idle_timer()
             )
 
+        # Flag to track if matlab-proxy is in the process of shutting down
+        self.is_shutting_down: bool = False
+
     def set_remaining_idle_timeout(self, new_timeout):
         """Sets the remaining IDLE timeout after the validating checks.
 

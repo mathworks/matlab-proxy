@@ -1,4 +1,4 @@
-# Copyright 2024 The MathWorks, Inc.
+# Copyright 2024-2025 The MathWorks, Inc.
 import asyncio
 
 from pytest_mock import MockerFixture
@@ -108,6 +108,7 @@ async def test_exception_handling_in_shutdown(mocker: MockerFixture):
     that the event's set method was called despite the exception.
     """
     mock_event = mocker.Mock(spec=asyncio.Event())
+    mock_event.is_set.return_value = False
     mock_event.set.side_effect = Exception("Test Exception")
 
     app = {"parent_pid": 1234, "shutdown_event": mock_event}

@@ -207,6 +207,7 @@ async def get_env_config(req):
     config["matlab"] = {
         "version": state.settings["matlab_version"],
         "supportedVersions": constants.SUPPORTED_MATLAB_VERSIONS,
+        "rootPath": str(state.settings.get("matlab_path", "")),
     }
 
     config["browserTitle"] = state.settings["browser_title"]
@@ -432,8 +433,12 @@ async def shutdown_integration_delete(req):
         req (HTTPRequest): HTTPRequest Object
     """
     state = req.app["state"]
-    logger.info(f"Shutting down {state.settings['integration_name']}...")
+    if state.is_shutting_down:
+        logger.debug("Shutdown already in progress")
+        return create_status_response(req.app, "../")
 
+    logger.info(f"Shutting down {state.settings['integration_name']}...")
+    state.is_shutting_down = True
     res = create_status_response(req.app, "../")
 
     # Schedule the shutdown to happen after the response is sent
