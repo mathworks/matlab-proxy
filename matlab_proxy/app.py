@@ -1,4 +1,4 @@
-# Copyright 2020-2025 The MathWorks, Inc.
+# Copyright 2020-2026 The MathWorks, Inc.
 
 import asyncio
 import json
@@ -28,6 +28,11 @@ mimetypes.add_type("font/eot", ".eot")
 mimetypes.add_type("font/ttf", ".ttf")
 mimetypes.add_type("application/json", ".map")
 mimetypes.add_type("image/png", ".ico")
+
+# Explicitly add JS mime types to override any incorrect types
+# Refer https://github.com/mathworks/matlab-proxy/issues/78 for details
+mimetypes.add_type("text/javascript", ".js")
+mimetypes.add_type("text/javascript", ".mjs")
 
 # TODO It is bad practice to have global state in aiohttp applications, instead this
 # mount point should be read in the application start up function, then if it is not
