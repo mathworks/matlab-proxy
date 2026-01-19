@@ -6,7 +6,6 @@ import pytest
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from tests.utils.logging_util import create_integ_test_logger
 
-
 _logger = create_integ_test_logger(
     __name__, log_file_path=os.getenv("MWI_INTEG_TESTS_LOG_FILE_PATH")
 )

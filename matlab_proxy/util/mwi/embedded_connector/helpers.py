@@ -3,7 +3,6 @@
 """This file contains helper methods which return the details required for sending
 a HTTP request to the Embedded Connector."""
 
-
 from matlab_proxy.util import mwi
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 

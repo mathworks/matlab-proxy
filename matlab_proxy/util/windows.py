@@ -8,7 +8,6 @@ from matlab_proxy.util.mwi.exceptions import (
     UIVisibleFatalError,
 )
 
-
 """ This file contains methods specific to non-posix / windows OS.
 """
 

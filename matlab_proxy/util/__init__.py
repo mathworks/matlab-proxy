@@ -19,7 +19,6 @@ from matlab_proxy.util.mwi.exceptions import (
     LockAcquisitionError,
 )
 
-
 logger = mwi.logger.get()
 
 # Global value to detect whether interrupt signal handler has been triggered or not.
