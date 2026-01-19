@@ -1,4 +1,4 @@
-# Copyright 2020-2025 The MathWorks, Inc.
+# Copyright 2020-2026 The MathWorks, Inc.
 
 import asyncio
 import contextlib
@@ -136,9 +136,7 @@ class AppState:
         loop = util.get_event_loop()
 
         # matlab-proxy server related tasks which have the same lifetime as the server
-        self.server_tasks = {
-            "update_matlab_state": loop.create_task(self.__update_matlab_state())
-        }
+        self.server_tasks = {}
 
         self.is_idle_timeout_enabled = (
             True if self.settings["mwi_idle_timeout"] else False
@@ -1403,6 +1401,9 @@ class AppState:
         )
         self.matlab_tasks["update_matlab_port"] = loop.create_task(
             self.__update_matlab_port(self.MATLAB_PORT_CHECK_DELAY_IN_SECONDS)
+        )
+        self.matlab_tasks["update_matlab_state"] = loop.create_task(
+            self.__update_matlab_state()
         )
 
     async def __send_stop_request_to_matlab(self):

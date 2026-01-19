@@ -1,4 +1,4 @@
-# Copyright 2023-2025 The MathWorks, Inc.
+# Copyright 2023-2026 The MathWorks, Inc.
 
 import asyncio
 import json
@@ -6,9 +6,9 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from matlab_proxy import settings
 
 from matlab_proxy import settings
 from matlab_proxy.app_state import AppState
@@ -18,13 +18,8 @@ from matlab_proxy.util.mwi.exceptions import (
     MatlabError,
     MatlabInstallError,
 )
-from matlab_proxy.constants import (
-    CONNECTOR_SECUREPORT_FILENAME,
-    USER_CODE_OUTPUT_FILE_NAME,
-)
-
-from tests.unit.util import MockResponse
 from tests.unit.test_constants import CHECK_MATLAB_STATUS_INTERVAL, FIVE_MAX_TRIES
+from tests.unit.util import MockResponse
 
 
 @pytest.fixture
@@ -145,6 +140,13 @@ class Mock_xvfb:
     returncode: Optional[int]
     pid: Optional[int]
 
+    async def wait(self) -> int:
+        return self.returncode
+
+    def terminate(self):
+        """Mock terminate method"""
+        pass
+
 
 @dataclass(frozen=True)
 class Mock_matlab:
@@ -152,12 +154,17 @@ class Mock_matlab:
 
     returncode: Optional[int]
     pid: Optional[int]
+    stderr: MagicMock = MagicMock()
 
     def is_running(self) -> bool:
         return self.returncode is None
 
-    def wait(self) -> int:
+    async def wait(self) -> int:
         return self.returncode
+
+    def terminate(self):
+        """Mock terminate method"""
+        pass
 
 
 @pytest.mark.parametrize(
@@ -547,6 +554,14 @@ async def test_requests_sent_by_matlab_proxy_have_headers(
         ok=True, payload={"messages": {"EvalResponse": [{"isError": None}]}}
     )
     mocked_req = mocker.patch("aiohttp.ClientSession.request", return_value=mock_resp)
+    mock_xvfb = Mock_xvfb(None, 12345)
+    mock_matlab = Mock_matlab(None, 12346)
+
+    app_state = app_state_with_token_auth_fixture
+
+    app_state.matlab_session_files["matlab_ready_file"] = (
+        app_state.matlab_session_files["matlab_ready_file"].touch()
+    )
 
     # Patching to make _are_required_processes_ready() to return True
     mocker.patch.object(
@@ -560,23 +575,31 @@ async def test_requests_sent_by_matlab_proxy_have_headers(
         "get_matlab_state",
         return_value="up",
     )
-    # Wait for _update_matlab_connector_status to run
-    await asyncio.sleep(CHECK_MATLAB_STATUS_INTERVAL)
+
+    # Patching xvfb subprocess
+    mocker.patch.object(
+        AppState, "_AppState__start_xvfb_process", return_value=mock_xvfb
+    )
+
+    # Patching xvfb subprocess
+    mocker.patch.object(
+        AppState, "_AppState__start_matlab_process", return_value=mock_matlab
+    )
+
+    # start matlab
+    await app_state.start_matlab()
+
+    # Wait for fake MATLAB to startup
+    await asyncio.sleep(CHECK_MATLAB_STATUS_INTERVAL * 5)
 
     # Act
-    await app_state_with_token_auth_fixture._AppState__send_stop_request_to_matlab()
+    # Send the stop request
+    await app_state._AppState__send_stop_request_to_matlab()
 
     # Assert
-
-    # 1 request from _update_matlab_connector_status() and another from
-    # /stop_matlab request
-    connector_status_request_headers = list(mocked_req.call_args_list)[0].kwargs[
+    send_stop_matlab_request_headers = list(mocked_req.call_args_list)[0].kwargs[
         "headers"
     ]
-    send_stop_matlab_request_headers = list(mocked_req.call_args_list)[1].kwargs[
-        "headers"
-    ]
-    assert sample_token_headers_fixture == connector_status_request_headers
     assert sample_token_headers_fixture == send_stop_matlab_request_headers
 
 
@@ -711,7 +734,7 @@ async def test_detect_active_client_status_can_reset_active_client(app_state_fix
     )
     assert (
         app_state_fixture.active_client == None
-    ), f"Expected the active_client to be None"
+    ), "Expected the active_client to be None"
 
 
 @pytest.mark.parametrize(
@@ -815,21 +838,32 @@ async def test_decrement_timer_runs_out(sample_settings_fixture, mocker):
     idle_timeout = 1
     sample_settings_fixture["mwi_idle_timeout"] = idle_timeout
     app_state = AppState(settings=sample_settings_fixture)
-    app_state.processes = {"matlab": None, "xvfb": None}
+    mock_xvfb = Mock_xvfb(None, 12345)
+    mock_matlab = Mock_matlab(None, 12346)
+
     app_state.licensing = {"type": "existing_license"}
 
     # mock util.get_event_loop() to return a new event_loop for the test to assert
     mock_loop = asyncio.new_event_loop()
     mocker.patch("matlab_proxy.app_state.util.get_event_loop", return_value=mock_loop)
+    # Patching xvfb subprocess
+    mocker.patch.object(
+        AppState, "_AppState__start_xvfb_process", return_value=mock_xvfb
+    )
+
+    # Patching xvfb subprocess
+    mocker.patch.object(
+        AppState, "_AppState__start_matlab_process", return_value=mock_matlab
+    )
 
     # Act
     # Wait for a little more time than idle_timeout to decrease flakiness of this test on different platforms.
-    # MATLAB state changes from down -> starting -> up -> down (idle timer runs out)
+    # MATLAB state is set to 'stopping' by stop_matlab() which is called once the decrement timer runs out.
     await asyncio.sleep(idle_timeout * FIVE_MAX_TRIES)
 
     # Assert
     assert not mock_loop.is_running()
-    assert app_state.get_matlab_state() == "down"
+    assert app_state.get_matlab_state() == "stopping"
 
     # Cleanup
     mock_loop.stop()
@@ -1009,12 +1043,12 @@ async def assert_matlab_state(app_state_fixture, expected_matlab_status, count):
 @pytest.mark.parametrize(
     "matlab_ready_file, expected_matlab_status",
     [
-        (None, "down"),
-        (Path("dummy"), "starting"),
+        (None, "starting"),
+        (Path("dummy"), "up"),
     ],
     ids=[
         "no_matlab_ready_file_formed",
-        "no_matlab_ready_file_created",
+        "matlab_ready_file_created",
     ],
 )
 async def test_check_matlab_connector_status_auto_updates_based_on_matlab_ready_file(
@@ -1034,18 +1068,52 @@ async def test_check_matlab_connector_status_auto_updates_based_on_matlab_ready_
         "_are_required_processes_ready",
         return_value=True,
     )
+    if matlab_ready_file:
+        matlab_ready_file.touch()
+        print("File eixts ", matlab_ready_file.exists())
+
     app_state_fixture.matlab_session_files["matlab_ready_file"] = matlab_ready_file
 
-    # Act
-    # Nothing to act upon as the _update_matlab_state() is started automatically in the constructor.
-    # Have to wait here for the atleast the same interval as the __update_matlab_state_based_on_endpoint_to_use()
-    # for the MATLAB status to update from 'down'
+    mock_xvfb = Mock_xvfb(None, 12345)
+    mock_matlab = Mock_matlab(None, 12346)
 
-    # Assert
+    # Patching xvfb subprocess
+    mocker.patch.object(
+        AppState, "_AppState__start_xvfb_process", return_value=mock_xvfb
+    )
+
+    # Patching xvfb subprocess
+    mocker.patch.object(
+        AppState, "_AppState__start_matlab_process", return_value=mock_matlab
+    )
+
     # MATLAB state should be 'down' first
     assert app_state_fixture.get_matlab_state() == "down"
-    await asyncio.sleep(CHECK_MATLAB_STATUS_INTERVAL)
 
+    mocker.patch.object(
+        AppState, "_AppState__matlab_stderr_reader_posix", new=AsyncMock()
+    )
+    mocker.patch.object(
+        AppState, "_AppState__track_embedded_connector_state", new=AsyncMock()
+    )
+    mocker.patch.object(AppState, "_AppState__update_matlab_port", new=AsyncMock())
+    mocker.patch(
+        "matlab_proxy.app_state.mwi.embedded_connector.request.get_state",
+        return_value="up",
+    )
+
+    # Act
+    await app_state_fixture.start_matlab()
+
+    if matlab_ready_file:
+        app_state_fixture.matlab_session_files["matlab_ready_file"].touch()
+
+    # Nothing to act upon as the _update_matlab_state() is started by start_matlab().
+    # Have to wait here for the atleast the same interval as the __update_matlab_state_based_on_endpoint_to_use()
+    # for the MATLAB status to update from 'down' to 'up'
+
+    # Assert
+    await asyncio.sleep(CHECK_MATLAB_STATUS_INTERVAL)
     await assert_matlab_state(app_state_fixture, expected_matlab_status, FIVE_MAX_TRIES)
 
 
@@ -1062,6 +1130,18 @@ async def test_update_matlab_state_switches_to_busy_endpoint(
     """
     # Arrange
     # Setup mocks for the first ping request to be successful
+    mock_xvfb = Mock_xvfb(None, 12345)
+    mock_matlab = Mock_matlab(None, 12346)
+
+    # Patching xvfb subprocess
+    mocker.patch.object(
+        AppState, "_AppState__start_xvfb_process", return_value=mock_xvfb
+    )
+
+    # Patching xvfb subprocess
+    mocker.patch.object(
+        AppState, "_AppState__start_matlab_process", return_value=mock_matlab
+    )
     mocker.patch.object(
         AppState,
         "_are_required_processes_ready",
@@ -1071,6 +1151,19 @@ async def test_update_matlab_state_switches_to_busy_endpoint(
         "matlab_proxy.app_state.mwi.embedded_connector.request.get_state",
         return_value="up",
     )
+    mocker.patch.object(
+        AppState, "_AppState__matlab_stderr_reader_posix", new=AsyncMock()
+    )
+    mocker.patch.object(
+        AppState, "_AppState__track_embedded_connector_state", new=AsyncMock()
+    )
+    mocker.patch.object(AppState, "_AppState__update_matlab_port", new=AsyncMock())
+
+    # MATLAB state should be 'down' first
+    assert app_state_fixture.get_matlab_state() == "down"
+
+    await app_state_fixture.start_matlab()
+
     tmp_file = tmp_path / Path("dummy")
     tmp_file.touch()
     app_state_fixture.matlab_session_files["matlab_ready_file"] = tmp_file
