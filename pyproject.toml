@@ -11,7 +11,7 @@ description = "Python® package enables you to launch MATLAB® and access it fro
 readme = "README.md"
 license = "LicenseRef-MATHWORKS-CLOUD-REFERENCE-ARCHITECTURE-LICENSE"
 license-files = ["LICENSE.md"]
-requires-python = ">=3.10, <3.14"
+requires-python = ">=3.10, <3.15"
 authors = [
     { name = "The MathWorks Inc.", email = "cloud@mathworks.com" },
 ]
