@@ -25,7 +25,15 @@ def get_event_loop():
         # If execution reached this except block, it implies that there
         # was no running event loop. So, create one.
         if system.is_posix():
-            loop = asyncio.get_event_loop()
+            try:
+                # Creates loop before python <=3.13,
+                # fails with RuntimeError for greater versions
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                # For python versions >=3.14:
+                # create the loop and set it as the current event loop
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
         else:
             loop = windows.get_event_loop()
 
