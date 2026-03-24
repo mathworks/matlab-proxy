@@ -1,9 +1,9 @@
-# MATLAB Licensing Info
+# MATLAB Licensing Information
 
 
 **For End Users**:
 
-When starting MATLAB through this integration, you are presented with a user interface with two options to set up MATLAB licensing.
+When you start MATLAB, you see a user interface with three options to set up MATLAB licensing.
 
 <p align="center">
   <img width="400" src="img/licensing_GUI.png">
