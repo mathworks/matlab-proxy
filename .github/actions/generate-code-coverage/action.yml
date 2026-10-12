@@ -1,4 +1,4 @@
-# Copyright 2020-2025 The MathWorks, Inc.
+# Copyright 2020-2026 The MathWorks, Inc.
 
 name: Generate Code Coverage XML
 description: |
@@ -13,12 +13,12 @@ runs:
   using: "composite"
   steps:
     - name: Set up Python 3.10
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: '3.10'
 
     - name: Use Node.js 24
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@v7
       with:
         node-version: 24
 
@@ -35,7 +35,7 @@ runs:
       shell: bash
 
     - name: Upload python coverage report to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v7
       with:
         directory: ./
         name: Python-codecov
@@ -53,7 +53,7 @@ runs:
       shell: bash
 
     - name: Upload Javscript coverage report to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v7
       with:
         directory: ./gui/coverage/
         fail_ci_if_error: true
