@@ -16,6 +16,7 @@ from multidict import CIMultiDict
 
 import tests.unit.test_constants as test_constants
 from matlab_proxy import app, util
+from matlab_proxy.util import xvfb
 from matlab_proxy.app import matlab_view
 from matlab_proxy.util import system as mwi_sys
 from matlab_proxy.util.mwi import environment_variables as mwi_env
@@ -84,6 +85,28 @@ async def test_create_app():
     # By default there is 1 for clean up task
     assert len(test_server.on_shutdown) == 1
     assert len(test_server.on_cleanup) == 1
+    await test_server["state"].stop_server_tasks()
+
+
+async def test_create_app_warns_when_xvfb_unavailable(mocker):
+    """On Linux, create_app surfaces a UI warning when Xvfb is not installed."""
+    mocker.patch("matlab_proxy.app.system.is_linux", return_value=True)
+    mocker.patch("matlab_proxy.app.xvfb.is_available", return_value=False)
+
+    test_server = app.create_app()
+
+    assert xvfb.XVFB_NOT_AVAILABLE_WARNING in test_server["state"].warnings
+    await test_server["state"].stop_server_tasks()
+
+
+async def test_create_app_no_xvfb_warning_when_available(mocker):
+    """No Xvfb warning is surfaced when Xvfb is on the PATH."""
+    mocker.patch("matlab_proxy.app.system.is_linux", return_value=True)
+    mocker.patch("matlab_proxy.app.xvfb.is_available", return_value=True)
+
+    test_server = app.create_app()
+
+    assert xvfb.XVFB_NOT_AVAILABLE_WARNING not in test_server["state"].warnings
     await test_server["state"].stop_server_tasks()
 
 

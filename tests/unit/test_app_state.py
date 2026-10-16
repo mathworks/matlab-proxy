@@ -38,8 +38,6 @@ def sample_settings_fixture(tmp_path):
         "error": None,
         "warnings": [],
         "matlab_config_file": tmp_file,
-        "is_xvfb_available": True,
-        "is_windowmanager_available": True,
         "mwi_server_url": "dummy",
         "mwi_logs_root_dir": Path(settings.get_mwi_config_folder(dev=True)),
         "app_port": 12345,
@@ -351,7 +349,7 @@ validate_required_processes_test_data = [
     ],
 )
 def test_are_required_processes_ready(
-    app_state_fixture, mocker_os_patching_fixture, matlab, xvfb, expected
+    app_state_fixture, mocker_os_patching_fixture, mocker, matlab, xvfb, expected
 ):
     """Test to check if required processes are ready
 
@@ -364,8 +362,9 @@ def test_are_required_processes_ready(
     """
     # Arrange
     app_state_fixture.processes = {"matlab": matlab, "xvfb": xvfb}
-    if not xvfb:
-        app_state_fixture.settings["is_xvfb_available"] = False
+    # The health check probes the PATH for Xvfb; model "Xvfb not installed" as the
+    # absence of a tracked Xvfb process.
+    mocker.patch("matlab_proxy.util.xvfb.is_available", return_value=bool(xvfb))
 
     # Act
     actual = app_state_fixture._are_required_processes_ready()
@@ -478,35 +477,6 @@ async def test_track_embedded_connector(mocker_os_patching_fixture, app_state_fi
 
 
 @pytest.mark.parametrize(
-    "env_var_name, filter_prefix, is_filtered",
-    [("MWI_AUTH_TOKEN", "MWI_", None), ("MWIFOO_AUTH_TOKEN", "MWI_", "foo")],
-    ids=["env_var_is_filtered", "env_var_is_not_filtered"],
-)
-def test_env_variables_filtration_for_xvfb_process(
-    monkeypatch, env_var_name, filter_prefix, is_filtered
-):
-    """Test to check if __filter_env_variables filters environment variables with a certain prefix correctly.
-
-    Args:
-        monkeypatch (Object): Built-in pytest fixture for monkeypatching
-        env_var_name (str): Name of the environment variable
-        filter_prefix (str): Prefix to check for filtering
-        is_filtered (bool): To check if the env variable with specified prefix is filtered.
-    """
-    # Arrange
-    env_var = env_var_name
-    monkeypatch.setenv(env_var, "foo")
-
-    # Act
-    filtered_env_vars: dict = AppState._AppState__filter_env_variables(
-        os.environ, filter_prefix
-    )
-
-    # Assert
-    assert filtered_env_vars.get(env_var) == is_filtered
-
-
-@pytest.mark.parametrize(
     "platform, expected_output",
     [("linux", "stdout"), ("windows", "file"), ("mac", "stdout")],
 )
@@ -578,9 +548,7 @@ async def test_requests_sent_by_matlab_proxy_have_headers(
     )
 
     # Patching xvfb subprocess
-    mocker.patch.object(
-        AppState, "_AppState__start_xvfb_process", return_value=mock_xvfb
-    )
+    mocker.patch("matlab_proxy.util.xvfb.start", return_value=(mock_xvfb, ":12345"))
 
     # Patching xvfb subprocess
     mocker.patch.object(
@@ -612,7 +580,8 @@ async def test_start_matlab_without_xvfb(app_state_fixture, mocker):
         mocker : Built-in pytest fixture
     """
     # Arrange
-    app_state_fixture.settings["is_xvfb_available"] = False
+    # Xvfb not installed -> xvfb.start() returns None and MATLAB runs without it.
+    mocker.patch("matlab_proxy.util.xvfb.start", return_value=None)
     mock_matlab = Mock_matlab(None, 1)
 
     # Starting asyncio tasks related to matlab is not required here as only Xvfb check is required.
@@ -637,15 +606,17 @@ async def test_start_matlab_without_xvfb(app_state_fixture, mocker):
     assert app_state_fixture.processes["matlab"] is mock_matlab
 
 
-async def test_start_matlab_without_xvfb_and_matlab(app_state_fixture):
+async def test_start_matlab_without_xvfb_and_matlab(app_state_fixture, mocker):
     """Test to check if MATLAB doesn't start and sets the error variable to MatlabInstallError when
     there is not MATLAB on system PATH
 
     Args:
         app_state_fixture (AppState): Object of AppState class with defaults set
+        mocker : Built-in pytest fixture
     """
     # Arrange
-    app_state_fixture.settings["is_xvfb_available"] = False
+    # Xvfb not installed -> xvfb.start() returns None and MATLAB runs without it.
+    mocker.patch("matlab_proxy.util.xvfb.start", return_value=None)
     app_state_fixture.settings["matlab_cmd"] = None
 
     # Act
@@ -848,9 +819,7 @@ async def test_decrement_timer_runs_out(sample_settings_fixture, mocker):
     mock_loop = asyncio.new_event_loop()
     mocker.patch("matlab_proxy.app_state.util.get_event_loop", return_value=mock_loop)
     # Patching xvfb subprocess
-    mocker.patch.object(
-        AppState, "_AppState__start_xvfb_process", return_value=mock_xvfb
-    )
+    mocker.patch("matlab_proxy.util.xvfb.start", return_value=(mock_xvfb, ":12345"))
 
     # Patching xvfb subprocess
     mocker.patch.object(
@@ -1079,9 +1048,7 @@ async def test_check_matlab_connector_status_auto_updates_based_on_matlab_ready_
     mock_matlab = Mock_matlab(None, 12346)
 
     # Patching xvfb subprocess
-    mocker.patch.object(
-        AppState, "_AppState__start_xvfb_process", return_value=mock_xvfb
-    )
+    mocker.patch("matlab_proxy.util.xvfb.start", return_value=(mock_xvfb, ":12345"))
 
     # Patching xvfb subprocess
     mocker.patch.object(
@@ -1135,9 +1102,7 @@ async def test_update_matlab_state_switches_to_busy_endpoint(
     mock_matlab = Mock_matlab(None, 12346)
 
     # Patching xvfb subprocess
-    mocker.patch.object(
-        AppState, "_AppState__start_xvfb_process", return_value=mock_xvfb
-    )
+    mocker.patch("matlab_proxy.util.xvfb.start", return_value=(mock_xvfb, ":12345"))
 
     # Patching xvfb subprocess
     mocker.patch.object(

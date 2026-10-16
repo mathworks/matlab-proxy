@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Callable, Final, Optional
 
 from matlab_proxy import util
+from matlab_proxy.util import window_manager, xvfb
 from matlab_proxy.constants import (
     CHECK_MATLAB_STATUS_INTERVAL_SECONDS,
     CONNECTOR_SECUREPORT_FILENAME,
@@ -568,7 +569,7 @@ class AppState:
 
         if system.is_linux():
             # If Xvfb is on system PATH, check if it up and running.
-            if self.settings.get("is_xvfb_available", None) and (
+            if xvfb.is_available() and (
                 xvfb_process is None or xvfb_process.returncode is not None
             ):
                 logger.debug(
@@ -943,6 +944,11 @@ class AppState:
         """
         matlab_env = os.environ.copy()
 
+        # Improves first time usage of simulink, at slightly longer startup times.
+        # Should only impact those users that have simulink installed.
+        # fixes mathworks/matlab-proxy#96
+        matlab_env["PREWARM_SIMULINK"] = "true"
+
         # Remove MLM_LICENSE_FILE unconditionally before applying licensing env vars.
         # This must happen regardless of licensing type because MLM_LICENSE_FILE has
         # higher precedence than other licensing options in MATLAB. If it's inherited
@@ -1071,90 +1077,6 @@ class AppState:
             licensing_env["MLM_LICENSE_FILE"] = self.licensing["conn_str"]
 
         return licensing_env
-
-    def __filter_env_variables(env_vars: dict, prefix: str) -> dict:
-        """Removes the keys that starts with the prefix supplied to this function
-
-        Args:
-            env_vars (dict): dict to be filtered
-            prefix (str): starting characters of the keys to be removed
-
-        Returns:
-            dict: dict with filtered keys
-        """
-        return {
-            key: value for key, value in env_vars.items() if not key.startswith(prefix)
-        }
-
-    async def __start_window_manager(self, display=None):
-        if display is None:
-            logger.info("Not starting fluxbox as display is not provided")
-            return None
-
-        wm_env = os.environ.copy()
-        wm_env["DISPLAY"] = display
-        wm_cmd = ["fluxbox", "-screen", "0", "-log", "/dev/null"]
-
-        try:
-            logger.info(f"Starting window manager with DISPLAY={wm_env['DISPLAY']}")
-            return await asyncio.create_subprocess_exec(
-                *wm_cmd, close_fds=False, env=wm_env, stderr=asyncio.subprocess.PIPE
-            )
-
-        except Exception as err:
-            self.error = WindowManagerError(
-                "Unable to start the Fluxbox Window Manager due to the following error: "
-                + err
-            )
-            # Log the error on the console.
-            log_error(logger, self.error)
-
-        return None
-
-    async def __start_xvfb_process(self):
-        """Private method to start the xvfb process. Will set appropriate
-        errors to self.error and return None when any exceptions are raised.
-
-        Returns:
-            (asyncio.subprocess.Process) : When Xvfb process is created successfully else None.
-        """
-
-        # Start Xvfb process and update display number in settings
-        create_xvfb_cmd = self.settings["create_xvfb_cmd"]
-        xvfb_cmd, dpipe = create_xvfb_cmd()
-        filtered_env_variables = AppState.__filter_env_variables(
-            os.environ.copy(), "MWI_"
-        )
-
-        try:
-            xvfb, display_port = await mw.create_xvfb_process(
-                xvfb_cmd, dpipe, filtered_env_variables
-            )
-            self.settings["matlab_display"] = ":" + str(display_port)
-
-            logger.info(f"Started Xvfb with PID={xvfb.pid} on DISPLAY={display_port}")
-
-            return xvfb
-
-        # If something went wrong ie. exception is raised in starting Xvfb process, capture error for logging
-        # and for showing the error on the frontend.
-
-        # FileNotFoundError: is thrown if Xvfb is not found on System Path.
-        # XvfbError: is thrown if something went wrong when starting Xvfb process.
-        except (FileNotFoundError, XvfbError):
-            self.error = XvfbError(
-                """Unable to start the Xvfb process. Ensure Xvfb is installed and is available on the System Path. See https://github.com/mathworks/matlab-proxy#requirements for information on Xvfb"""
-            )
-            # Log the error on the console.
-            log_error(logger, self.error)
-
-        # If something else went wrong log the error and exit
-        except Exception as err:
-            self.error = err
-            # Log the error on the console.
-            log_error(logger, err)
-
-        return None
 
     async def __start_matlab_process(self, matlab_env):
         """Starts the matlab process depending on the operating system. If an exception is raised,
@@ -1364,20 +1286,28 @@ class AppState:
         self.logs["matlab"].clear()
 
         # Start Xvfb process on linux if possible
-        if system.is_linux() and self.settings["is_xvfb_available"]:
-            xvfb = await self.__start_xvfb_process()
-
-            # xvfb variable would be None if creation of the process failed.
-            # Halt MATLAB process startup by returning early.
-            if xvfb is None:
+        if system.is_linux():
+            try:
+                started_xvfb = await xvfb.start()
+            except XvfbError as err:
+                # An installed-but-unstartable Xvfb is fatal: set the error and halt
+                # MATLAB process startup by returning early.
+                self.error = err
+                log_error(logger, self.error)
                 return
 
-            self.processes["xvfb"] = xvfb
+            # started_xvfb is None when Xvfb is not installed; MATLAB runs without it.
+            if started_xvfb is not None:
+                self.processes["xvfb"], self.settings["matlab_display"] = started_xvfb
 
         # Start Window Manager on linux if possible
-        if system.is_linux() and self.settings["is_windowmanager_available"]:
+        if system.is_linux():
             display = self.settings.get("matlab_display", None)
-            await self.__start_window_manager(display)
+            try:
+                await window_manager.start(display)
+            except WindowManagerError as err:
+                self.error = err
+                log_error(logger, self.error)
 
         try:
             # Prepare ready file for the MATLAB process.

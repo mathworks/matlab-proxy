@@ -188,7 +188,6 @@ def get_dev_settings(config):
             str(devel_file),
             "matlab",
         ],
-        "create_xvfb_cmd": create_xvfb_cmd,
         "base_url": os.environ.get(mwi_env.get_env_name_base_url(), ""),
         "app_port": os.environ.get(mwi_env.get_env_name_app_port(), 8000),
         "host_interface": "127.0.0.1",
@@ -218,8 +217,6 @@ def get_dev_settings(config):
             os.getenv(mwi_env.get_env_name_mwi_use_existing_license(), "")
         ),
         "warnings": [],
-        "is_xvfb_available": False,
-        "is_windowmanager_available": False,
         "mwi_idle_timeout": None,
         "cookie_jar": _get_cookie_jar(),
         "browser_title": session_name.get_browser_title("R2020b"),
@@ -274,22 +271,6 @@ def get(config_name=matlab_proxy.get_default_config_name(), dev=False):
         # there is an exception thrown when creating the matlab specific settings.
         settings.update(get_server_settings(config_name))
 
-        settings["is_xvfb_available"] = True if shutil.which("Xvfb") else False
-        settings["is_windowmanager_available"] = (
-            True if shutil.which("fluxbox") else False
-        )
-
-        # Warn user if xvfb is not available on system path.
-        if system.is_linux():
-            if not settings["is_xvfb_available"]:
-                warning = "  Unable to find Xvfb on the system PATH. Xvfb enables graphical abilities like plots and figures in the MATLAB desktop.\nConsider adding Xvfb to the system PATH and restart matlab-proxy.\nFor details, see https://github.com/mathworks/matlab-proxy#requirements."
-                logger.warning(warning)
-                settings["warnings"].append(warning)
-
-            if not settings["is_windowmanager_available"]:
-                warning = " Unable to find fluxbox on the system PATH. To use Simulink Online, add Fluxbox to the system PATH and restart matlab-proxy. For details, see https://github.com/mathworks/matlab-proxy#requirements."
-                logger.warning(warning)
-
         settings.update(get_matlab_settings())
 
     return settings
@@ -325,7 +306,6 @@ def get_server_settings(config_name):
 
     cookie_jar = _get_cookie_jar()
     return {
-        "create_xvfb_cmd": create_xvfb_cmd,
         "base_url": mwi.validators.validate_base_url(
             os.getenv(mwi_env.get_env_name_base_url(), "")
         ),
@@ -431,43 +411,6 @@ def get_mw_context_tags(extension_name):
     )
 
     return combined_context_tags
-
-
-def create_xvfb_cmd():
-    """Creates the Xvfb command with a write descriptor.
-
-    Returns:
-        List: Containing 2 lists.
-
-    The second List contains a read and a write descriptor.
-    The first List is the command to launch Xvfb process with the same write descriptor(from the first list) embedded in the command.
-    """
-    # Using os.pipe() can lead to race conditions (ie.usage of same set of file descriptors between 2 processes)
-    # when called in quick succession and also when running tests.
-    # Using os.pipe2() with the flag os.O_NONBLOCK will avoid race conditions.
-    dpipe = os.pipe2(os.O_NONBLOCK)
-
-    # Allow child process to use the file descriptor created by parent.
-    os.set_inheritable(dpipe[1], True)
-
-    xvfb_cmd = [
-        "Xvfb",
-        "-displayfd",
-        # Write descriptor
-        str(dpipe[1]),
-        "-screen",
-        "0",
-        "3840x2160x24",
-        "-dpi",
-        "100",
-        # "-ac",
-        "-extension",
-        "RANDR",
-        # "+render",
-        # "-noreset",
-    ]
-
-    return xvfb_cmd, dpipe
 
 
 def get_test_temp_dir():

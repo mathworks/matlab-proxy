@@ -21,8 +21,6 @@ def sample_settings(tmp_path):
         "error": None,
         "warnings": [],
         "matlab_config_file": tmp_file,
-        "is_xvfb_available": True,
-        "is_windowmanager_available": True,
         "mwi_server_url": "dummy",
         "mwi_logs_root_dir": Path(settings.get_mwi_config_folder(dev=True)),
         "app_port": 12345,
@@ -57,8 +55,8 @@ class TestAppStateExitReason:
         mocker.patch(
             "matlab_proxy.app_state.util.get_event_loop", return_value=mock_loop
         )
-        mocker.patch.object(
-            AppState, "_AppState__start_xvfb_process", return_value=mocker.MagicMock()
+        mocker.patch(
+            "matlab_proxy.util.xvfb.start", return_value=(mocker.MagicMock(), ":12345")
         )
         mocker.patch.object(
             AppState, "_AppState__start_matlab_process", return_value=mocker.MagicMock()

@@ -49,14 +49,19 @@ MATLAB Proxy is under active development. For support or to report issues, see [
   ```
   
 
-* Fluxbox Window Manager (only for Linux® based systems):
+* Window Manager (only for Linux® based systems):
 
-  Installing fluxbox is optional but required to use Simulink Online.
+  Installing a window manager is optional but required to use Simulink Online.
+  `matlab-proxy` uses the `openbox` window manager.
 
-  Install fluxbox using:
+  Install openbox using:
   ```bash
   # On a Debian/Ubuntu based system:
-  $ sudo apt install fluxbox 
+  $ sudo apt install openbox
+
+  # On a RHEL based system (openbox is provided by EPEL):
+  $ sudo yum install epel-release
+  $ sudo yum install openbox
   ```
 
 * Python versions: 3.10 | 3.11 | 3.12 | 3.13 | 3.14

@@ -15,9 +15,10 @@ from cryptography import fernet
 
 import matlab_proxy
 from matlab_proxy import constants, settings, util
+from matlab_proxy.util import xvfb
 from matlab_proxy.app_state import AppState
 from matlab_proxy.constants import IS_CONCURRENCY_CHECK_ENABLED, ExitReason
-from matlab_proxy.util import mwi
+from matlab_proxy.util import mwi, system
 from matlab_proxy.util.mwi import download, token_auth
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi.exceptions import AppError, InvalidTokenError, LicensingError
@@ -959,6 +960,22 @@ def configure_and_start(app):
 
 
 # config has a default initializer because it needs to be callable without inputs from ADEV servers
+def _propagate_startup_warnings(state):
+    """Detects startup-time environment issues and propagates them.
+
+    Each warning is logged and appended to ``state.warnings`` so the frontend can
+    display it. This is the single place to add future startup checks.
+
+    Args:
+        state (AppState): The application state whose ``warnings`` list is updated.
+    """
+    # On Linux, warn if Xvfb is unavailable. MATLAB still starts, but graphical
+    # features such as plots and figures need a virtual display provided by Xvfb.
+    if system.is_linux() and not xvfb.is_available():
+        logger.warning(xvfb.XVFB_NOT_AVAILABLE_WARNING)
+        state.warnings.append(xvfb.XVFB_NOT_AVAILABLE_WARNING)
+
+
 def create_app(config_name=matlab_proxy.get_default_config_name()):
     """Creates the web server and adds the routes,settings and env_config to the server.
 
@@ -974,6 +991,8 @@ def create_app(config_name=matlab_proxy.get_default_config_name()):
 
     # Initialise application state
     app["state"] = AppState(app["settings"])
+
+    _propagate_startup_warnings(app["state"])
 
     # In development mode, the node development server proxies requests to this
     # development server instead of serving the static files directly
