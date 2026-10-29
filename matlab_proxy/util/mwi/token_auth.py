@@ -4,6 +4,7 @@
 
 import os
 import secrets
+import time
 from hashlib import sha256
 from hmac import compare_digest
 from urllib.parse import parse_qs
@@ -11,6 +12,7 @@ from urllib.parse import parse_qs
 from aiohttp import web
 from aiohttp_session import get_session, new_session
 
+from matlab_proxy.constants import SESSION_COOKIE_RENEWAL_WINDOW_SECONDS
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import logger as mwi_logger
 
@@ -99,6 +101,37 @@ async def authenticate_request(request):
     return True
 
 
+async def renew_session_cookie_if_valid(request):
+    """Renew a valid cookie without requiring the request to be authenticated."""
+    logger.debug(
+        f"Session cookie renewal check: method={request.method}, path={request.path}."
+    )
+
+    if not _is_mwi_token_auth_enabled(request):
+        logger.debug(
+            "Session cookie renewal not applicable: token authentication is disabled."
+        )
+        return
+
+    session = await get_session(request)
+    token_name = await _get_token_name(request)
+    if token_name not in session:
+        logger.debug(
+            "Session cookie renewal not applicable: "
+            "no authenticated session cookie was found."
+        )
+        return
+
+    if not await _is_valid_token(session[token_name], request):
+        logger.debug(
+            "Session cookie renewal not applicable: "
+            "the session cookie failed authentication."
+        )
+        return
+
+    await _renew_session_cookie_if_needed(request, session)
+
+
 def authenticate_access_decorator(endpoint):
     """This decorator verifies that the request to an endpoint exposed by matlab-proxy
     contains the correct MWI_AUTH_TOKEN before servicing an endpoint."""
@@ -185,6 +218,51 @@ async def _store_token_hash_into_session(request):
     # Stash token hash in session for other endpoints
     session[await _get_token_name(request)] = await _get_token_hash(request)
     logger.trace(f"Created session and saved cookie.")
+
+
+def _should_renew_session_cookie(session):
+    """Return whether a session cookie is within one hour of expiring."""
+    if session.max_age is None:
+        return False
+
+    session_age = time.time() - session.created
+    renewal_threshold = session.max_age - SESSION_COOKIE_RENEWAL_WINDOW_SECONDS
+    should_renew = session_age >= renewal_threshold
+
+    if should_renew:
+        logger.debug(
+            "Session cookie renewal required: "
+            f"age={session_age:.1f}s, threshold={renewal_threshold:.1f}s, "
+            f"max_age={session.max_age}s."
+        )
+    else:
+        remaining_time = renewal_threshold - session_age
+        logger.debug(
+            f"Session cookie renewal not required: renewal in {remaining_time:.1f}s."
+        )
+
+    return should_renew
+
+
+async def _renew_session_cookie_if_needed(request, session):
+    """Replace an aging session while preserving its authenticated state."""
+    if not _should_renew_session_cookie(session):
+        return
+
+    previous_created = session.created
+    token_name = await _get_token_name(request)
+
+    # Reassigning the validated token marks the session as changed and resets
+    # its creation time. aiohttp-session then writes a fresh encrypted cookie.
+    session[token_name] = session[token_name]
+    logger.debug(
+        "Session cookie renewal prepared: "
+        f"previous_created={previous_created}, "
+        f"renewed_created={session.created}, "
+        f"entries={len(session)}, "
+        f"empty={session.empty}, "
+        f"max_age={session.max_age}s."
+    )
 
 
 def _is_mwi_token_auth_enabled(request):

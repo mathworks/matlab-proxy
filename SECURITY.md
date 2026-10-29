@@ -106,7 +106,15 @@ $ matlab-proxy-app
 In this example `SY78vUw5qyf0JTJzGK4mKJlk_exkzL_SMFJyilbGtNI` is the token that the server needs for future communication.
 
 After initial access, this token is cached by the browser, and all subsequent access from the same browser to the server will not require this token.
-You will however need this token to access the server from a new browser session or if you have cleared cookies or have cookies disabled.
+Browser authentication expires after one day and is renewed automatically
+while the browser remains connected to an active MATLAB session.
+
+You may need to provide the token again in any of these situations:
+
+- Your browser authentication expires.
+- The `matlab-proxy` server restarts.
+- You switch browsers or browser profiles.
+- You clear or disable cookies.
 
 ### **Specify your own token**
 
@@ -226,6 +234,6 @@ $ env MWI_ENABLE_TOKEN_AUTH="False" matlab-proxy-app
 
 ----
 
-Copyright 2020-2024 The MathWorks, Inc.
+Copyright 2020-2026 The MathWorks, Inc.
 
 ----

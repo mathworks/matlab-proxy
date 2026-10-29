@@ -110,6 +110,18 @@ async def test_create_app_no_xvfb_warning_when_available(mocker):
     await test_server["state"].stop_server_tasks()
 
 
+def test_create_session_cookie_storage():
+    """Session cookies have random names and expire after one day."""
+    first_storage = app.create_session_cookie_storage()
+    second_storage = app.create_session_cookie_storage()
+
+    assert first_storage.cookie_name.startswith("matlab-proxy-session-")
+    assert len(first_storage.cookie_name.removeprefix("matlab-proxy-session-")) == 64
+    assert first_storage.cookie_name != second_storage.cookie_name
+    assert first_storage.max_age == app.constants.SESSION_COOKIE_MAX_AGE_SECONDS
+    assert first_storage.max_age == 24 * 60 * 60
+
+
 def get_email():
     """Returns a placeholder email
 
@@ -267,15 +279,7 @@ async def async_configure_and_start(app_instance):
 
     # Setup the session storage,
     # Uniqified per session to prevent multiple proxy servers on the same FQDN from interfering with each other.
-    uniqify_session_cookie = app.secrets.token_hex()
-    fernet_key = app.fernet.Fernet.generate_key()
-    f = app.fernet.Fernet(fernet_key)
-    app.aiohttp_session_setup(
-        app_instance,
-        app.EncryptedCookieStorage(
-            f, cookie_name="matlab-proxy-session-" + uniqify_session_cookie
-        ),
-    )
+    app.aiohttp_session_setup(app_instance, app.create_session_cookie_storage())
 
     # Setup runner
     runner = app.web.AppRunner(app_instance, access_log=web_logger)
@@ -396,15 +400,21 @@ async def test_server(aiohttp_client, monkeypatch, request):
             monkeypatch.delenv(env_var_name, raising="False")
 
 
-async def test_get_status_route(test_server):
+async def test_get_status_route(test_server, mocker):
     """Test to check endpoint : "/get_status"
 
     Args:
         test_server (aiohttp_client): A aiohttp_client server for sending GET request.
     """
 
+    renew_session_cookie = mocker.patch.object(
+        app.token_auth, "renew_session_cookie_if_valid"
+    )
+
     resp = await test_server.get("/get_status")
+
     assert resp.status == HTTPStatus.OK
+    renew_session_cookie.assert_awaited_once()
 
 
 async def test_clear_client_id_route(test_server):

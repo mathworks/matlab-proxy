@@ -237,6 +237,10 @@ async def get_status(req):
     Returns:
         JSONResponse: JSONResponse object containing information about the server, MATLAB and MATLAB Licensing.
     """
+    # Keep an existing authenticated browser session alive without requiring
+    # authentication to access this endpoint.
+    await token_auth.renew_session_cookie_if_valid(req)
+
     # The client sends the CLIENT_ID as a query parameter if the concurrency check has been set to true.
     state = req.app["state"]
     client_id = req.query.get("MWI_CLIENT_ID", None)
@@ -904,6 +908,18 @@ async def cleanup_background_tasks(app):
     await util.cancel_tasks(server_tasks)
 
 
+def create_session_cookie_storage():
+    """Create encrypted storage with a random, short-lived session cookie."""
+    uniqify_session_cookie = secrets.token_hex()
+    fernet_key = fernet.Fernet.generate_key()
+    encryption = fernet.Fernet(fernet_key)
+    return EncryptedCookieStorage(
+        encryption,
+        cookie_name="matlab-proxy-session-" + uniqify_session_cookie,
+        max_age=constants.SESSION_COOKIE_MAX_AGE_SECONDS,
+    )
+
+
 def configure_and_start(app):
     """Configure the site for the app and update app with appropriate values
 
@@ -917,15 +933,7 @@ def configure_and_start(app):
 
     # Setup the session storage,
     # Uniqified per session to prevent multiple proxy servers on the same FQDN from interfering with each other.
-    uniqify_session_cookie = secrets.token_hex()
-    fernet_key = fernet.Fernet.generate_key()
-    f = fernet.Fernet(fernet_key)
-    aiohttp_session_setup(
-        app,
-        EncryptedCookieStorage(
-            f, cookie_name="matlab-proxy-session-" + uniqify_session_cookie
-        ),
-    )
+    aiohttp_session_setup(app, create_session_cookie_storage())
 
     # Setup runner
     runner = web.AppRunner(

@@ -1,4 +1,6 @@
-# Copyright 2023-2025 The MathWorks, Inc.
+# Copyright 2023-2026 The MathWorks, Inc.
+
+from types import SimpleNamespace
 
 import pytest
 from aiohttp import web
@@ -6,7 +8,11 @@ from aiohttp_session import setup as aiohttp_session_setup
 from aiohttp_session.cookie_storage import EncryptedCookieStorage
 from cryptography import fernet
 
-from matlab_proxy.constants import MWI_AUTH_TOKEN_NAME_FOR_HTTP
+from matlab_proxy.constants import (
+    MWI_AUTH_TOKEN_NAME_FOR_HTTP,
+    SESSION_COOKIE_MAX_AGE_SECONDS,
+    SESSION_COOKIE_RENEWAL_WINDOW_SECONDS,
+)
 from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi import token_auth
 
@@ -88,6 +94,11 @@ async def fake_endpoint(request):
     return web.Response(body="value: {}".format(request.app["value"]).encode("utf-8"))
 
 
+async def status_endpoint(request):
+    await token_auth.renew_session_cookie_if_valid(request)
+    return web.Response(body=b"status")
+
+
 @pytest.fixture
 async def fake_server_with_auth_enabled(
     aiohttp_client, monkeypatch, get_custom_auth_token_str
@@ -114,11 +125,17 @@ async def fake_server_with_auth_enabled(
     }
     app.router.add_get("/", fake_endpoint)
     app.router.add_post("/", fake_endpoint)
+    app.router.add_get("/get_status", status_endpoint)
     # Setup the session storage
     fernet_key = fernet.Fernet.generate_key()
     f = fernet.Fernet(fernet_key)
     aiohttp_session_setup(
-        app, EncryptedCookieStorage(f, cookie_name="matlab-proxy-session")
+        app,
+        EncryptedCookieStorage(
+            f,
+            cookie_name="matlab-proxy-session",
+            max_age=SESSION_COOKIE_MAX_AGE_SECONDS,
+        ),
     )
     return await aiohttp_client(app)
 
@@ -151,6 +168,113 @@ async def test_set_value_with_token(
     )
     assert resp3.status == web.HTTPOk.status_code
     assert fake_server_with_auth_enabled.server.app["value"] == "foobar1"
+
+
+@pytest.mark.parametrize(
+    "max_age, session_age, expected",
+    [
+        (None, 100, False),
+        (
+            SESSION_COOKIE_MAX_AGE_SECONDS,
+            SESSION_COOKIE_MAX_AGE_SECONDS - SESSION_COOKIE_RENEWAL_WINDOW_SECONDS - 1,
+            False,
+        ),
+        (
+            SESSION_COOKIE_MAX_AGE_SECONDS,
+            SESSION_COOKIE_MAX_AGE_SECONDS - SESSION_COOKIE_RENEWAL_WINDOW_SECONDS,
+            True,
+        ),
+    ],
+)
+def test_should_renew_session_cookie(monkeypatch, max_age, session_age, expected):
+    session = SimpleNamespace(created=1_000, max_age=max_age)
+    monkeypatch.setattr(token_auth.time, "time", lambda: session.created + session_age)
+
+    assert token_auth._should_renew_session_cookie(session) is expected
+
+
+async def test_cookie_renewal_does_not_protect_status_endpoint(
+    fake_server_with_auth_enabled,
+):
+    response_without_cookie = await fake_server_with_auth_enabled.get("/get_status")
+    response_with_invalid_cookie = await fake_server_with_auth_enabled.get(
+        "/get_status",
+        cookies={"matlab-proxy-session": "invalid"},
+    )
+
+    assert response_without_cookie.status == web.HTTPOk.status_code
+    assert response_with_invalid_cookie.status == web.HTTPOk.status_code
+    assert response_with_invalid_cookie.headers.getall("Set-Cookie", []) == []
+
+
+async def test_session_cookie_is_renewed_one_hour_before_expiry(
+    fake_server_with_auth_enabled, get_custom_auth_token_str, monkeypatch
+):
+    cookie_name = "matlab-proxy-session"
+    initial_response = await fake_server_with_auth_enabled.post(
+        "/",
+        data={"value": "initial"},
+        headers={MWI_AUTH_TOKEN_NAME_FOR_HTTP: get_custom_auth_token_str},
+    )
+    initial_cookie = initial_response.cookies[cookie_name]
+
+    assert initial_cookie["max-age"] == str(SESSION_COOKIE_MAX_AGE_SECONDS)
+    assert initial_cookie["expires"]
+
+    response_before_renewal = await fake_server_with_auth_enabled.post(
+        "/",
+        data={"value": "before-renewal"},
+    )
+    assert response_before_renewal.status == web.HTTPOk.status_code
+    assert cookie_name not in response_before_renewal.cookies
+
+    current_time = token_auth.time.time
+    monkeypatch.setattr(
+        token_auth.time,
+        "time",
+        lambda: (
+            current_time()
+            + SESSION_COOKIE_MAX_AGE_SECONDS
+            - SESSION_COOKIE_RENEWAL_WINDOW_SECONDS
+            + 1
+        ),
+    )
+
+    authenticated_response = await fake_server_with_auth_enabled.post(
+        "/",
+        data={"value": "authenticated-without-renewal"},
+    )
+    assert authenticated_response.status == web.HTTPOk.status_code
+    assert cookie_name not in authenticated_response.cookies
+
+    renewal_response = await fake_server_with_auth_enabled.get("/get_status")
+    renewed_cookie = renewal_response.cookies[cookie_name]
+
+    assert renewal_response.status == web.HTTPOk.status_code
+    assert renewed_cookie.value != initial_cookie.value
+    assert renewed_cookie["max-age"] == str(SESSION_COOKIE_MAX_AGE_SECONDS)
+    assert renewed_cookie["expires"]
+
+    response_with_renewed_cookie = await fake_server_with_auth_enabled.post(
+        "/",
+        data={"value": "using-renewed-cookie"},
+    )
+    assert response_with_renewed_cookie.status == web.HTTPOk.status_code
+    assert cookie_name not in response_with_renewed_cookie.cookies
+
+    # Advance the clock past the original cookie's max-age. The renewed
+    # session must still authenticate.
+    monkeypatch.setattr(
+        token_auth.time,
+        "time",
+        lambda: current_time() + SESSION_COOKIE_MAX_AGE_SECONDS + 1,
+    )
+    response_after_original_expiry = await fake_server_with_auth_enabled.post(
+        "/",
+        data={"value": "after-original-expiry"},
+    )
+    assert response_after_original_expiry.status == web.HTTPOk.status_code
+    assert fake_server_with_auth_enabled.server.app["value"] == "after-original-expiry"
 
 
 async def test_set_value_with_token_hash(

@@ -16,6 +16,10 @@ USER_CODE_OUTPUT_FILE_NAME: Final[str] = "startup_code_output.txt"
 # Clients of this package should use settings.py::get_process_startup_timeout() function
 DEFAULT_PROCESS_START_TIMEOUT: Final[int] = 600
 
+# Authentication cookies expire one day after they are issued or renewed.
+SESSION_COOKIE_MAX_AGE_SECONDS: Final[int] = 24 * 60 * 60
+SESSION_COOKIE_RENEWAL_WINDOW_SECONDS: Final[int] = 60 * 60
+
 SUPPORTED_MATLAB_VERSIONS: Final[List[str]] = [
     "R2020b",
     "R2021a",
