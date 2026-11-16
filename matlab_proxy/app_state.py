@@ -949,6 +949,19 @@ class AppState:
         # fixes mathworks/matlab-proxy#96
         matlab_env["PREWARM_SIMULINK"] = "true"
 
+        # warmupAcademy delays the Embedded Connector from coming up by ~60 seconds.
+        # Merge with any user-supplied value rather than overwriting it.
+        suppressed = [
+            f.strip()
+            for f in matlab_env.get(
+                "CONNECTOR_SUPPRESSED_LIFECYCLE_FUNCTIONS", ""
+            ).split(",")
+            if f.strip()
+        ]
+        if "warmupAcademy" not in suppressed:
+            suppressed.append("warmupAcademy")
+        matlab_env["CONNECTOR_SUPPRESSED_LIFECYCLE_FUNCTIONS"] = ",".join(suppressed)
+
         # Remove MLM_LICENSE_FILE unconditionally before applying licensing env vars.
         # This must happen regardless of licensing type because MLM_LICENSE_FILE has
         # higher precedence than other licensing options in MATLAB. If it's inherited

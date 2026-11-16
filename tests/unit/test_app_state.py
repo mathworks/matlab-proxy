@@ -507,6 +507,33 @@ async def test_setup_env_for_matlab(
     assert expected_output in matlab_env["MW_DIAGNOSTIC_DEST"]
 
 
+@pytest.mark.parametrize(
+    "user_value, expected",
+    [
+        (None, "warmupAcademy"),
+        ("", "warmupAcademy"),
+        ("warmupGPU", "warmupGPU,warmupAcademy"),
+        (" warmupGPU , warmupHelp ", "warmupGPU,warmupHelp,warmupAcademy"),
+        ("warmupAcademy,warmupGPU", "warmupAcademy,warmupGPU"),
+    ],
+)
+async def test_setup_env_for_matlab_suppresses_warmup_academy(
+    monkeypatch, app_state_fixture, tmp_path, user_value, expected
+):
+    """warmupAcademy is always suppressed, preserving any user-supplied suppressions."""
+    if user_value is None:
+        monkeypatch.delenv("CONNECTOR_SUPPRESSED_LIFECYCLE_FUNCTIONS", raising=False)
+    else:
+        monkeypatch.setenv("CONNECTOR_SUPPRESSED_LIFECYCLE_FUNCTIONS", user_value)
+    app_state_fixture.licensing = {"type": "existing_license"}
+    app_state_fixture.settings = {"mwapikey": None}
+    app_state_fixture.mwi_logs_dir = tmp_path
+
+    matlab_env = await app_state_fixture._AppState__setup_env_for_matlab()
+
+    assert matlab_env["CONNECTOR_SUPPRESSED_LIFECYCLE_FUNCTIONS"] == expected
+
+
 async def test_requests_sent_by_matlab_proxy_have_headers(
     app_state_with_token_auth_fixture,
     sample_token_headers_fixture,
